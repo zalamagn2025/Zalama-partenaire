@@ -1,0 +1,430 @@
+:root {
+  /* Variables communes aux deux thèmes */
+  --zalama-blue: #3b82f6;         /* Accent, boutons - bleu vif */
+  --zalama-blue-accent: #60a5fa;  /* Hover bouton - bleu plus clair */
+  --zalama-success: #10b981;      /* Succès */
+  --zalama-warning: #f59e0b;      /* Avertissement */
+  --zalama-danger: #ef4444;       /* Danger */
+  --zalama-green: #10b981;        /* Vert */
+  --zalama-red: #ef4444;          /* Rouge */
+  
+  /* Variables pour la sidebar */
+  --sidebar-width: 16rem;
+  --sidebar-collapsed-width: 4rem;
+  
+  /* Variables pour le dashboard */
+  --dashboard-padding: 8px;
+  --dashboard-gap: 8px;
+  --card-padding: 16px;
+}
+
+/* Thème sombre (par défaut) */
+[data-theme="dark"], :root {
+  /* Couleurs principales bleu ZaLaMa (très sombre, presque noir) */
+  --zalama-bg-dark: #0a1525;      /* Fond principal - bleu très sombre */
+  --zalama-bg-darker: #061020;    /* Sidebar - encore plus sombre */
+  --zalama-bg-light: #0e1e36;     /* Cards, hover - un peu plus clair */
+  --zalama-bg-lighter: #1a2c4e;   /* Hover plus clair */
+  --zalama-header-blue: #0c1d3b;  /* Header - bleu profond avec une touche de richesse */
+  --zalama-card: #0c1a2e;         /* Fond cards - bleu très sombre */
+  --zalama-border: #1e3a70;       /* Bordures */
+  --zalama-text: #e5e7ef;         /* Texte principal */
+  --zalama-text-secondary: #a0aec0; /* Texte secondaire */
+  --zalama-shadow: rgba(0, 0, 0, 0.3); /* Ombres */
+}
+
+/* Thème clair */
+[data-theme="light"] {
+  --zalama-bg-dark: #f5f7fa;      /* Fond principal - gris très clair */
+  --zalama-bg-darker: #e2e8f0;    /* Sidebar - gris clair */
+  --zalama-bg-light: #edf2f7;     /* Cards, hover - gris très clair */
+  --zalama-bg-lighter: #f8fafc;   /* Hover plus clair */
+  --zalama-header-blue: #f1f5f9;  /* Header - bleu très clair */
+  --zalama-card: #ffffff;         /* Fond cards - blanc */
+  --zalama-border: #cbd5e1;       /* Bordures */
+  --zalama-text: #1e293b;         /* Texte principal */
+  --zalama-text-secondary: #64748b; /* Texte secondaire */
+  --zalama-shadow: rgba(0, 0, 0, 0.1); /* Ombres */
+  
+  /* Variables pour la sidebar */
+  --sidebar-width: 16rem;
+  --sidebar-collapsed-width: 4rem;
+  
+  /* Variables pour le dashboard */
+  --dashboard-padding: 8px;
+  --dashboard-gap: 8px;
+  --card-padding: 16px;
+  
+  /* Variables pour les positions et dimensions des cartes */
+  --base-top: 8px;
+  --base-right: 8px;
+  --base-left: 8px;
+  
+  
+ 
+  
+}
+
+body {
+  background: var(--zalama-bg-dark);
+  color: var(--zalama-gray);
+}
+
+/* Dashboard layout avec positionnement absolu */
+.dashboard-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  padding: var(--dashboard-padding);
+  scrollbar-width: none;
+}
+
+/* Style de base pour toutes les cartes */
+.dashboard-card {
+  position: absolute;
+  margin: 0;
+  padding: var(--card-padding);
+  box-sizing: border-box;
+  overflow: hidden;
+  
+}
+
+.card {
+  background: var(--zalama-card);
+  border: 1px solid var(--zalama-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  height: fit-content;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Optimisation des espaces dans les cartes du dashboard */
+.card h2 {
+  margin-bottom: 0.75rem;
+}
+
+.card .grid {
+  gap: 0.75rem;
+}
+
+.card > div {
+  margin-bottom: 0.5rem;
+}
+
+.card > div:last-child {
+  margin-bottom: 0;
+}
+
+.sidebar {
+  background: var(--zalama-bg-darker);
+  border-right: 1px solid var(--zalama-border);
+  transition: width 0.3s ease;
+}
+
+.sidebar-collapsed {
+  width: 5rem !important;
+}
+
+.sidebar-collapsed .sidebar-text {
+  display: none;
+}
+
+.sidebar-collapsed .sidebar-logo-text {
+  display: none;
+}
+
+.header {
+  background: var(--zalama-bg-darker);
+  border-bottom: 1px solid var(--zalama-border);
+}
+
+.text-blue {
+  color: var(--zalama-blue);
+}
+
+.btn-primary {
+  background: var(--zalama-blue);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: var(--zalama-blue-accent);
+}
+
+/* Styles pour les en-têtes de section comme sur l'image */
+.section-header {
+  background: var(--zalama-header-bg);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Corps de section */
+.section-body {
+  padding: 1rem;
+  background: var(--zalama-card);
+  color: var(--zalama-gray);
+}
+
+/* Statistiques */
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: white;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: #a0aec0;
+}
+
+/* Graphiques */
+.chart-container {
+  height: 200px;
+  width: 100%;
+  position: relative;
+}
+
+/* Masquer la barre de défilement */
+.sidebar nav {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.sidebar nav::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+span{
+  font-size: 12px;
+}
+
+/* Media queries pour la responsivité */
+@media (max-width: 1200px) {
+  :root {
+    --sidebar-width: 14rem;
+    --card-padding: 12px;
+  }
+  
+  .dashboard-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 992px) {
+  :root {
+    --left-column-width: 100%;
+    --right-column-width: 100%;
+    --full-width: 100%;
+  }
+  
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .dashboard-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 16px;
+    height: auto;
+  }
+  
+  .card-stats, .card-finance, .card-partners, .card-services, 
+  .card-users, .card-alerts, .card-alerts-risk, .card-visualizations {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --dashboard-padding: 8px;
+    --dashboard-gap: 12px;
+    --card-padding: 12px;
+  }
+  
+  .dashboard-card {
+    padding: 12px;
+  }
+  
+  /* Ajustement des éléments dans la section "Activité par service" */
+  .dashboard-card.card-services .flex.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-card.card-services .flex.items-center {
+    width: 100%;
+    margin-bottom: 12px;
+    justify-content: space-between;
+  }
+  
+  .dashboard-card.card-services .h-16.w-px.bg-\[var\(--zalama-border\)\] {
+    display: none;
+  }
+  
+  /* Ajustement pour les graphiques */
+  .relative.w-40.h-40 {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 576px) {
+  :root {
+    --dashboard-padding: 6px;
+    --card-padding: 10px;
+  }
+  
+  .dashboard-card {
+    padding: 10px;
+  }
+  
+  h2.text-xl {
+    font-size: 1rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  /* Ajustement pour les graphiques */
+  .relative.w-40.h-40 {
+    width: 100px;
+    height: 100px;
+  }
+}
+
+/* Media queries pour la responsivité */
+@media (max-width: 1200px) {
+  :root {
+    --sidebar-width: 14rem;
+    --card-padding: 12px;
+  }
+  
+  .dashboard-card {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 992px) {
+  :root {
+    --left-column-width: 100%;
+    --right-column-width: 100%;
+    --full-width: 100%;
+  }
+  
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .dashboard-card {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 16px;
+    height: auto;
+  }
+  
+  .card-stats, .card-finance, .card-partners, .card-services, 
+  .card-users, .card-alerts, .card-alerts-risk, .card-visualizations {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  :root {
+    --dashboard-padding: 8px;
+    --dashboard-gap: 12px;
+    --card-padding: 12px;
+  }
+  
+  .dashboard-card {
+    padding: 12px;
+  }
+  
+  /* Ajustement des éléments dans la section "Activité par service" */
+  .dashboard-card.card-services .flex.justify-between {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .dashboard-card.card-services .flex.items-center {
+    width: 100%;
+    margin-bottom: 12px;
+    justify-content: space-between;
+  }
+  
+  .dashboard-card.card-services .h-16.w-px.bg-\[var\(--zalama-border\)\] {
+    display: none;
+  }
+  
+  /* Ajustement pour les graphiques */
+  .relative.w-40.h-40 {
+    width: 120px;
+    height: 120px;
+  }
+}
+
+@media (max-width: 576px) {
+  :root {
+    --dashboard-padding: 6px;
+    --card-padding: 10px;
+  }
+  
+  .dashboard-card {
+    padding: 10px;
+  }
+  
+  h2.text-xl {
+    font-size: 1rem;
+  }
+  
+  .text-3xl {
+    font-size: 1.5rem;
+  }
+  
+  .text-2xl {
+    font-size: 1.25rem;
+  }
+  
+  /* Ajustement pour les graphiques */
+  .relative.w-40.h-40 {
+    width: 100px;
+    height: 100px;
+  }
+}
