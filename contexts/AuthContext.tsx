@@ -58,30 +58,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const loadPartner = async (email: string) => {
     try {
-      console.log('Chargement du partenaire pour:', email);
-      console.log('Utilisateur actuel:', user);
-      
       // Attendre que l'utilisateur soit défini
       if (!user?.id) {
-        console.log('Utilisateur non encore défini, attente...');
         return;
       }
       
       // D'abord essayer de récupérer par l'ID de l'utilisateur
-      console.log('Tentative de récupération par ID utilisateur:', user.id);
       const { data, error } = await partnerService.getPartnerByUserId(user.id);
-      console.log('Résultat getPartnerByUserId:', { data, error });
       
       if (!error && data) {
-        console.log('Partenaire trouvé par ID:', data);
         setPartner(data);
         return;
       }
       
       // Si l'utilisateur est RH, chercher le partenaire par organisation
       if (user.organisation && user.poste?.toLowerCase().includes('rh')) {
-        console.log('Utilisateur RH détecté, recherche par organisation:', user.organisation);
-        
         // Récupérer le premier partenaire correspondant exactement à l'organisation
         const { data: orgData, error: orgError } = await supabase
           .from('partners')
@@ -90,7 +81,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .limit(1);
         
         if (orgData && orgData.length > 0) {
-          console.log('Partenaire trouvé par organisation pour RH:', orgData[0]);
           setPartner(orgData[0]);
           return;
         }
@@ -103,19 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .limit(1);
         
         if (partialData && partialData.length > 0) {
-          console.log('Partenaire trouvé par correspondance partielle pour RH:', partialData[0]);
           setPartner(partialData[0]);
           return;
         }
-        
-        console.log('Aucun partenaire trouvé pour l\'organisation RH:', user.organisation);
       }
       
       // Fallback: essayer par email seulement si c'est un email valide et si l'ID n'a pas fonctionné
       if (email && email.includes('@') && !email.includes('-')) {
-        console.log('Tentative de récupération par email:', email);
         const { data: emailData, error: emailError } = await partnerService.getPartnerByEmail(email);
-        console.log('Résultat getPartnerByEmail:', { data: emailData, error: emailError });
         
         if (emailError) {
           console.error('Erreur lors du chargement du partenaire:', emailError);
@@ -123,20 +108,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         if (emailData) {
-          console.log('Partenaire trouvé par email:', emailData);
           setPartner(emailData);
-        } else {
-          console.log('Aucun partenaire trouvé');
         }
       } else {
-        console.log('Email invalide ou UUID, impossible de récupérer par email:', email);
         // Si l'email est un UUID, essayer de récupérer le partenaire directement par l'ID
-        console.log('Tentative de récupération directe par ID utilisateur comme partenaire');
         const { data: directData, error: directError } = await partnerService.getPartnerById(user.id);
-        console.log('Résultat getPartnerById:', { data: directData, error: directError });
         
         if (!directError && directData) {
-          console.log('Partenaire trouvé directement par ID:', directData);
           setPartner(directData);
         }
       }

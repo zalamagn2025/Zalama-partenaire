@@ -100,8 +100,6 @@ export const partnerService = {
 // Service pour les employés
 export const employeeService = {
   async getEmployees(partnerId?: string) {
-    console.log('🔍 Recherche des employés pour le partenaire:', partnerId);
-    
     let query = supabase
       .from('employees')
       .select('*')
@@ -112,8 +110,6 @@ export const employeeService = {
     }
     
     const { data, error } = await query
-    console.log('🔍 Employés trouvés:', data?.length || 0);
-    console.log('🔍 Erreur employés:', error);
     return { data: data as Employee[], error }
   },
 
@@ -174,11 +170,8 @@ export const alertService = {
       .select('*')
       .order('date_creation', { ascending: false })
     
-    if (partnerId) {
-      // Pour l'instant, récupérer toutes les alertes
-      // car la table n'a pas de lien direct avec les partenaires
-      console.log('Recherche d\'alertes pour le partenaire:', partnerId);
-    }
+    // Pour l'instant, récupérer toutes les alertes
+    // car la table n'a pas de lien direct avec les partenaires
     
     const { data, error } = await query
     return { data: data as Alert[], error }
@@ -207,8 +200,6 @@ export const alertService = {
 // Service pour les transactions financières
 export const financialService = {
   async getTransactions(partnerId?: string) {
-    console.log('🔍 Récupération des transactions financières pour le partenaire:', partnerId);
-    
     let query = supabase
       .from('financial_transactions')
       .select(`
@@ -231,17 +222,14 @@ export const financialService = {
     const { data, error } = await query;
 
     if (error) {
-      console.error('❌ Erreur lors de la récupération des transactions:', error);
+      console.error('Erreur lors de la récupération des transactions:', error);
       return { data: null, error };
     }
 
-    console.log('✅ Transactions récupérées:', data?.length || 0);
     return { data, error: null };
   },
 
   async getFinancialStats(partnerId?: string) {
-    console.log('🔍 Récupération des statistiques financières pour le partenaire:', partnerId);
-    
     let query = supabase
       .from('financial_transactions')
       .select('montant, type, statut');
@@ -254,7 +242,7 @@ export const financialService = {
     const { data, error } = await query;
 
     if (error) {
-      console.error('❌ Erreur lors de la récupération des statistiques:', error);
+      console.error('Erreur lors de la récupération des statistiques:', error);
       return { data: null, error };
     }
 
@@ -291,7 +279,6 @@ export const financialService = {
       });
     }
 
-    console.log('✅ Statistiques calculées:', stats);
     return { data: stats, error: null };
   }
 }
@@ -299,15 +286,12 @@ export const financialService = {
 // Service pour les messages
 export const messageService = {
   async getMessages(partnerId?: string) {
-    console.log('🔍 getMessages appelé avec partnerId:', partnerId);
-    
     let query = supabase
       .from('messages')
       .select('*')
       .order('date_envoi', { ascending: false })
     
     if (partnerId) {
-      console.log('🔍 Recherche des messages pour le partenaire:', partnerId);
       // Récupérer les messages des employés du partenaire
       const { data: employees, error: employeesError } = await supabase
         .from('employees')
@@ -315,16 +299,12 @@ export const messageService = {
         .eq('partner_id', partnerId)
         .eq('actif', true)
       
-      console.log('🔍 Employés trouvés pour les messages:', employees?.length || 0);
-      
       if (employees && employees.length > 0) {
         // Récupérer les utilisateurs correspondant aux employés
         const { data: users, error: usersError } = await supabase
           .from('users')
           .select('id')
           .in('email', employees.map(emp => emp.email).filter(Boolean))
-        
-        console.log('🔍 Utilisateurs trouvés pour les messages:', users?.length || 0);
         
         if (users && users.length > 0) {
           const userIds = users.map(user => user.id);
@@ -341,8 +321,6 @@ export const messageService = {
     }
     
     const { data, error } = await query
-    console.log('🔍 Messages trouvés:', data?.length || 0);
-    console.log('🔍 Erreur messages:', error);
     return { data: data as Message[], error }
   },
 
@@ -365,8 +343,6 @@ export const messageService = {
 // Service pour les avis
 export const avisService = {
   async getAvis(partnerId: string) {
-    console.log('🔍 Récupération des avis pour le partenaire:', partnerId);
-    
     const { data, error } = await supabase
       .from('avis')
       .select(`
@@ -383,11 +359,10 @@ export const avisService = {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('❌ Erreur lors de la récupération des avis:', error);
+      console.error('Erreur lors de la récupération des avis:', error);
       return { data: null, error };
     }
 
-    console.log('✅ Avis récupérés:', data?.length || 0);
     return { data, error: null };
   },
 
@@ -425,15 +400,12 @@ export const avisService = {
 // Service pour les demandes
 export const demandeService = {
   async getDemandes(partnerId?: string) {
-    console.log('🔍 getDemandes appelé avec partnerId:', partnerId);
-    
     let query = supabase
       .from('demandes')
       .select('*')
       .order('date_demande', { ascending: false })
     
     if (partnerId) {
-      console.log('🔍 Recherche des demandes pour le partenaire:', partnerId);
       // Récupérer les demandes des employés du partenaire
       const { data: employees, error: employeesError } = await supabase
         .from('employees')
@@ -441,16 +413,12 @@ export const demandeService = {
         .eq('partner_id', partnerId)
         .eq('actif', true)
       
-      console.log('🔍 Employés trouvés pour les demandes:', employees?.length || 0);
-      
       if (employees && employees.length > 0) {
         // Récupérer les utilisateurs correspondant aux employés
         const { data: users, error: usersError } = await supabase
           .from('users')
           .select('id')
           .in('email', employees.map(emp => emp.email).filter(Boolean))
-        
-        console.log('🔍 Utilisateurs trouvés pour les demandes:', users?.length || 0);
         
         if (users && users.length > 0) {
           const userIds = users.map(user => user.id);
@@ -466,8 +434,6 @@ export const demandeService = {
     }
     
     const { data, error } = await query
-    console.log('🔍 Demandes trouvées:', data?.length || 0);
-    console.log('🔍 Erreur demandes:', error);
     return { data: data as Demande[], error }
   },
 
@@ -545,8 +511,6 @@ export const demandeAvanceService = {
   },
 
   async getDemandesAvance(partnerId: string) {
-    console.log('🔍 Récupération des demandes d\'avance pour le partenaire:', partnerId);
-    
     const { data, error } = await supabase
       .from('salary_advance_requests')
       .select(`
@@ -563,11 +527,10 @@ export const demandeAvanceService = {
       .order('date_creation', { ascending: false });
 
     if (error) {
-      console.error('❌ Erreur lors de la récupération des demandes d\'avance:', error);
+      console.error('Erreur lors de la récupération des demandes d\'avance:', error);
       return { data: null, error };
     }
 
-    console.log('✅ Demandes d\'avance récupérées:', data?.length || 0);
     return { data, error: null };
   },
 

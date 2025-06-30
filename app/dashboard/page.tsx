@@ -50,7 +50,6 @@ export default function EntrepriseDashboardPage() {
   const { user, partner, loading } = useAuth();
   const router = useRouter();
   
-  console.log("le partenaire", partner); 
   // États pour les données dynamiques
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
