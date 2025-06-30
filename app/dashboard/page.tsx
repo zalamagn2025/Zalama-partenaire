@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Users, FileText, Star, BarChart2, CreditCard, Clock, AlertCircle, Download, Building2, MessageSquare, ThumbsUp, ClipboardList } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
+import PerformanceFinanciere from '@/components/dashboard/PerformanceFinanciere';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -49,6 +50,7 @@ export default function EntrepriseDashboardPage() {
   const { user, partner, loading } = useAuth();
   const router = useRouter();
   
+  console.log("le partenaire", partner); 
   // États pour les données dynamiques
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
@@ -160,7 +162,7 @@ export default function EntrepriseDashboardPage() {
   const activeEmployees = employees.filter(emp => emp.actif);
   const totalSalary = activeEmployees.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
   const totalTransactions = transactions.reduce((sum, trans) => sum + trans.montant, 0);
-  const unreadMessages = messages.filter(msg => !msg.lu && msg.destinataire_id === user?.id);
+  const unreadMessages = messages.filter(msg => !msg.lu && msg.destinataire === user?.id);
   const activeAlerts = alerts.filter(alert => alert.statut !== 'Résolue');
   const averageRating = avis.length > 0 ? avis.reduce((sum, av) => sum + av.note, 0) / avis.length : 0;
   const pendingDemandes = demandes.filter(dem => dem.statut === 'En attente');
@@ -313,6 +315,15 @@ export default function EntrepriseDashboardPage() {
         />
       </div>
 
+      {/* Section Performance Financière */}
+      {partner && (
+        <PerformanceFinanciere 
+          className="mt-6" 
+          totalTransactions={gnfFormatter(totalTransactions)} 
+          dateLimite={partner.date_adhesion || new Date().toISOString()} 
+        />
+      )}
+
       {/* Graphiques et visualisations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Évolution des demandes */}
@@ -448,7 +459,7 @@ export default function EntrepriseDashboardPage() {
           </h3>
           <div className="space-y-3">
             {messages.slice(0, 5).map((message) => (
-              <div key={message.id} className={`flex items-start space-x-3 p-3 rounded-lg ${
+              <div key={message.message_id} className={`flex items-start space-x-3 p-3 rounded-lg ${
                 !message.lu ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-gray-50 dark:bg-gray-700'
               }`}>
                 <MessageSquare className={`w-5 h-5 mt-0.5 ${
