@@ -39,18 +39,8 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
         console.error('Erreur lors du chargement des alertes:', alertsError);
       }
 
-      // Récupérer les messages adressés à ce partenaire (en utilisant le nom du partenaire)
-      const { data: messages, error: messagesError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('destinataire', session.partner.nom)
-        .eq('lu', false)
-        .order('date_envoi', { ascending: false })
-        .limit(10);
-
-      if (messagesError) {
-        console.error('Erreur lors du chargement des messages:', messagesError);
-      }
+      // Section messages supprimée - pas de messages
+      const messageNotifications: Notification[] = [];
 
       // Convertir les alertes en notifications
       const alertNotifications: Notification[] = (alerts || []).map((alert, index) => ({
@@ -62,17 +52,6 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
         timestamp: new Date(alert.date_creation),
         read: alert.statut === 'Résolue',
         link: `/dashboard/alertes`
-      }));
-
-      // Convertir les messages en notifications
-      const messageNotifications: Notification[] = (messages || []).map((message, index) => ({
-        id: alertNotifications.length + index + 1,
-        title: `Nouveau message: ${message.sujet}`,
-        message: message.contenu?.substring(0, 100) + '...' || '',
-        type: message.priorite?.toLowerCase() === 'urgente' ? 'warning' : 'info',
-        timestamp: new Date(message.date_envoi),
-        read: message.lu,
-        link: `/dashboard/messages`
       }));
 
       // Combiner toutes les notifications et les trier par date

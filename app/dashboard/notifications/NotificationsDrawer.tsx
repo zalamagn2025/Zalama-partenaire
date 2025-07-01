@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import { } from 'lucide-react';
-import { notificationsMock } from './notificationService';
+import { getNotifications } from './notificationService';
 import { Notification } from './types';
+import { useAuth } from '@/contexts/AuthContext';
 import NotificationHeader from './NotificationHeader';
 import NotificationList from './NotificationList';
 import NotificationFilters from './NotificationFilters';
@@ -15,9 +16,32 @@ interface NotificationsDrawerProps {
 }
 
 export default function NotificationsDrawer({ isOpen, onClose }: NotificationsDrawerProps) {
+  const { session } = useAuth();
   const drawerRef = useRef<HTMLDivElement>(null);
-  const [notifications, setNotifications] = React.useState<Notification[]>(notificationsMock);
+  const [notifications, setNotifications] = React.useState<Notification[]>([]);
   const [filter, setFilter] = React.useState<string>('all');
+  const [isLoading, setIsLoading] = React.useState(false);
+
+  // Charger les notifications depuis la base de données
+  useEffect(() => {
+    const loadNotifications = async () => {
+      if (!session?.partner?.id) return;
+      
+      setIsLoading(true);
+      try {
+        const notifications = await getNotifications(session.partner.id);
+        setNotifications(notifications);
+      } catch (error) {
+        console.error('Erreur lors du chargement des notifications:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isOpen && session?.partner?.id) {
+      loadNotifications();
+    }
+  }, [isOpen, session?.partner?.id]);
   
   // Fermer le drawer si on clique en dehors
   useEffect(() => {

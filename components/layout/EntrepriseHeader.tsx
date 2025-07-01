@@ -27,15 +27,11 @@ export default function EntrepriseHeader() {
         .select('*', { count: 'exact', head: true })
         .neq('statut', 'Résolue');
 
-      // Compter les messages non lus adressés à ce partenaire
-      const { count: messageCount, error: messageError } = await supabase
-        .from('messages')
-        .select('*', { count: 'exact', head: true })
-        .eq('destinataire', session.partner.nom)
-        .eq('lu', false);
+      // Section messages supprimée - pas de comptage
+      const messageCount = 0;
 
-      if (!alertError && !messageError) {
-        setUnreadCount((alertCount || 0) + (messageCount || 0));
+      if (!alertError) {
+        setUnreadCount((alertCount || 0) + messageCount);
       }
     } catch (error) {
       console.error('Erreur lors du chargement du nombre de notifications:', error);

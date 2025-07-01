@@ -1,25 +1,107 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar} from 'recharts';
+import { useAuth } from '@/contexts/AuthContext';
+import { PartnerDataService } from '@/lib/services';
+
+interface ChartData {
+  monthlyData: Array<{
+    name: string;
+    demandes: number;
+    remboursements: number;
+    revenus: number;
+  }>;
+  companiesData: Array<{
+    name: string;
+    value: number;
+  }>;
+}
 
 export default function GraphiquesVisualisations() {
-  // Données pour l'évolution mensuelle
-  const monthlyData = [
-    { name: 'Jan', demandes: 400, remboursements: 240, revenus: 100 },
-    { name: 'Fév', demandes: 300, remboursements: 180, revenus: 80 },
-    { name: 'Mar', demandes: 500, remboursements: 320, revenus: 120 },
-    { name: 'Avr', demandes: 450, remboursements: 300, revenus: 110 },
-    { name: 'Mai', demandes: 600, remboursements: 400, revenus: 140 },
-    { name: 'Juin', demandes: 550, remboursements: 380, revenus: 130 },
-  ];
+  const { session } = useAuth();
+  const [chartData, setChartData] = useState<ChartData>({
+    monthlyData: [],
+    companiesData: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Données pour les barres comparatives
-  const companiesData = [
-    { name: 'Acme Inc', value: 48 },
-    { name: 'Globex', value: 36 },
-    { name: 'Initech', value: 40 },
-    { name: 'Umbrella', value: 28 },
-    { name: 'Autres', value: 32 },
-  ];
+  useEffect(() => {
+    if (session?.partner) {
+      loadChartData();
+    }
+  }, [session?.partner]);
+
+  const loadChartData = async () => {
+    if (!session?.partner) return;
+
+    setIsLoading(true);
+    try {
+      const partnerService = new PartnerDataService(session.partner.id);
+      
+      // Récupérer les données financières pour les graphiques
+      const financialData = await partnerService.getFinancialTransactions();
+      const demandesData = await partnerService.getDemandesAvanceSalaire();
+      
+      // Calculer les données mensuelles
+      const monthlyData = calculateMonthlyData(financialData, demandesData);
+      
+      // Calculer les données comparatives (pour l'instant, on utilise les données du partenaire actuel)
+      const companiesData = [
+        { name: session.partner.nom, value: 100 }
+      ];
+
+      setChartData({ monthlyData, companiesData });
+    } catch (error) {
+      console.error('Erreur lors du chargement des données de graphiques:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const calculateMonthlyData = (financialData: any[], demandesData: any[]) => {
+    const monthlyStats: { [key: string]: { demandes: number; remboursements: number; revenus: number } } = {};
+    
+    // Initialiser les 6 derniers mois
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'];
+    months.forEach(month => {
+      monthlyStats[month] = { demandes: 0, remboursements: 0, revenus: 0 };
+    });
+
+    // Calculer les demandes par mois
+    demandesData.forEach(demande => {
+      const date = new Date(demande.date_demande || demande.created_at);
+      const monthKey = date.toLocaleDateString('fr-FR', { month: 'short' });
+      if (monthlyStats[monthKey]) {
+        monthlyStats[monthKey].demandes += 1;
+      }
+    });
+
+    // Calculer les transactions financières par mois
+    financialData.forEach(transaction => {
+      const date = new Date(transaction.date_transaction || transaction.created_at);
+      const monthKey = date.toLocaleDateString('fr-FR', { month: 'short' });
+      
+      if (monthlyStats[monthKey]) {
+        if (transaction.type === 'Récupéré') {
+          monthlyStats[monthKey].remboursements += Number(transaction.montant) || 0;
+        } else if (transaction.type === 'Revenu') {
+          monthlyStats[monthKey].revenus += Number(transaction.montant) || 0;
+        }
+      }
+    });
+
+    return months.map(month => ({
+      name: month,
+      ...monthlyStats[month]
+    }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-[var(--zalama-text-secondary)]">Chargement des graphiques...</div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -30,7 +112,7 @@ export default function GraphiquesVisualisations() {
           <div className="h-64 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={monthlyData}
+                data={chartData.monthlyData}
                 margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
@@ -65,11 +147,11 @@ export default function GraphiquesVisualisations() {
         </div>
         
         <div>
-          <h3 className="text-sm md:text-base font-medium mb-3 text-[var(--zalama-text)]">Barres comparatives</h3>
+          <h3 className="text-sm md:text-base font-medium mb-3 text-[var(--zalama-text)]">Activité du partenaire</h3>
           <div className="h-64 w-full mt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={companiesData}
+                data={chartData.companiesData}
                 margin={{ top: 5, right: 30, left: 0, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" opacity={0.1} vertical={false} />

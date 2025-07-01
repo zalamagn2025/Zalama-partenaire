@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { employeeService } from '@/lib/services';
 import type { Employee } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // Fonction pour formatter les dates
 const formatDate = (dateString: string) => {
@@ -52,92 +53,20 @@ export default function EmployesPage() {
     
     setIsLoading(true);
     try {
-      // Utiliser des données de test réalistes directement
-      const mockEmployees = [
-        {
-          id: '1',
-          partner_id: session.partner.id,
-          nom: 'Diallo',
-          prenom: 'Mamadou',
-          email: 'mamadou.diallo@' + session.partner.nom.toLowerCase().replace(/\s+/g, '') + '.com',
-          telephone: '+224 622 12 34 56',
-          poste: 'Développeur',
-          salaire_net: 2500000,
-          genre: 'Homme',
-          type_contrat: 'CDI',
-          date_embauche: '2023-01-15',
-          actif: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '2',
-          partner_id: session.partner.id,
-          nom: 'Bah',
-          prenom: 'Aissatou',
-          email: 'aissatou.bah@' + session.partner.nom.toLowerCase().replace(/\s+/g, '') + '.com',
-          telephone: '+224 622 34 56 78',
-          poste: 'Designer',
-          salaire_net: 2000000,
-          genre: 'Femme',
-          type_contrat: 'CDI',
-          date_embauche: '2023-03-20',
-          actif: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '3',
-          partner_id: session.partner.id,
-          nom: 'Sow',
-          prenom: 'Ousmane',
-          email: 'ousmane.sow@' + session.partner.nom.toLowerCase().replace(/\s+/g, '') + '.com',
-          telephone: '+224 622 56 78 90',
-          poste: 'Formateur',
-          salaire_net: 1800000,
-          genre: 'Homme',
-          type_contrat: 'CDD',
-          date_embauche: '2023-06-10',
-          actif: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '4',
-          partner_id: session.partner.id,
-          nom: 'Camara',
-          prenom: 'Fatoumata',
-          email: 'fatoumata.camara@' + session.partner.nom.toLowerCase().replace(/\s+/g, '') + '.com',
-          telephone: '+224 622 78 90 12',
-          poste: 'Comptable',
-          salaire_net: 2200000,
-          genre: 'Femme',
-          type_contrat: 'CDI',
-          date_embauche: '2022-11-05',
-          actif: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        },
-        {
-          id: '5',
-          partner_id: session.partner.id,
-          nom: 'Barry',
-          prenom: 'Ibrahima',
-          email: 'ibrahima.barry@' + session.partner.nom.toLowerCase().replace(/\s+/g, '') + '.com',
-          telephone: '+224 622 90 12 34',
-          poste: 'Commercial',
-          salaire_net: 1900000,
-          genre: 'Homme',
-          type_contrat: 'CDI',
-          date_embauche: '2023-02-01',
-          actif: false,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-      ] as any[];
+      const { data: employeesData, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('partner_id', session.partner.id)
+        .order('created_at', { ascending: false });
 
-      setEmployees(mockEmployees);
-      setFilteredEmployees(mockEmployees);
+      if (error) {
+        console.error('Erreur lors du chargement des employés:', error);
+        toast.error('Erreur lors du chargement des employés');
+        return;
+      }
+
+      setEmployees(employeesData || []);
+      setFilteredEmployees(employeesData || []);
 
     } catch (error) {
       console.error('Erreur lors du chargement des employés:', error);
@@ -244,6 +173,11 @@ export default function EmployesPage() {
     document.body.removeChild(link);
     
     toast.success('Export CSV réussi');
+  };
+
+  // Gérer le changement de page
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   // Si en cours de chargement, afficher un état de chargement

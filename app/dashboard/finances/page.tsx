@@ -6,7 +6,7 @@ import { Euro, TrendingUp, TrendingDown, Filter, Download, Printer, Users, Calen
 import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/dashboard/StatCard';
 import { toast } from 'sonner';
-import { dashboardService } from '@/lib/services';
+import { dashboardService, PartnerDataService } from '@/lib/services';
 import { financialServiceFixed } from '@/lib/services_fixed';
 import type { FinancialTransaction, Employee, FinancialTransactionWithEmployee } from '@/lib/supabase';
 import { 
@@ -62,95 +62,11 @@ export default function FinancesPage() {
     
     setIsLoading(true);
     try {
-      // Utiliser des données de test réalistes directement (identiques au dashboard)
-      const mockTransactions = [
-        { 
-          transaction_id: 1001, 
-          montant: 2500000, 
-          type: 'debloque', 
-          statut: 'Validé', 
-          description: 'Avance sur salaire - Janvier 2024', 
-          date_transaction: '2024-01-15', 
-          partenaire_id: session.partner.id,
-          employe_id: '1',
-          reference: 'REF-001',
-          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          transaction_id: 1002, 
-          montant: 1800000, 
-          type: 'debloque', 
-          statut: 'Validé', 
-          description: 'Avance sur salaire - Février 2024', 
-          date_transaction: '2024-02-10', 
-          partenaire_id: session.partner.id,
-          employe_id: '2',
-          reference: 'REF-002',
-          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          transaction_id: 1003, 
-          montant: 3200000, 
-          type: 'debloque', 
-          statut: 'Validé', 
-          description: 'Avance sur salaire - Mars 2024', 
-          date_transaction: '2024-03-05', 
-          partenaire_id: session.partner.id,
-          employe_id: '3',
-          reference: 'REF-003',
-          employees: { nom: 'Sow', prenom: 'Ousmane', poste: 'Formateur' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          transaction_id: 1004, 
-          montant: 2100000, 
-          type: 'recupere', 
-          statut: 'Validé', 
-          description: 'Remboursement - Mars 2024', 
-          date_transaction: '2024-03-25', 
-          partenaire_id: session.partner.id,
-          employe_id: '2',
-          reference: 'REF-004',
-          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          transaction_id: 1005, 
-          montant: 4500000, 
-          type: 'debloque', 
-          statut: 'Validé', 
-          description: 'Avance sur salaire - Avril 2024', 
-          date_transaction: '2024-04-12', 
-          partenaire_id: session.partner.id,
-          employe_id: '1',
-          reference: 'REF-005',
-          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        },
-        { 
-          transaction_id: 1006, 
-          montant: 1200000, 
-          type: 'recupere', 
-          statut: 'En attente', 
-          description: 'Remboursement en cours - Avril 2024', 
-          date_transaction: '2024-04-20', 
-          partenaire_id: session.partner.id,
-          employe_id: '3',
-          reference: 'REF-006',
-          employees: { nom: 'Sow', prenom: 'Ousmane', poste: 'Formateur' },
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
-        }
-      ] as any[];
-
-      setTransactions(mockTransactions);
+      // Utiliser le service pour récupérer les vraies données
+      const partnerService = new PartnerDataService(session.partner.id);
+      const transactions = await partnerService.getFinancialTransactions();
+      
+      setTransactions(transactions);
 
     } catch (error) {
       console.error('Erreur lors du chargement des données financières:', error);

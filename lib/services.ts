@@ -577,4 +577,320 @@ export const demandeAvanceService = {
 
     return { error };
   }
-}; 
+};
+
+// Service pour récupérer les données dynamiques du partenaire connecté
+export class PartnerDataService {
+  private partnerId: string;
+
+  constructor(partnerId: string) {
+    this.partnerId = partnerId;
+  }
+
+  // Récupérer les employés du partenaire
+  async getEmployees(): Promise<Employee[]> {
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('*')
+        .eq('partner_id', this.partnerId)
+        .eq('actif', true)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des employés:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des employés:', error);
+      return [];
+    }
+  }
+
+  // Récupérer les transactions financières du partenaire
+  async getFinancialTransactions(): Promise<FinancialTransaction[]> {
+    try {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select(`
+          *,
+          employees (
+            id,
+            nom,
+            prenom,
+            poste
+          )
+        `)
+        .eq('partenaire_id', this.partnerId)
+        .order('date_transaction', { ascending: false });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des transactions:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des transactions:', error);
+      return [];
+    }
+  }
+
+  // Récupérer les alertes du partenaire
+  async getAlerts(): Promise<Alert[]> {
+    try {
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('assigne_a', this.partnerId)
+        .order('date_creation', { ascending: false });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des alertes:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des alertes:', error);
+      return [];
+    }
+  }
+
+  // Récupérer les avis des employés du partenaire
+  async getAvis(): Promise<Avis[]> {
+    try {
+      const { data, error } = await supabase
+        .from('avis')
+        .select(`
+          *,
+          employees!avis_employee_id_fkey (
+            id,
+            nom,
+            prenom,
+            poste
+          )
+        `)
+        .eq('partner_id', this.partnerId)
+        .order('date_avis', { ascending: false });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des avis:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des avis:', error);
+      return [];
+    }
+  }
+
+  // Récupérer les demandes d'avance de salaire du partenaire
+  async getSalaryAdvanceRequests(): Promise<SalaryAdvanceRequest[]> {
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select(`
+          *,
+          employees!salary_advance_requests_employe_id_fkey (
+            id,
+            nom,
+            prenom,
+            poste
+          )
+        `)
+        .eq('partenaire_id', this.partnerId)
+        .order('date_creation', { ascending: false });
+
+      if (error) {
+        console.error('Erreur lors de la récupération des demandes:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Erreur lors de la récupération des demandes:', error);
+      return [];
+    }
+  }
+
+  // Récupérer les statistiques du partenaire
+  async getPartnerStats() {
+    try {
+      const [employees, transactions, alerts, avis, demandes] = await Promise.all([
+        this.getEmployees(),
+        this.getFinancialTransactions(),
+        this.getAlerts(),
+        this.getAvis(),
+        this.getSalaryAdvanceRequests()
+      ]);
+
+      // Calculer les statistiques
+      const totalEmployees = employees.length;
+      const totalTransactions = transactions.length;
+      const totalAlerts = alerts.length;
+      const totalAvis = avis.length;
+      const totalDemandes = demandes.length;
+
+      // Calculer le montant total des transactions
+      const totalAmount = transactions.reduce((sum, transaction) => {
+        return sum + (transaction.montant || 0);
+      }, 0);
+
+      // Calculer les demandes en cours
+      const pendingDemandes = demandes.filter(d => d.statut === 'En attente').length;
+
+      // Calculer les avis positifs
+      const positiveAvis = avis.filter(a => a.type_retour === 'positif').length;
+      const averageRating = avis.length > 0 
+        ? avis.reduce((sum, avis) => sum + avis.note, 0) / avis.length 
+        : 0;
+
+      return {
+        totalEmployees,
+        totalTransactions,
+        totalAlerts,
+        totalAvis,
+        totalDemandes,
+        totalAmount,
+        pendingDemandes,
+        positiveAvis,
+        averageRating: Math.round(averageRating * 10) / 10
+      };
+    } catch (error) {
+      console.error('Erreur lors du calcul des statistiques:', error);
+      return {
+        totalEmployees: 0,
+        totalTransactions: 0,
+        totalAlerts: 0,
+        totalAvis: 0,
+        totalDemandes: 0,
+        totalAmount: 0,
+        pendingDemandes: 0,
+        positiveAvis: 0,
+        averageRating: 0
+      };
+    }
+  }
+
+  // Récupérer les données pour les graphiques
+  async getChartData() {
+    try {
+      const [transactions, demandes] = await Promise.all([
+        this.getFinancialTransactions(),
+        this.getSalaryAdvanceRequests()
+      ]);
+
+      // Données mensuelles pour les transactions
+      const monthlyTransactions = this.groupByMonth(transactions, 'date_transaction');
+      
+      // Données mensuelles pour les demandes
+      const monthlyDemandes = this.groupByMonth(demandes, 'date_creation');
+
+      // Répartition par type de transaction
+      const transactionTypes = this.groupByType(transactions, 'type');
+
+      return {
+        monthlyTransactions,
+        monthlyDemandes,
+        transactionTypes
+      };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des données graphiques:', error);
+      return {
+        monthlyTransactions: [],
+        monthlyDemandes: [],
+        transactionTypes: []
+      };
+    }
+  }
+
+  // Fonction utilitaire pour grouper par mois
+  private groupByMonth(data: any[], dateField: string) {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const grouped = {};
+
+    data.forEach(item => {
+      const date = new Date(item[dateField]);
+      const monthKey = months[date.getMonth()];
+      
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = 0;
+      }
+      grouped[monthKey]++;
+    });
+
+    return months.map(month => ({
+      name: month,
+      value: grouped[month] || 0
+    }));
+  }
+
+  // Fonction utilitaire pour grouper par type
+  private groupByType(data: any[], typeField: string) {
+    const grouped = {};
+
+    data.forEach(item => {
+      const type = item[typeField];
+      if (!grouped[type]) {
+        grouped[type] = 0;
+      }
+      grouped[type]++;
+    });
+
+    return Object.entries(grouped).map(([type, count]) => ({
+      name: type,
+      value: count
+    }));
+  }
+}
+
+// Service pour les notifications (remplace les données mock)
+export class NotificationService {
+  static async getNotifications(partnerId: string) {
+    try {
+      // Récupérer les alertes récentes comme notifications
+      const { data: alerts, error } = await supabase
+        .from('alerts')
+        .select('*')
+        .eq('assigne_a', partnerId)
+        .order('date_creation', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error('Erreur lors de la récupération des notifications:', error);
+        return [];
+      }
+
+      // Convertir les alertes en format notification
+      return (alerts || []).map(alert => ({
+        id: alert.id,
+        title: alert.titre,
+        message: alert.description || '',
+        type: this.mapAlertTypeToNotificationType(alert.type),
+        timestamp: new Date(alert.date_creation),
+        read: alert.statut === 'Résolue',
+        link: `/dashboard/alertes`
+      }));
+    } catch (error) {
+      console.error('Erreur lors de la récupération des notifications:', error);
+      return [];
+    }
+  }
+
+  private static mapAlertTypeToNotificationType(alertType: string): 'info' | 'warning' | 'error' | 'success' {
+    switch (alertType) {
+      case 'Critique':
+        return 'error';
+      case 'Importante':
+        return 'warning';
+      case 'Information':
+        return 'info';
+      default:
+        return 'info';
+    }
+  }
+} 

@@ -5,7 +5,7 @@ import { FileText, CheckCircle, Clock, AlertCircle, Search, Filter, Calendar, Do
 import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/dashboard/StatCard';
 import { toast } from 'sonner';
-import { demandeAvanceService } from '@/lib/services';
+import { demandeAvanceService, PartnerDataService } from '@/lib/services';
 import type { SalaryAdvanceRequest, Employee } from '@/lib/supabase';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
@@ -41,101 +41,11 @@ export default function DemandesPage() {
       
       setLoading(true);
       try {
-        // Utiliser des données de test réalistes directement
-        const mockDemandes = [
-          {
-            id: '1',
-            employe_id: '1',
-            partenaire_id: session.partner.id,
-            montant_demande: 1500000,
-            type_motif: 'Urgence médicale',
-            motif: 'Hospitalisation d\'urgence - frais médicaux',
-            statut: 'En attente',
-            date_creation: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            date_traitement: null,
-            commentaire_validation: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
-          },
-          {
-            id: '2',
-            employe_id: '2',
-            partenaire_id: session.partner.id,
-            montant_demande: 2000000,
-            type_motif: 'Loyer',
-            motif: 'Paiement urgent du loyer mensuel',
-            statut: 'En attente',
-            date_creation: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-            date_traitement: null,
-            commentaire_validation: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
-          },
-          {
-            id: '3',
-            employe_id: '3',
-            partenaire_id: session.partner.id,
-            montant_demande: 800000,
-            type_motif: 'Éducation',
-            motif: 'Frais scolaires pour les enfants',
-            statut: 'Validé',
-            date_creation: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-            date_traitement: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-            commentaire_validation: 'Demande approuvée - motif valide',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Sow', prenom: 'Ousmane', poste: 'Formateur' }
-          },
-          {
-            id: '4',
-            employe_id: '4',
-            partenaire_id: session.partner.id,
-            montant_demande: 1200000,
-            type_motif: 'Transport',
-            motif: 'Achat de moto pour le transport au travail',
-            statut: 'Validé',
-            date_creation: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
-            date_traitement: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
-            commentaire_validation: 'Demande approuvée après vérification',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Camara', prenom: 'Fatoumata', poste: 'Comptable' }
-          },
-          {
-            id: '5',
-            employe_id: '1',
-            partenaire_id: session.partner.id,
-            montant_demande: 3000000,
-            type_motif: 'Urgence familiale',
-            motif: 'Frais funéraires - urgence familiale',
-            statut: 'Rejeté',
-            date_creation: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-            date_traitement: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString(),
-            commentaire_validation: 'Montant trop élevé par rapport au salaire',
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
-          },
-          {
-            id: '6',
-            employe_id: '2',
-            partenaire_id: session.partner.id,
-            montant_demande: 900000,
-            type_motif: 'Santé',
-            motif: 'Achat de médicaments et consultation médicale',
-            statut: 'En cours',
-            date_creation: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            date_traitement: null,
-            commentaire_validation: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
-          }
-        ] as any[];
-
-        setDemandesAvance(mockDemandes);
+        // Utiliser le service pour récupérer les vraies données
+        const partnerService = new PartnerDataService(session.partner.id);
+        const demandes = await partnerService.getSalaryAdvanceRequests();
+        
+        setDemandesAvance(demandes);
 
       } catch (error) {
         console.error('Erreur lors du chargement des demandes:', error);

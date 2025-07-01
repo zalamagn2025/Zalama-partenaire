@@ -8,6 +8,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import { toast } from 'sonner';
 import { avisServiceFixed as avisService } from '@/lib/services_fixed';
 import type { Avis, Employee } from '@/lib/supabase';
+import { PartnerDataService } from '@/lib/services';
 import { 
   LineChart, 
   Line, 
@@ -30,129 +31,25 @@ const avisCategories = [
   { id: "general", label: "Général" },
 ];
 
-// Données fictives pour les avis
-const avisData = [
-  { 
-    id: "AVIS-2025-001", 
-    titre: "Expérience positive avec l'avance sur salaire", 
-    description: "J'ai pu obtenir une avance sur salaire rapidement quand j'en avais besoin. Le processus était simple et efficace.", 
-    date: "15/05/2025", 
-    categorie: "service",
-    note: 5,
-    employe: "Jean Dupont",
-    departement: "Marketing",
-    likes: 8,
-    dislikes: 0,
-    commentaires: 2
-  },
-  { 
-    id: "AVIS-2025-002", 
-    titre: "Interface utilisateur intuitive", 
-    description: "L'application est très facile à utiliser, même pour quelqu'un qui n'est pas à l'aise avec la technologie.", 
-    date: "12/05/2025", 
-    categorie: "application",
-    note: 4,
-    employe: "Sophie Martin",
-    departement: "Ressources Humaines",
-    likes: 5,
-    dislikes: 1,
-    commentaires: 3
-  },
-  { 
-    id: "AVIS-2025-003", 
-    titre: "Support réactif", 
-    description: "J'ai eu un problème avec ma demande et l'équipe de support a répondu très rapidement. Problème résolu en moins d'une heure.", 
-    date: "10/05/2025", 
-    categorie: "support",
-    note: 5,
-    employe: "Thomas Petit",
-    departement: "Comptabilité",
-    likes: 12,
-    dislikes: 0,
-    commentaires: 1
-  },
-  { 
-    id: "AVIS-2025-004", 
-    titre: "Suggestion d'amélioration pour les notifications", 
-    description: "Il serait utile d'avoir des notifications plus détaillées concernant le statut des demandes. Parfois, je ne sais pas exactement où en est ma demande.", 
-    date: "05/05/2025", 
-    categorie: "application",
-    note: 3,
-    employe: "Emma Leroy",
-    departement: "Développement",
-    likes: 15,
-    dislikes: 2,
-    commentaires: 4
-  },
-  { 
-    id: "AVIS-2025-005", 
-    titre: "Excellente initiative", 
-    description: "Je trouve que ce service est une excellente initiative de la part de l'entreprise. Cela montre qu'elle se soucie du bien-être financier de ses employés.", 
-    date: "01/05/2025", 
-    categorie: "general",
-    note: 5,
-    employe: "Lucas Moreau",
-    departement: "Ventes",
-    likes: 20,
-    dislikes: 0,
-    commentaires: 5
-  },
-  { 
-    id: "AVIS-2025-006", 
-    titre: "Délai de traitement parfois long", 
-    description: "J'ai remarqué que certaines demandes prennent plus de temps que prévu à être traitées. Ce serait bien d'avoir une estimation plus précise du temps de traitement.", 
-    date: "28/04/2025", 
-    categorie: "service",
-    note: 3,
-    employe: "Chloé Dubois",
-    departement: "Marketing",
-    likes: 7,
-    dislikes: 3,
-    commentaires: 2
-  },
-  { 
-    id: "AVIS-2025-007", 
-    titre: "Fonctionnalité de prêt P2P très utile", 
-    description: "La fonctionnalité de prêt P2P est très utile pour les projets personnels. J'ai pu financer ma formation professionnelle grâce à cela.", 
-    date: "25/04/2025", 
-    categorie: "service",
-    note: 5,
-    employe: "Antoine Bernard",
-    departement: "Ressources Humaines",
-    likes: 18,
-    dislikes: 1,
-    commentaires: 3
-  },
-  { 
-    id: "AVIS-2025-008", 
-    titre: "Application parfois lente", 
-    description: "J'ai remarqué que l'application est parfois lente à charger, surtout aux heures de pointe. Ce serait bien d'améliorer les performances.", 
-    date: "20/04/2025", 
-    categorie: "application",
-    note: 3,
-    employe: "Julie Robert",
-    departement: "Développement",
-    likes: 9,
-    dislikes: 4,
-    commentaires: 2
-  }
-];
+// Données pour le graphique d'évolution des notes (calculées dynamiquement)
+const getEvolutionNotesData = (avis: AvisWithEmployee[]) => {
+  const monthlyData: { [key: string]: number[] } = {};
+  
+  avis.forEach(avis => {
+    const date = new Date(avis.date_avis || avis.created_at || '');
+    const monthKey = date.toLocaleDateString('fr-FR', { month: 'short' });
+    
+    if (!monthlyData[monthKey]) {
+      monthlyData[monthKey] = [];
+    }
+    monthlyData[monthKey].push(avis.note);
+  });
 
-// Données pour le graphique d'évolution des notes
-const evolutionNotesData = [
-  { mois: 'Jan', note: 4.2 },
-  { mois: 'Fév', note: 4.3 },
-  { mois: 'Mar', note: 4.1 },
-  { mois: 'Avr', note: 4.4 },
-  { mois: 'Mai', note: 4.5 },
-  { mois: 'Juin', note: 4.3 },
-  { mois: 'Juil', note: 4.2 },
-  { mois: 'Août', note: 4.0 },
-  { mois: 'Sep', note: 4.1 },
-  { mois: 'Oct', note: 4.3 },
-  { mois: 'Nov', note: 4.4 },
-  { mois: 'Déc', note: 4.6 },
-];
+  return Object.entries(monthlyData).map(([mois, notes]) => ({
+    mois,
+    note: notes.reduce((sum, note) => sum + note, 0) / notes.length
+  }));
+};
 
 
 
@@ -193,77 +90,12 @@ export default function AvisPage() {
     
     setIsLoading(true);
     try {
-      // Utiliser des données de test réalistes directement
-      const mockAvis = [
-        { 
-          id: '1', 
-          employee_id: '1', 
-          partner_id: session.partner.id, 
-          note: 5, 
-          commentaire: 'Service excellent, traitement rapide des demandes d\'avance', 
-          type_retour: 'positif', 
-          date_avis: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), 
-          approuve: true, 
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString(),
-          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
-        },
-        { 
-          id: '2', 
-          employee_id: '2', 
-          partner_id: session.partner.id, 
-          note: 4, 
-          commentaire: 'Très satisfait du service client et de la rapidité', 
-          type_retour: 'positif', 
-          date_avis: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), 
-          approuve: true, 
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString(),
-          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
-        },
-        { 
-          id: '3', 
-          employee_id: '3', 
-          partner_id: session.partner.id, 
-          note: 5, 
-          commentaire: 'Interface utilisateur intuitive et processus simplifié', 
-          type_retour: 'positif', 
-          date_avis: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), 
-          approuve: true, 
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString(),
-          employees: { nom: 'Sow', prenom: 'Ousmane', poste: 'Formateur' }
-        },
-        { 
-          id: '4', 
-          employee_id: '1', 
-          partner_id: session.partner.id, 
-          note: 4, 
-          commentaire: 'Bon service, quelques améliorations possibles sur les délais', 
-          type_retour: 'constructif', 
-          date_avis: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), 
-          approuve: true, 
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString(),
-          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
-        },
-        { 
-          id: '5', 
-          employee_id: '2', 
-          partner_id: session.partner.id, 
-          note: 5, 
-          commentaire: 'Système fiable et équipe support réactive', 
-          type_retour: 'positif', 
-          date_avis: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(), 
-          approuve: true, 
-          created_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString(),
-          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
-        }
-      ] as any[];
-
-      setAvis(mockAvis);
-      setFilteredAvis(mockAvis);
+      // Utiliser le service pour récupérer les vraies données
+      const partnerService = new PartnerDataService(session.partner.id);
+      const avis = await partnerService.getAvis();
+      
+      setAvis(avis);
+      setFilteredAvis(avis);
 
     } catch (error) {
       console.error('Erreur lors du chargement des avis:', error);
@@ -272,6 +104,7 @@ export default function AvisPage() {
       setIsLoading(false);
     }
   };
+
 
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
@@ -384,7 +217,7 @@ export default function AvisPage() {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
-                data={evolutionNotesData}
+                data={getEvolutionNotesData(avis)}
                 margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--zalama-border)" />
