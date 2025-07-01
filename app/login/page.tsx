@@ -117,7 +117,7 @@ export default function LoginPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Se connecter</CardTitle>
+            <CardTitle className='text-center text-2xl font-bold'>Connexion</CardTitle>
             <CardDescription>
               Utilisez vos identifiants administrateur pour accéder au dashboard
             </CardDescription>
@@ -167,7 +167,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <Alert>
+              <Alert className='mt-4'>
                 <Shield className="h-4 w-4" />
                 <AlertDescription>
                   <p>Seuls les utilisateurs avec les rôles <strong>RH</strong> ou <strong>Responsable</strong> peuvent accéder au dashboard.</p>
@@ -175,7 +175,7 @@ export default function LoginPage() {
               </Alert>
             </CardContent>
             
-            <CardFooter className="flex flex-col space-y-4">
+            <CardFooter className="flex flex-col space-y-4 mt-4">
               <Button
                 type="submit"
                 className="w-full"
@@ -194,21 +194,6 @@ export default function LoginPage() {
                 )}
               </Button>
               
-              <div className="text-center space-y-2">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Pour la démo, cliquez sur le bouton ci-dessous pour créer des utilisateurs de test.
-                </p>
-                <div className="mt-2">
-                  <button
-                    type="button"
-                    onClick={createTestUsers}
-                    disabled={isLoading}
-                    className="text-blue-600 dark:text-blue-400 hover:text-blue-500 underline"
-                  >
-                    Créer les utilisateurs de test
-                  </button>
-                </div>
-              </div>
             </CardFooter>
           </form>
         </Card>
