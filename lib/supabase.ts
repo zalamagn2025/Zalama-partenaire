@@ -408,7 +408,7 @@ export async function createTestData() {
           
           if (userData) {
             avis.push({
-              user_id: userData.id,
+              employee_id: employee.id,
               partner_id: employee.partner_id,
               note: Math.floor(Math.random() * 3) + 3, // Note entre 3 et 5
               commentaire: [
@@ -418,6 +418,7 @@ export async function createTestData() {
                 'Très content du support reçu.',
                 'Service de qualité, je recommande.'
               ][Math.floor(Math.random() * 5)],
+              type_retour: Math.random() > 0.5 ? 'positif' : 'negatif',
               date_avis: new Date().toISOString(),
               approuve: true,
               created_at: new Date().toISOString(),
@@ -812,10 +813,11 @@ export interface Message {
 
 export interface Avis {
   id: string
-  user_id: string
+  employee_id: string
   partner_id: string
   note: number
   commentaire?: string
+  type_retour?: 'positif' | 'negatif'
   date_avis: string
   approuve: boolean
   created_at: string

@@ -1,671 +1,653 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useParams } from 'next/navigation';
-import {User, Lock, Shield, Palette, Moon, Sun, Save, X, Trash, Download, CheckCircle, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Palette, Moon, Sun, Save, Mail, Phone, Building, Calendar, MapPin, Edit3, Camera, Lock, Eye, EyeOff } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 export default function ParametresPage() {
-  // Utiliser useParams pour récupérer le slug de l'URL
-  const params = useParams();
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const slug = params.slug as string;
-  
-  
-  // Utiliser le contexte de thème global
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<string>('apparence');
-  
+  const { session } = useAuth();
+  const [activeTab, setActiveTab] = useState<string>('profil');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [profileData, setProfileData] = useState({
+    nom: '',
+    email: '',
+    telephone: '',
+    poste: '',
+    display_name: ''
+  });
+  const [partnerData, setPartnerData] = useState({
+    nom: '',
+    secteur: '',
+    adresse: '',
+    telephone: '',
+    email: '',
+    description: '',
+    date_adhesion: '',
+    ville: '',
+    pays: ''
+  });
+
+  // Charger les données de session au montage
+  useEffect(() => {
+    if (session?.admin) {
+      setProfileData({
+        nom: session.admin.display_name || '',
+        email: session.admin.email || '',
+        telephone: '',  // Pas de propriété téléphone dans AdminUser
+        poste: session.admin.role || '',
+        display_name: session.admin.display_name || ''
+      });
+    }
+    if (session?.partner) {
+      setPartnerData({
+        nom: session.partner.nom || '',
+        secteur: session.partner.secteur || '',
+        adresse: session.partner.adresse || '',
+        telephone: session.partner.telephone || '',
+        email: session.partner.email || '',
+        description: session.partner.description || '',
+        date_adhesion: session.partner.date_adhesion || '',
+        ville: session.partner.adresse || '',
+        pays: 'Guinée'
+      });
+    }
+  }, [session]);
+
+  const handleProfileSave = async () => {
+    try {
+      // TODO: Implémenter la sauvegarde des données de profil
+      toast.success('Profil mis à jour avec succès');
+      setIsEditingProfile(false);
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde du profil');
+    }
+  };
+
+  const handlePartnerSave = async () => {
+    try {
+      // TODO: Implémenter la sauvegarde des données partenaire
+      toast.success('Informations de l\'entreprise mises à jour');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      toast.error('Erreur lors de la sauvegarde');
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast.error('Les mots de passe ne correspondent pas');
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast.error('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      // Mettre à jour le mot de passe avec Supabase
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Mot de passe changé avec succès');
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (error: any) {
+      console.error('Erreur lors du changement de mot de passe:', error);
+      toast.error(error.message || 'Erreur lors du changement de mot de passe');
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Non définie';
+    return new Date(dateString).toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
   return (
-    <div className="flex flex-col gap-6">
-      
+    <div className="p-6 space-y-6">
+      {/* En-tête */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Paramètres
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            Gérez votre profil et les paramètres de votre entreprise
+          </p>
+        </div>
+      </div>
+
       {/* Onglets de paramètres */}
-      <div className="flex flex-wrap gap-2 border-b border-[var(--zalama-border)] pb-2 pt-4">
+      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         <button 
           onClick={() => setActiveTab('profil')}
-          className={`px-4 py-2 rounded-lg ${activeTab === 'profil' ? 'bg-[var(--zalama-blue)] text-white' : 'hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]'} flex items-center gap-2`}
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'profil' 
+              ? 'bg-blue-600 text-white' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+          } flex items-center gap-2`}
         >
           <User className="w-4 h-4" />
           <span>Profil</span>
         </button>
         <button 
           onClick={() => setActiveTab('securite')}
-          className={`px-4 py-2 rounded-lg ${activeTab === 'securite' ? 'bg-[var(--zalama-blue)] text-white' : 'hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]'} flex items-center gap-2`}
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'securite' 
+              ? 'bg-blue-600 text-white' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+          } flex items-center gap-2`}
         >
           <Lock className="w-4 h-4" />
           <span>Sécurité</span>
         </button>
-
-        <button 
-          onClick={() => setActiveTab('confidentialite')}
-          className={`px-4 py-2 rounded-lg ${activeTab === 'confidentialite' ? 'bg-[var(--zalama-blue)] text-white' : 'hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]'} flex items-center gap-2`}
-        >
-          <Shield className="w-4 h-4" />
-          <span>Confidentialité</span>
-        </button>
         <button 
           onClick={() => setActiveTab('apparence')}
-          className={`px-4 py-2 rounded-lg ${activeTab === 'apparence' ? 'bg-[var(--zalama-blue)] text-white' : 'hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]'} flex items-center gap-2`}
+          className={`px-4 py-2 rounded-lg transition-colors ${
+            activeTab === 'apparence' 
+              ? 'bg-blue-600 text-white' 
+              : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'
+          } flex items-center gap-2`}
         >
           <Palette className="w-4 h-4" />
           <span>Apparence</span>
         </button>
-       
       </div>
       
-      {/* Contenu des paramètres - Affichage conditionnel selon l'onglet actif */}
+      {/* Contenu des paramètres */}
       {activeTab === 'profil' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Colonne de gauche - Informations de profil */}
-          <div className="lg:col-span-2">
-          <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-            <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-6">Informations de l&apos;entreprise</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Profil personnel */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Mon Profil
+              </h2>
+              <button
+                onClick={() => setIsEditingProfile(!isEditingProfile)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+              >
+                <Edit3 className="w-4 h-4" />
+                {isEditingProfile ? 'Annuler' : 'Modifier'}
+              </button>
+            </div>
+
+            {/* Photo de profil */}
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="relative">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {session?.admin?.display_name?.charAt(0) || 'U'}
+                </div>
+                {isEditingProfile && (
+                  <button className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-full hover:bg-blue-700 transition-colors">
+                    <Camera className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  {session?.admin?.display_name || 'Utilisateur'}
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {session?.admin?.role || 'Rôle non défini'} • {session?.partner?.nom}
+                </p>
+              </div>
+            </div>
             
             <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Nom de l&apos;entreprise</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                    defaultValue="Entreprise XYZ"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Identifiant</label>
-                  <input 
-                    type="text" 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                    defaultValue={params.slug}
-                    disabled
-                  />
-                </div>
-              </div>
-              
               <div>
-                <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Email de contact</label>
-                <input 
-                  type="email" 
-                  className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  defaultValue="contact@entreprisexyz.com"
-                />
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Téléphone</label>
-                  <input 
-                    type="tel" 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                    defaultValue="01 23 45 67 89"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Site web</label>
-                  <input 
-                    type="url" 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                    defaultValue="https://www.entreprisexyz.com"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Adresse</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom complet
+                </label>
                 <input 
                   type="text" 
-                  className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  defaultValue="123 Rue de l'Exemple, 75000 Paris"
+                  value={profileData.nom}
+                  onChange={(e) => setProfileData({...profileData, nom: e.target.value})}
+                  disabled={!isEditingProfile}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Description</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom d'affichage
+                </label>
+                <input 
+                  type="text" 
+                  value={profileData.display_name}
+                  onChange={(e) => setProfileData({...profileData, display_name: e.target.value})}
+                  disabled={!isEditingProfile}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="email" 
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                    disabled={!isEditingProfile}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Téléphone
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="tel" 
+                    value={profileData.telephone}
+                    onChange={(e) => setProfileData({...profileData, telephone: e.target.value})}
+                    disabled={!isEditingProfile}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Poste
+                </label>
+                <input 
+                  type="text" 
+                  value={profileData.poste}
+                  onChange={(e) => setProfileData({...profileData, poste: e.target.value})}
+                  disabled={!isEditingProfile}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                />
+              </div>
+              
+              {isEditingProfile && (
+                <div className="flex gap-3 pt-4">
+                  <button
+                    onClick={handleProfileSave}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    Sauvegarder
+                  </button>
+                  <button
+                    onClick={() => setIsEditingProfile(false)}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Informations de l'entreprise */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+              Informations de l'entreprise
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Nom de l'entreprise
+                </label>
+                <div className="relative">
+                  <Building className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="text" 
+                    value={partnerData.nom}
+                    onChange={(e) => setPartnerData({...partnerData, nom: e.target.value})}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Secteur d'activité
+                </label>
+                <select 
+                  value={partnerData.secteur}
+                  onChange={(e) => setPartnerData({...partnerData, secteur: e.target.value})}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                >
+                  <option value="">Sélectionner un secteur</option>
+                  <option value="Technologie">Technologie</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Santé">Santé</option>
+                  <option value="Éducation">Éducation</option>
+                  <option value="Commerce">Commerce</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Transport">Transport</option>
+                  <option value="Autre">Autre</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email de l'entreprise
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="email" 
+                    value={partnerData.email}
+                    onChange={(e) => setPartnerData({...partnerData, email: e.target.value})}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Téléphone de l'entreprise
+                </label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="tel" 
+                    value={partnerData.telephone}
+                    onChange={(e) => setPartnerData({...partnerData, telephone: e.target.value})}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Adresse
+                </label>
+                <div className="relative">
+                  <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <input 
+                    type="text" 
+                    value={partnerData.adresse}
+                    onChange={(e) => setPartnerData({...partnerData, adresse: e.target.value})}
+                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Ville
+                  </label>
+                  <input 
+                    type="text" 
+                    value={partnerData.ville}
+                    onChange={(e) => setPartnerData({...partnerData, ville: e.target.value})}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Pays
+                  </label>
+                  <input 
+                    type="text" 
+                    value={partnerData.pays}
+                    onChange={(e) => setPartnerData({...partnerData, pays: e.target.value})}
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
                 <textarea 
-                  className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] min-h-[100px]"
-                  defaultValue="Entreprise XYZ est spécialisée dans le développement de solutions innovantes pour les professionnels du secteur..."
+                  value={partnerData.description}
+                  onChange={(e) => setPartnerData({...partnerData, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Décrivez votre entreprise..."
                 />
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Secteur d&apos;activité</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="tech">Technologie</option>
-                    <option value="finance">Finance</option>
-                    <option value="sante">Santé</option>
-                    <option value="education">Éducation</option>
-                    <option value="commerce">Commerce</option>
-                    <option value="autre">Autre</option>
-                  </select>
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Date d'adhésion: {formatDate(partnerData.date_adhesion)}</span>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Taille de l&apos;entreprise</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="1-10">1-10 employés</option>
-                    <option value="11-50">11-50 employés</option>
-                    <option value="51-200">51-200 employés</option>
-                    <option value="201-500">201-500 employés</option>
-                    <option value="501+">501+ employés</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6 mt-6">
-            <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-6">Paramètres régionaux</h2>
-            
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Langue</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                    <option value="es">Español</option>
-                    <option value="de">Deutsch</option>
-                    <option value="it">Italiano</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Fuseau horaire</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="europe/paris">Europe/Paris (UTC+01:00)</option>
-                    <option value="europe/london">Europe/London (UTC+00:00)</option>
-                    <option value="america/new_york">America/New_York (UTC-05:00)</option>
-                    <option value="asia/tokyo">Asia/Tokyo (UTC+09:00)</option>
-                    <option value="australia/sydney">Australia/Sydney (UTC+10:00)</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Format de date</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="dd/mm/yyyy">JJ/MM/AAAA</option>
-                    <option value="mm/dd/yyyy">MM/JJ/AAAA</option>
-                    <option value="yyyy-mm-dd">AAAA-MM-JJ</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Devise</label>
-                  <select 
-                    className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                  >
-                    <option value="eur">Euro (GNF)</option>
-                    <option value="usd">Dollar américain ($)</option>
-                    <option value="gbp">Livre sterling (£)</option>
-                    <option value="jpy">Yen japonais (¥)</option>
-                    <option value="cad">Dollar canadien (C$)</option>
-                  </select>
-                </div>
+                <button
+                  onClick={handlePartnerSave}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Sauvegarder les modifications
+                </button>
               </div>
             </div>
           </div>
         </div>
-        
-        {/* Colonne de droite - Photo et paramètres rapides */}
-        <div>
-          <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-            <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-6">Logo et apparence</h2>
-            
-            <div className="flex flex-col items-center mb-6">
-              <div className="w-32 h-32 rounded-lg bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] flex items-center justify-center mb-4">
-                <span className="text-3xl font-bold text-[var(--zalama-blue)]">XYZ</span>
-              </div>
-              <button className="px-4 py-2 rounded-lg bg-[var(--zalama-blue)] text-white text-sm">
-                Changer le logo
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="flex items-center justify-between text-sm font-medium text-[var(--zalama-text)] mb-1">
-                  <span>Thème</span>
-                  <div className="flex items-center gap-2">
-                    <Sun className="w-4 h-4 text-amber-500" />
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                    <Moon className="w-4 h-4 text-indigo-400" />
-                  </div>
-                </label>
-              </div>
-              
-              <div>
-                <label className="flex items-center justify-between text-sm font-medium text-[var(--zalama-text)] mb-1">
-                  <span>Couleur principale</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-blue-600 border border-[var(--zalama-border)] cursor-pointer"></div>
-                    <div className="w-6 h-6 rounded-full bg-purple-600 border border-[var(--zalama-border)] cursor-pointer"></div>
-                    <div className="w-6 h-6 rounded-full bg-green-600 border border-[var(--zalama-border)] cursor-pointer"></div>
-                    <div className="w-6 h-6 rounded-full bg-amber-600 border border-[var(--zalama-border)] cursor-pointer"></div>
-                    <div className="w-6 h-6 rounded-full bg-red-600 border border-[var(--zalama-border)] cursor-pointer"></div>
-                  </div>
-                </label>
-              </div>
-              
-              <div className="pt-4 border-t border-[var(--zalama-border)]">
-                <h3 className="text-sm font-medium text-[var(--zalama-text)] mb-3">Paramètres rapides</h3>
-                
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between text-sm text-[var(--zalama-text)]/80">
-                    <span>Notifications par email</span>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center justify-between text-sm text-[var(--zalama-text)]/80">
-                    <span>Notifications push</span>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center justify-between text-sm text-[var(--zalama-text)]/80">
-                    <span>Profil public</span>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform"></span>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center justify-between text-sm text-[var(--zalama-text)]/80">
-                    <span>Authentification à deux facteurs</span>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       )}
-      
-       {/* Boutons d'action */}
-      <div className="flex justify-end gap-3 mt-4">
-        <button className="px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] flex items-center gap-2">
-          <X className="w-4 h-4" />
-          <span>Annuler</span>
-        </button>
-        <button className="px-4 py-2 rounded-lg bg-[var(--zalama-blue)] text-white flex items-center gap-2">
-          <Save className="w-4 h-4" />
-          <span>Enregistrer les modifications</span>
-        </button>
-      </div>
 
-      {/* Contenu des onglets */}
-      <div className="bg-[var(--zalama-card)] rounded-lg p-6 shadow-sm">
-        {activeTab === 'profil' && (
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--zalama-text)] mb-4">Profil de l&apos;entreprise</h2>
-            <p className="text-[var(--zalama-text)]/70 mb-6">Gérez les informations de votre entreprise {params.slug}.</p>
-            {/* Contenu du profil */}
-          </div>
-        )}
-
-        {activeTab === 'apparence' && (
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--zalama-text)] mb-4">Apparence</h2>
-            <p className="text-[var(--zalama-text)]/70 mb-6">Personnalisez l&apos;apparence de votre tableau de bord pour une expérience sur mesure.</p>
+      {activeTab === 'securite' && (
+        <div className="max-w-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+              Sécurité du compte
+            </h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Thème */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6 overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-bl-full -z-10"></div>
-                
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4 flex items-center gap-2">
-                  <Palette className="w-5 h-5 text-[var(--zalama-blue)]" />
-                  <span>Thème</span>
-                </h3>
-                
-                <p className="text-sm text-[var(--zalama-text)]/70 mb-6">Choisissez entre le mode clair et le mode sombre pour votre tableau de bord.</p>
-                
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <button 
-                    onClick={toggleTheme}
-                    className={`flex-1 flex items-center justify-center p-6 rounded-xl border transition-all hover:shadow-md ${theme === 'light' ? 'border-[var(--zalama-blue)] bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 shadow-sm' : 'border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]'}`}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${theme === 'light' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'bg-[var(--zalama-bg-light)]'}`}>
-                        <Sun className="w-6 h-6" />
-                      </div>
-                      <span className="text-sm font-medium text-[var(--zalama-text)]">Mode Clair</span>
-                      {theme === 'light' && <span className="text-xs text-[var(--zalama-blue)] mt-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Actif</span>}
-                    </div>
-                  </button>
-                  
-                  <button 
-                    onClick={toggleTheme}
-                    className={`flex-1 flex items-center justify-center p-6 rounded-xl border transition-all hover:shadow-md ${theme === 'dark' ? 'border-[var(--zalama-blue)] bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 shadow-sm' : 'border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]'}`}
-                  >
-                    <div className="flex flex-col items-center">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 ${theme === 'dark' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-[var(--zalama-bg-light)]'}`}>
-                        <Moon className="w-6 h-6" />
-                      </div>
-                      <span className="text-sm font-medium text-[var(--zalama-text)]">Mode Sombre</span>
-                      {theme === 'dark' && <span className="text-xs text-[var(--zalama-blue)] mt-1 flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Actif</span>}
-                    </div>
-                  </button>
-                </div>
-              </div>
-              
-              {/* Couleurs d'accent */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6 overflow-hidden relative">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-500/10 to-blue-500/10 rounded-bl-full -z-10"></div>
-                
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[var(--zalama-blue)]" />
-                  <span>Couleur d'accent</span>
-                </h3>
-                
-                <p className="text-sm text-[var(--zalama-text)]/70 mb-6">Personnalisez la couleur principale de votre interface.</p>
-                
-                <div className="grid grid-cols-5 gap-3">
-                  <button className="aspect-square rounded-full bg-blue-500 border-4 border-white dark:border-gray-800 shadow-sm hover:scale-110 transition-transform"></button>
-                  <button className="aspect-square rounded-full bg-indigo-500 border-2 border-white dark:border-gray-800 hover:scale-110 transition-transform"></button>
-                  <button className="aspect-square rounded-full bg-purple-500 border-2 border-white dark:border-gray-800 hover:scale-110 transition-transform"></button>
-                  <button className="aspect-square rounded-full bg-green-500 border-2 border-white dark:border-gray-800 hover:scale-110 transition-transform"></button>
-                  <button className="aspect-square rounded-full bg-amber-500 border-2 border-white dark:border-gray-800 hover:scale-110 transition-transform"></button>
-                </div>
-                
-                <div className="mt-6">
-                  <h4 className="text-sm font-medium text-[var(--zalama-text)] mb-3">Prévisualisation</h4>
-                  <div className="flex gap-3">
-                    <button className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm">Bouton principal</button>
-                    <button className="px-4 py-2 rounded-lg border border-blue-500 text-blue-500 dark:text-blue-400 text-sm">Bouton secondaire</button>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Densité de l'interface */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Densité de l'interface</h3>
-                <p className="text-sm text-[var(--zalama-text)]/70 mb-4">Ajustez l'espacement des éléments de l'interface.</p>
-                
-                <div className="space-y-4">
-                  <label className="flex items-center gap-3 p-3 rounded-lg border border-[var(--zalama-border)] cursor-pointer">
-                    <input type="radio" name="density" className="w-4 h-4 accent-[var(--zalama-blue)]" defaultChecked />
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Confortable</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Espacement standard pour une meilleure lisibilité</p>
-                    </div>
-                  </label>
-                  
-                  <label className="flex items-center gap-3 p-3 rounded-lg border border-[var(--zalama-border)] cursor-pointer">
-                    <input type="radio" name="density" className="w-4 h-4 accent-[var(--zalama-blue)]" />
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Compact</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Espacement réduit pour afficher plus d'informations</p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-              
-              {/* Animations */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Animations</h3>
-                <p className="text-sm text-[var(--zalama-text)]/70 mb-4">Contrôlez les animations et les transitions de l'interface.</p>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Animations de l'interface</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Activer les animations lors des transitions</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Animations des graphiques</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Activer les animations dans les graphiques</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Mode réduit pour les performances</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Réduire les animations pour améliorer les performances</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform"></span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-end mt-8">
-              <button className="px-6 py-2 rounded-lg bg-[var(--zalama-blue)] text-white flex items-center gap-2 hover:bg-blue-600 transition-colors">
-                <Save className="w-4 h-4" />
-                <span>Enregistrer les préférences</span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'securite' && (
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--zalama-text)] mb-4">Sécurité</h2>
-            <p className="text-[var(--zalama-text)]/70 mb-6">Gérez les paramètres de sécurité de votre compte et modifiez votre mot de passe.</p>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-6">
               {/* Changement de mot de passe */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Changer votre mot de passe</h3>
+              <div>
+                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                  Changer le mot de passe
+                </h3>
+                
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Mot de passe actuel</label>
-                    <input 
-                      type="password" 
-                      className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                      placeholder="••••••••"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Nouveau mot de passe
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <input 
+                        type={showNewPassword ? "text" : "password"}
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                        placeholder="Entrez votre nouveau mot de passe"
+                        className="w-full pl-10 pr-12 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
+                  
                   <div>
-                    <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Nouveau mot de passe</label>
-                    <input 
-                      type="password" 
-                      className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                      placeholder="••••••••"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Confirmer le nouveau mot de passe
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <input 
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                        placeholder="Confirmez votre nouveau mot de passe"
+                        className="w-full pl-10 pr-12 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-[var(--zalama-text)]/70 mb-1">Confirmer le nouveau mot de passe</label>
-                    <input 
-                      type="password" 
-                      className="w-full px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  <div className="pt-2">
-                    <button className="px-4 py-2 rounded-lg bg-[var(--zalama-blue)] text-white flex items-center gap-2">
-                      <Save className="w-4 h-4" />
-                      <span>Mettre à jour le mot de passe</span>
+                  
+                  <div className="pt-4">
+                    <button
+                      onClick={handlePasswordChange}
+                      disabled={isChangingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {isChangingPassword ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                      {isChangingPassword ? 'Changement...' : 'Changer le mot de passe'}
                     </button>
                   </div>
                 </div>
               </div>
-              
-              {/* Authentification à deux facteurs */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Authentification à deux facteurs</h3>
-                <p className="text-[var(--zalama-text)]/70 mb-4">Renforcez la sécurité de votre compte en activant l'authentification à deux facteurs.</p>
-                
-                <div className="flex items-center justify-between mb-6">
-                  <span className="text-sm font-medium text-[var(--zalama-text)]">Statut</span>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">Activé</span>
-                </div>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Application d'authentification</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Utilisez Google Authenticator, Microsoft Authenticator ou une autre application similaire.</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
+
+              {/* Informations de sécurité */}
+              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
+                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                  Informations de sécurité
+                </h3>
+                <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Lock className="w-4 h-4" />
+                    <span>Dernière connexion: {session?.admin?.last_login ? formatDate(session.admin.last_login) : 'Non disponible'}</span>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">SMS</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Recevez un code par SMS sur votre téléphone mobile.</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform"></span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    <span>Rôle: {session?.admin?.role || 'Non défini'}</span>
                   </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Email</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Recevez un code par email.</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform"></span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Compte créé: {session?.admin?.created_at ? formatDate(session.admin.created_at) : 'Non disponible'}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Conseils de sécurité */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
+                  Conseils de sécurité
+                </h4>
+                <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
+                  <li>• Utilisez un mot de passe d'au moins 8 caractères</li>
+                  <li>• Incluez des lettres, chiffres et caractères spéciaux</li>
+                  <li>• Ne partagez jamais vos identifiants</li>
+                  <li>• Changez votre mot de passe régulièrement</li>
+                </ul>
+              </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {activeTab === 'notifications' && (
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--zalama-text)] mb-4">Notifications</h2>
-            <p className="text-[var(--zalama-text)]/70 mb-6">Gérez vos préférences de notifications.</p>
-            {/* Contenu des notifications */}
-          </div>
-        )}
-
-        {activeTab === 'confidentialite' && (
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--zalama-text)] mb-4">Confidentialité</h2>
-            <p className="text-[var(--zalama-text)]/70 mb-6">Gérez vos paramètres de confidentialité et contrôlez vos données.</p>
+      {activeTab === 'apparence' && (
+        <div className="max-w-2xl">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
+              Préférences d'apparence
+            </h2>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Paramètres de confidentialité */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Paramètres de confidentialité</h3>
-                
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Profil public</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Permettre aux autres entreprises de voir votre profil</p>
+            <div className="space-y-6">
+              {/* Thème */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                  Mode d'affichage
+                </label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => theme === 'dark' && toggleTheme()}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === 'light'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-yellow-100 rounded-lg">
+                        <Sun className="w-5 h-5 text-yellow-600" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-gray-900 dark:text-white">Clair</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Thème lumineux</div>
+                      </div>
                     </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </div>
+                  </button>
                   
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Partage des statistiques</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Partager vos statistiques anonymisées pour améliorer nos services</p>
+                  <button
+                    onClick={() => theme === 'light' && toggleTheme()}
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      theme === 'dark'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-800 rounded-lg">
+                        <Moon className="w-5 h-5 text-gray-100" />
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-gray-900 dark:text-white">Sombre</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">Thème sombre</div>
+                      </div>
                     </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Historique des activités</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Conserver l'historique de vos activités sur la plateforme</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" defaultChecked />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-[var(--zalama-blue)] rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform before:translate-x-5"></span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="text-sm font-medium text-[var(--zalama-text)]">Cookies de suivi</h4>
-                      <p className="text-xs text-[var(--zalama-text)]/70">Autoriser les cookies de suivi pour personnaliser votre expérience</p>
-                    </div>
-                    <div className="relative inline-block w-10 h-5">
-                      <input type="checkbox" className="opacity-0 w-0 h-0" />
-                      <span className="absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 rounded-full before:absolute before:h-4 before:w-4 before:left-0.5 before:bottom-0.5 before:bg-white before:rounded-full before:transition-transform"></span>
-                    </div>
-                  </div>
+                  </button>
                 </div>
               </div>
-              
-              {/* Gestion des données */}
-              <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-                <h3 className="text-lg font-medium text-[var(--zalama-text)] mb-4">Gestion des données</h3>
-                
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-sm font-medium text-[var(--zalama-text)] mb-2">Exporter vos données</h4>
-                    <p className="text-xs text-[var(--zalama-text)]/70 mb-3">Téléchargez une copie de toutes vos données stockées sur notre plateforme.</p>
-                    <button className="px-4 py-2 rounded-lg bg-[var(--zalama-bg-light)] border border-[var(--zalama-border)] text-[var(--zalama-text)] text-sm flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      <span>Exporter les données</span>
-                    </button>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-[var(--zalama-text)] mb-2">Supprimer l'historique</h4>
-                    <p className="text-xs text-[var(--zalama-text)]/70 mb-3">Effacer l'historique de vos activités sur la plateforme.</p>
-                    <button className="px-4 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 dark:bg-amber-900/20 dark:border-amber-700/30 dark:text-amber-400 text-sm flex items-center gap-2">
-                      <X className="w-4 h-4" />
-                      <span>Effacer l'historique</span>
-                    </button>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-[var(--zalama-text)] mb-2">Supprimer le compte</h4>
-                    <p className="text-xs text-[var(--zalama-text)]/70 mb-3">Supprimer définitivement votre compte et toutes vos données.</p>
-                    <button className="px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-700/30 dark:text-red-400 text-sm flex items-center gap-2">
-                      <Trash className="w-4 h-4" />
-                      <span>Supprimer le compte</span>
-                    </button>
-                  </div>
+
+              {/* Informations sur le thème actuel */}
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                  <Palette className="w-5 h-5" />
+                  <span className="font-medium">Thème actuel: {theme === 'light' ? 'Clair' : 'Sombre'}</span>
                 </div>
+                <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
+                  Votre choix est automatiquement sauvegardé et synchronisé sur tous vos appareils.
+                </p>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

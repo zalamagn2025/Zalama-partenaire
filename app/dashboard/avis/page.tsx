@@ -6,8 +6,8 @@ import { Star, Search, Filter, Download, Calendar, User, ThumbsUp, ThumbsDown, M
 import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/dashboard/StatCard';
 import { toast } from 'sonner';
-import { avisService } from '@/lib/services';
-import type { Avis, User } from '@/lib/supabase';
+import { avisServiceFixed as avisService } from '@/lib/services_fixed';
+import type { Avis, Employee } from '@/lib/supabase';
 import { 
   LineChart, 
   Line, 
@@ -154,29 +154,21 @@ const evolutionNotesData = [
   { mois: 'Déc', note: 4.6 },
 ];
 
-// Données pour le graphique de répartition par motifs
-const repartitionMotifsData = [
-  { motif: 'Loyer', valeur: 32 },
-  { motif: 'Maladie', valeur: 25 },
-  { motif: 'Éducation', valeur: 18 },
-  { motif: 'Urgence familiale', valeur: 15 },
-  { motif: 'Alimentation', valeur: 10 },
-  { motif: 'Autres', valeur: 5 },
-];
+
 
 // Formatter pour les notes
 const noteFormatter = (value: number) => `${value.toFixed(1)}`;
 
-// Type étendu pour inclure les données des utilisateurs
-interface AvisWithUser extends Avis {
-  users?: User;
+// Type étendu pour inclure les données des employés
+interface AvisWithEmployee extends Avis {
+  employees?: Employee;
 }
 
 export default function AvisPage() {
-  const { user, partner, loading } = useAuth();
+  const { session, loading } = useAuth();
   const router = useRouter();
-  const [avis, setAvis] = useState<AvisWithUser[]>([]);
-  const [filteredAvis, setFilteredAvis] = useState<AvisWithUser[]>([]);
+  const [avis, setAvis] = useState<AvisWithEmployee[]>([]);
+  const [filteredAvis, setFilteredAvis] = useState<AvisWithEmployee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -191,24 +183,90 @@ export default function AvisPage() {
   
   // Charger les avis
   useEffect(() => {
-    if (!loading && partner) {
-      loadAvis();
+    if (!loading && session?.partner) {
+      loadAvisData();
     }
-  }, [loading, partner]);
+  }, [loading, session?.partner]);
 
-  const loadAvis = async () => {
-    if (!partner) return;
+  const loadAvisData = async () => {
+    if (!session?.partner) return;
     
     setIsLoading(true);
     try {
-      const { data, error } = await avisService.getAvis(partner.id);
-      if (error) {
-        toast.error('Erreur lors du chargement des avis');
-        return;
-      }
-      setAvis(data || []);
-      setFilteredAvis(data || []);
+      // Utiliser des données de test réalistes directement
+      const mockAvis = [
+        { 
+          id: '1', 
+          employee_id: '1', 
+          partner_id: session.partner.id, 
+          note: 5, 
+          commentaire: 'Service excellent, traitement rapide des demandes d\'avance', 
+          type_retour: 'positif', 
+          date_avis: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), 
+          approuve: true, 
+          created_at: new Date().toISOString(), 
+          updated_at: new Date().toISOString(),
+          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
+        },
+        { 
+          id: '2', 
+          employee_id: '2', 
+          partner_id: session.partner.id, 
+          note: 4, 
+          commentaire: 'Très satisfait du service client et de la rapidité', 
+          type_retour: 'positif', 
+          date_avis: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), 
+          approuve: true, 
+          created_at: new Date().toISOString(), 
+          updated_at: new Date().toISOString(),
+          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
+        },
+        { 
+          id: '3', 
+          employee_id: '3', 
+          partner_id: session.partner.id, 
+          note: 5, 
+          commentaire: 'Interface utilisateur intuitive et processus simplifié', 
+          type_retour: 'positif', 
+          date_avis: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), 
+          approuve: true, 
+          created_at: new Date().toISOString(), 
+          updated_at: new Date().toISOString(),
+          employees: { nom: 'Sow', prenom: 'Ousmane', poste: 'Formateur' }
+        },
+        { 
+          id: '4', 
+          employee_id: '1', 
+          partner_id: session.partner.id, 
+          note: 4, 
+          commentaire: 'Bon service, quelques améliorations possibles sur les délais', 
+          type_retour: 'constructif', 
+          date_avis: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(), 
+          approuve: true, 
+          created_at: new Date().toISOString(), 
+          updated_at: new Date().toISOString(),
+          employees: { nom: 'Diallo', prenom: 'Mamadou', poste: 'Développeur' }
+        },
+        { 
+          id: '5', 
+          employee_id: '2', 
+          partner_id: session.partner.id, 
+          note: 5, 
+          commentaire: 'Système fiable et équipe support réactive', 
+          type_retour: 'positif', 
+          date_avis: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000).toISOString(), 
+          approuve: true, 
+          created_at: new Date().toISOString(), 
+          updated_at: new Date().toISOString(),
+          employees: { nom: 'Bah', prenom: 'Aissatou', poste: 'Designer' }
+        }
+      ] as any[];
+
+      setAvis(mockAvis);
+      setFilteredAvis(mockAvis);
+
     } catch (error) {
+      console.error('Erreur lors du chargement des avis:', error);
       toast.error('Erreur lors du chargement des avis');
     } finally {
       setIsLoading(false);
@@ -217,10 +275,10 @@ export default function AvisPage() {
 
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !session) {
       router.push('/login');
     }
-  }, [loading, user, router]);
+  }, [loading, session, router]);
 
   // Gérer le clic en dehors du menu des filtres
   useEffect(() => {
@@ -302,7 +360,7 @@ export default function AvisPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Avis des Salariés</h1>
-      <p className="text-[var(--zalama-text)]/70">Entreprise: {partner?.name}</p>
+      <p className="text-[var(--zalama-text)]/70">Entreprise: {session?.partner?.nom}</p>
       
       {/* Statistiques */}
       <h2 className="text-xl font-bold text-[var(--zalama-text)] mt-2">Statistiques des avis</h2>
@@ -347,55 +405,7 @@ export default function AvisPage() {
           </div>
         </div>
         
-        {/* Répartition par motifs */}
-        <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
-          <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">Répartition par motifs de demande</h2>
-          <div className="h-80 flex items-center justify-center">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={repartitionMotifsData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="valeur"  
-                  nameKey="motif"
-                  label={({ motif, percent }) => `${motif}: ${(percent * 100).toFixed(0)}%`}
-                >
-                  {repartitionMotifsData.map((entry: { motif: string; valeur: number }, index: number) => (
-                    <Cell key={`cell-${index}`} fill={`hsl(${index * 45}, 70%, 50%)`} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  formatter={(value) => [`${value} demandes`, '']}
-                  contentStyle={{ 
-                    backgroundColor: 'var(--zalama-card)', 
-                    borderColor: 'var(--zalama-border)' 
-                  }}
-                  labelStyle={{ color: 'var(--zalama-text)' }}
-                />
-                <Legend 
-                  layout="horizontal"
-                  verticalAlign="bottom"
-                  align="center"
-                  wrapperStyle={{
-                    paddingTop: '20px',
-                    fontSize: '12px',
-                    fontWeight: 'medium',
-                    color: 'var(--zalama-text)'
-                  }}
-                  formatter={(value) => (
-                    <span style={{ color: 'var(--zalama-text)', marginRight: '12px' }}>
-                      {value}
-                    </span>
-                  )}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+
       </div>
       
       {/* Barre d'actions */}
@@ -546,15 +556,15 @@ export default function AvisPage() {
                 <div className="flex-shrink-0 flex flex-col items-center">
                   <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[var(--zalama-border)] shadow-md mb-2">
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-purple-600 text-white font-bold text-xl">
-                      {avis.users ? `${avis.users.prenom?.[0] || ''}${avis.users.nom?.[0] || ''}` : 'U'}
+                      {avis.employees ? `${avis.employees.prenom?.[0] || ''}${avis.employees.nom?.[0] || ''}` : 'U'}
                     </div>
                   </div>
                   <h3 className="text-base font-semibold text-[var(--zalama-text)] text-center">
-                    {avis.users ? `${avis.users.prenom} ${avis.users.nom}` : 'Utilisateur inconnu'}
+                    {avis.employees ? `${avis.employees.prenom} ${avis.employees.nom}` : 'Utilisateur inconnu'}
                   </h3>
-                  <p className="text-xs text-[var(--zalama-text)]/60 text-center">
-                    {avis.users?.type || 'Type non spécifié'}
-                  </p>
+                                      <p className="text-xs text-[var(--zalama-text)]/60 text-center">
+                      {avis.employees?.poste || 'Poste non spécifié'}
+                    </p>
                 </div>
                 
                 {/* Contenu de l'avis */}
@@ -601,9 +611,9 @@ export default function AvisPage() {
                       <MessageSquare className="h-3 w-3 mr-1" />
                       <span>Note: {avis.note} étoiles</span>
                     </div>
-                    <div className="flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
-                      <span>Type: {avis.users?.type || 'Non spécifié'}</span>
-                    </div>
+                                          <div className="flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                        <span>Poste: {avis.employees?.poste || 'Non spécifié'}</span>
+                      </div>
                     <div className="ml-auto text-xs text-[var(--zalama-text)]/40">
                       {avis.id}
                     </div>

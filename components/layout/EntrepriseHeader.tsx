@@ -1,18 +1,64 @@
 "use client";
 import { Bell, Sun, Moon, LogOut, User } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
 import NotificationDrawer from '../../components/dashboard/notifications/NotificationDrawer';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 export default function EntrepriseHeader() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { session, signOut } = useAuth();
+  
+  // Charger le nombre de notifications non lues
+  const loadUnreadCount = async () => {
+    if (!session?.partner?.id) return;
+    
+    try {
+      // Compter les alertes non résolues (sans filtrage par partenaire car la colonne n'existe pas)
+      const { count: alertCount, error: alertError } = await supabase
+        .from('alerts')
+        .select('*', { count: 'exact', head: true })
+        .neq('statut', 'Résolue');
+
+      // Compter les messages non lus adressés à ce partenaire
+      const { count: messageCount, error: messageError } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('destinataire', session.partner.nom)
+        .eq('lu', false);
+
+      if (!alertError && !messageError) {
+        setUnreadCount((alertCount || 0) + (messageCount || 0));
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement du nombre de notifications:', error);
+    }
+  };
+
+  // Charger le nombre au montage et quand la session change
+  useEffect(() => {
+    if (session?.partner?.id) {
+      loadUnreadCount();
+    }
+  }, [session?.partner?.id]);
+
+  // Recharger toutes les 30 secondes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (session?.partner?.id) {
+        loadUnreadCount();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [session?.partner?.id]);
   
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {
@@ -65,7 +111,7 @@ export default function EntrepriseHeader() {
           >
             <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors" />
             <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-500/70 opacity-75"></span>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">5</span>
+            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">{unreadCount}</span>
           </button>
           <button
             onClick={toggleTheme}

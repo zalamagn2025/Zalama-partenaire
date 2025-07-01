@@ -252,6 +252,7 @@ export const financialService = {
       total_recupere: 0,
       total_revenus: 0,
       total_remboursements: 0,
+      total_commissions: 0,
       total_transactions: data?.length || 0,
       montant_moyen: 0
     };
@@ -262,18 +263,31 @@ export const financialService = {
 
       data.forEach(transaction => {
         const montant = Number(transaction.montant);
-        switch (transaction.type) {
-          case 'Débloqué':
-            stats.total_debloque += montant;
+        switch (transaction.type.toLowerCase()) {
+          case 'debloque':
+            if (transaction.statut === 'Validé') {
+              stats.total_debloque += montant;
+            }
             break;
-          case 'Récupéré':
-            stats.total_recupere += montant;
+          case 'recupere':
+            if (transaction.statut === 'Validé') {
+              stats.total_recupere += montant;
+            }
             break;
-          case 'Revenu':
-            stats.total_revenus += montant;
+          case 'revenu':
+            if (transaction.statut === 'Validé') {
+              stats.total_revenus += montant;
+            }
             break;
-          case 'Remboursement':
-            stats.total_remboursements += montant;
+          case 'remboursement':
+            if (transaction.statut === 'Validé') {
+              stats.total_remboursements += montant;
+            }
+            break;
+          case 'commission':
+            if (transaction.statut === 'Validé') {
+              stats.total_commissions += montant;
+            }
             break;
         }
       });
@@ -347,12 +361,12 @@ export const avisService = {
       .from('avis')
       .select(`
         *,
-        users (
+        employees (
           id,
           nom,
           prenom,
           email,
-          type
+          poste
         )
       `)
       .eq('partner_id', partnerId)
