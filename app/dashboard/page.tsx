@@ -47,7 +47,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function EntrepriseDashboardPage() {
-  const { user, partner, loading } = useAuth();
+  const { session, loading } = useAuth();
   const router = useRouter();
   
   // États pour les données dynamiques
@@ -62,13 +62,13 @@ export default function EntrepriseDashboardPage() {
 
   // Charger les données au montage du composant
   useEffect(() => {
-    if (!loading && partner) {
+    if (!loading && session?.partner) {
       loadDashboardData();
     }
-  }, [loading, partner]);
+  }, [loading, session?.partner]);
 
   const loadDashboardData = async () => {
-    if (!partner) return;
+    if (!session?.partner) return;
     
     setIsLoading(true);
     try {
@@ -81,12 +81,12 @@ export default function EntrepriseDashboardPage() {
         avisData,
         demandesData
       ] = await Promise.all([
-        employeeService.getEmployees(partner.id),
-        financialService.getTransactions(partner.id),
-        alertService.getAlerts(partner.id),
-        messageService.getMessages(partner.id),
-        avisService.getAvis(partner.id),
-        demandeAvanceService.getDemandes(partner.id)
+        employeeService.getEmployees(session.partner.id),
+        financialService.getTransactions(session.partner.id),
+        alertService.getAlerts(session.partner.id),
+        messageService.getMessages(session.partner.id),
+        avisService.getAvis(session.partner.id),
+        demandeAvanceService.getDemandes(session.partner.id)
       ]);
 
       if (employeesData.data) setEmployees(employeesData.data);
@@ -118,19 +118,19 @@ export default function EntrepriseDashboardPage() {
 
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && !session) {
       router.push('/login');
     }
-  }, [loading, user, router]);
+  }, [loading, session, router]);
 
   // Afficher un message de bienvenue
   useEffect(() => {
-    if (partner && !isLoading) {
-      toast.success(`Bienvenue sur le tableau de bord de ${partner.nom}`, {
+    if (session?.partner && !isLoading) {
+      toast.success(`Bienvenue sur le tableau de bord de ${session.partner.nom}`, {
         id: 'dashboard-welcome'
       });
     }
-  }, [partner, isLoading]);
+  }, [session?.partner, isLoading]);
 
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
@@ -141,8 +141,8 @@ export default function EntrepriseDashboardPage() {
     );
   }
 
-  // Si pas de partenaire, afficher un message d'erreur
-  if (!partner) {
+  // Si pas de session ou partenaire, afficher un message d'erreur
+  if (!session?.partner) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -161,7 +161,7 @@ export default function EntrepriseDashboardPage() {
   const activeEmployees = employees.filter(emp => emp.actif);
   const totalSalary = activeEmployees.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
   const totalTransactions = transactions.reduce((sum, trans) => sum + trans.montant, 0);
-  const unreadMessages = messages.filter(msg => !msg.lu && msg.destinataire === user?.id);
+  const unreadMessages = messages.filter(msg => !msg.lu && msg.destinataire === session?.admin?.id);
   const activeAlerts = alerts.filter(alert => alert.statut !== 'Résolue');
   const averageRating = avis.length > 0 ? avis.reduce((sum, av) => sum + av.note, 0) / avis.length : 0;
   const pendingDemandes = demandes.filter(dem => dem.statut === 'En attente');
@@ -191,7 +191,7 @@ export default function EntrepriseDashboardPage() {
     if (demandes.length === 0) return last6Months;
     
     const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const monthsWithData = new Set();
+    const monthsWithData = new Set<string>();
     
     demandes.forEach(demande => {
       const date = new Date(demande.date_creation);
@@ -199,7 +199,7 @@ export default function EntrepriseDashboardPage() {
       monthsWithData.add(key);
     });
     
-    const monthsArray = Array.from(monthsWithData).map(key => {
+    const monthsArray = Array.from(monthsWithData).map((key: string) => {
       const [year, month] = key.split('-').map(Number);
       return {
         month,
@@ -263,7 +263,7 @@ export default function EntrepriseDashboardPage() {
             Tableau de bord
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {partner.nom} - {partner.secteur}
+            {session?.partner?.nom} - {session?.partner?.secteur}
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -315,11 +315,11 @@ export default function EntrepriseDashboardPage() {
       </div>
 
       {/* Section Performance Financière */}
-      {partner && (
+      {session?.partner && (
         <PerformanceFinanciere 
           className="mt-6" 
           totalTransactions={gnfFormatter(totalTransactions)} 
-          dateLimite={partner.date_adhesion || new Date().toISOString()} 
+          dateLimite={session.partner.date_adhesion || new Date().toISOString()} 
         />
       )}
 

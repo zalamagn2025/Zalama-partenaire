@@ -12,13 +12,13 @@ export default function EntrepriseHeader() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const { logout, currentAdmin } = useAuth();
+  const { session, signOut } = useAuth();
   
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {
     if (!pathname) return "Tableau de Bord";
     
-    if (pathname === "/dashboard/entreprise") return "Tableau de Bord";
+    if (pathname === "/dashboard") return "Tableau de Bord";
     if (pathname.includes("/employes")) return "Gestion des Employés";
     if (pathname.includes("/finances")) return "Finances";
     if (pathname.includes("/statistiques")) return "Statistiques";
@@ -34,6 +34,15 @@ export default function EntrepriseHeader() {
     setNotificationsOpen(!notificationsOpen);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setProfileMenuOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
+  };
+
   return (
     <>
       <header className="w-full h-20 flex items-center justify-between px-4 md:px-8 bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] shadow-sm sticky top-0 z-20">
@@ -42,7 +51,7 @@ export default function EntrepriseHeader() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
           <div className="hidden md:flex items-center ml-6 text-gray-600 dark:text-gray-300 text-sm">
             <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
-              {pathname?.split('/')[3]?.charAt(0).toUpperCase() + pathname?.split('/')[3]?.slice(1).replace(/-/g, ' ') || 'Entreprise'}
+              {session?.partner?.nom || 'Dashboard'}
             </span>
           </div>
         </div>
@@ -74,14 +83,14 @@ export default function EntrepriseHeader() {
             >
               <User className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:inline">
-                {currentAdmin?.name || 'Admin'}
+                {session?.admin?.display_name || 'Admin'}
               </span>
             </button>
             
             {profileMenuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
                 <button
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="flex w-full items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
                 >
                   <LogOut className="w-4 h-4 mr-2" />

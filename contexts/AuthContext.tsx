@@ -3,214 +3,269 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Partner, User as CustomUser } from '@/lib/supabase';
-import { partnerService } from '@/lib/services';
-import { createHash } from 'crypto';
+
+// Types pour le nouveau système d'authentification
+export interface AdminUser {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  partenaire_id: string;
+  active: boolean;
+  last_login?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Partner {
+  id: string;
+  nom: string;
+  type: string;
+  secteur: string;
+  description?: string;
+  nom_representant?: string;
+  email_representant?: string;
+  telephone_representant?: string;
+  nom_rh?: string;
+  email_rh?: string;
+  telephone_rh?: string;
+  rccm?: string;
+  nif?: string;
+  email?: string;
+  telephone?: string;
+  adresse?: string;
+  site_web?: string;
+  logo_url?: string;
+  date_adhesion: string;
+  actif: boolean;
+  nombre_employes: number;
+  salaire_net_total: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AuthSession {
+  user: User;           // Utilisateur Supabase auth.users
+  admin: AdminUser;     // Profil admin_users
+  partner: Partner;     // Données du partenaire
+}
 
 interface AuthContextType {
-  user: CustomUser | null;
-  partner: Partner | null;
+  session: AuthSession | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; session?: AuthSession | null }>;
   signOut: () => Promise<void>;
-  refreshPartner: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Fonction pour hasher un mot de passe
-const hashPassword = (password: string) => {
-  return createHash('sha256').update(password).digest('hex');
-};
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<CustomUser | null>(null);
-  const [partner, setPartner] = useState<Partner | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Vérifier l'utilisateur actuel au chargement depuis le localStorage
-    const checkUser = async () => {
-      try {
-        const savedUser = localStorage.getItem('zalama_user');
-        if (savedUser) {
-          const userData = JSON.parse(savedUser);
-          setUser(userData);
-          // Charger le partenaire seulement après avoir défini l'utilisateur
-          await loadPartner(userData.email);
+    // Vérifier la session au chargement et écouter les changements
+    initializeAuth();
+    
+    // Écouter les changements d'état d'authentification
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
+      console.log('Auth state change:', event, supabaseSession?.user?.id);
+      
+      if (event === 'SIGNED_IN' && supabaseSession?.user) {
+        try {
+          const fullSession = await loadUserSession(supabaseSession.user);
+          if (fullSession) {
+            setSession(fullSession);
+            console.log('Session loaded and stored successfully');
+          }
+        } catch (error) {
+          console.error('Error loading session after sign in:', error);
+          await supabase.auth.signOut();
         }
-      } catch (error) {
-        console.error('Erreur lors de la vérification de l\'utilisateur:', error);
-      } finally {
-        setLoading(false);
+      } else if (event === 'SIGNED_OUT') {
+        setSession(null);
+        localStorage.removeItem('zalama_session');
+        document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        console.log('Session cleared after sign out');
       }
-    };
+    });
 
-    checkUser();
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Effet pour recharger le partenaire quand l'utilisateur change
-  useEffect(() => {
-    if (user?.email) {
-      loadPartner(user.email);
-    }
-  }, [user]);
-
-  const loadPartner = async (email: string) => {
+  const initializeAuth = async () => {
     try {
-      // Attendre que l'utilisateur soit défini
-      if (!user?.id) {
-        return;
+      // 1. Vérifier d'abord le localStorage pour une restauration rapide
+      const savedSession = localStorage.getItem('zalama_session');
+      if (savedSession) {
+        try {
+          const parsedSession = JSON.parse(savedSession);
+          setSession(parsedSession);
+          console.log('Session restored from localStorage');
+                 } catch (parseError) {
+           console.error('Error parsing saved session:', parseError);
+           localStorage.removeItem('zalama_session');
+           document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+         }
       }
+
+      // 2. Vérifier la session Supabase actuelle
+      const { data: { session: supabaseSession } } = await supabase.auth.getSession();
       
-      // D'abord essayer de récupérer par l'ID de l'utilisateur
-      const { data, error } = await partnerService.getPartnerByUserId(user.id);
-      
-      if (!error && data) {
-        setPartner(data);
-        return;
-      }
-      
-      // Si l'utilisateur est RH, chercher le partenaire par organisation
-      if (user.organisation && user.poste?.toLowerCase().includes('rh')) {
-        // Récupérer le premier partenaire correspondant exactement à l'organisation
-        const { data: orgData, error: orgError } = await supabase
-          .from('partners')
-          .select('*')
-          .eq('nom', user.organisation)
-          .limit(1);
-        
-        if (orgData && orgData.length > 0) {
-          setPartner(orgData[0]);
-          return;
+      if (supabaseSession?.user) {
+        try {
+          const fullSession = await loadUserSession(supabaseSession.user);
+          if (fullSession) {
+            setSession(fullSession);
+            console.log('Session verified and updated from Supabase');
+          }
+        } catch (error) {
+          console.error('Error verifying session:', error);
+                     await supabase.auth.signOut();
+           setSession(null);
+           localStorage.removeItem('zalama_session');
+           document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
         }
-        
-        // Si pas trouvé, essayer une correspondance partielle
-        const { data: partialData, error: partialError } = await supabase
-          .from('partners')
-          .select('*')
-          .ilike('nom', `%${user.organisation}%`)
-          .limit(1);
-        
-        if (partialData && partialData.length > 0) {
-          setPartner(partialData[0]);
-          return;
-        }
-      }
-      
-      // Fallback: essayer par email seulement si c'est un email valide et si l'ID n'a pas fonctionné
-      if (email && email.includes('@') && !email.includes('-')) {
-        const { data: emailData, error: emailError } = await partnerService.getPartnerByEmail(email);
-        
-        if (emailError) {
-          console.error('Erreur lors du chargement du partenaire:', emailError);
-          return;
-        }
-        
-        if (emailData) {
-          setPartner(emailData);
-        }
-      } else {
-        // Si l'email est un UUID, essayer de récupérer le partenaire directement par l'ID
-        const { data: directData, error: directError } = await partnerService.getPartnerById(user.id);
-        
-        if (!directError && directData) {
-          setPartner(directData);
-        }
+      } else if (savedSession) {
+                 // Si pas de session Supabase mais session locale, nettoyer
+         setSession(null);
+         localStorage.removeItem('zalama_session');
+         document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+         console.log('Cleared invalid local session');
       }
     } catch (error) {
-      console.error('Erreur lors du chargement du partenaire:', error);
+      console.error('Error initializing auth:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserSession = async (authUser: User): Promise<AuthSession | null> => {
+    try {
+      console.log('Loading user session for:', authUser.id);
+      
+      // 1. Vérifier dans admin_users
+      const { data: adminData, error: adminError } = await supabase
+        .from('admin_users')
+        .select('*')
+        .eq('id', authUser.id)
+        .eq('active', true)
+        .single();
+
+      if (adminError || !adminData) {
+        throw new Error('Utilisateur non autorisé - Profil admin introuvable');
+      }
+
+      // 2. Vérifier le rôle (RH ou Responsable)
+      if (!['rh', 'responsable'].includes(adminData.role.toLowerCase())) {
+        throw new Error(`Accès refusé - Rôle non autorisé: ${adminData.role}`);
+      }
+
+      // 3. Charger le partenaire
+      if (!adminData.partenaire_id) {
+        throw new Error('Aucun partenaire associé à cet utilisateur');
+      }
+
+      const { data: partnerData, error: partnerError } = await supabase
+        .from('partners')
+        .select('*')
+        .eq('id', adminData.partenaire_id)
+        .eq('actif', true)
+        .single();
+
+      if (partnerError || !partnerData) {
+        throw new Error('Partenaire introuvable ou inactif');
+      }
+
+      // 4. Mettre à jour last_login
+      await supabase
+        .from('admin_users')
+        .update({ 
+          last_login: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', authUser.id);
+
+      // 5. Créer la session complète
+      const fullSession: AuthSession = {
+        user: authUser,
+        admin: { ...adminData, last_login: new Date().toISOString() },
+        partner: partnerData
+      };
+
+      // 6. Sauvegarder dans localStorage immédiatement
+      localStorage.setItem('zalama_session', JSON.stringify(fullSession));
+      
+      // 7. Créer un cookie simple pour le middleware
+      const sessionCookie = {
+        admin: { id: adminData.id, role: adminData.role },
+        partner: { id: partnerData.id, actif: partnerData.actif }
+      };
+      document.cookie = `zalama_session=${encodeURIComponent(JSON.stringify(sessionCookie))}; path=/; max-age=86400; SameSite=Lax`;
+      
+      console.log('Session saved to localStorage and cookie');
+
+      return fullSession;
+    } catch (error) {
+      console.error('Erreur lors du chargement de la session:', error);
+      throw error;
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Vérifier les identifiants dans la table users
-      const { data: users, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .eq('actif', true)
-        .single();
+      console.log('Attempting sign in for:', email);
+      
+      // 1. Authentification avec Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (userError || !users) {
-        return { error: { message: 'Identifiants invalides' } };
+      if (authError) {
+        console.error('Supabase auth error:', authError);
+        return { error: authError };
       }
 
-      // Vérifier le hash du mot de passe
-      const passwordHash = hashPassword(password);
-      if (users.encrypted_password !== passwordHash) {
-        return { error: { message: 'Mot de passe incorrect' } };
+      if (!authData.user) {
+        return { error: { message: 'Erreur lors de la connexion' } };
       }
 
-      // Connexion réussie
-      const userData: CustomUser = {
-        id: users.id,
-        email: users.email,
-        nom: users.nom,
-        prenom: users.prenom,
-        telephone: users.telephone,
-        adresse: users.adresse,
-        type: users.type,
-        statut: users.statut,
-        photo_url: users.photo_url,
-        organisation: users.organisation,
-        poste: users.poste,
-        niveau_etudes: users.niveau_etudes,
-        etablissement: users.etablissement,
-        date_inscription: users.date_inscription,
-        derniere_connexion: users.derniere_connexion,
-        actif: users.actif,
-        created_at: users.created_at,
-        updated_at: users.updated_at
-      };
+      console.log('Supabase auth successful, loading user session...');
 
-      // Sauvegarder l'utilisateur dans le localStorage
-      localStorage.setItem('zalama_user', JSON.stringify(userData));
-      
-      // Créer un cookie pour le middleware
-      document.cookie = `zalama_user=${JSON.stringify(userData)}; path=/; max-age=86400; SameSite=Lax`;
-      
-      setUser(userData);
-      
-      // Charger les données du partenaire
-      await loadPartner(userData.email);
-      
-      return { error: null };
-    } catch (error) {
+      // 2. Charger la session complète immédiatement
+      const fullSession = await loadUserSession(authData.user);
+      if (fullSession) {
+        setSession(fullSession);
+        console.log('Sign in completed successfully');
+        return { error: null, session: fullSession };
+      } else {
+        return { error: { message: 'Erreur lors du chargement de la session' } };
+      }
+    } catch (error: any) {
       console.error('Erreur de connexion:', error);
-      return { error: { message: 'Erreur de connexion' } };
+      return { error: { message: error.message || 'Erreur de connexion' } };
     }
   };
 
   const signOut = async () => {
     try {
-      // Supprimer l'utilisateur du localStorage
-      localStorage.removeItem('zalama_user');
-      
-      // Supprimer le cookie
-      document.cookie = 'zalama_user=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-      
-      setUser(null);
-      setPartner(null);
+      console.log('Signing out...');
+      await supabase.auth.signOut();
+      localStorage.removeItem('zalama_session');
+      document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      setSession(null);
+      console.log('Sign out completed');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }
   };
 
-  const refreshPartner = async () => {
-    if (user?.email) {
-      await loadPartner(user.email);
-    }
-  };
-
   const value = {
-    user,
-    partner,
+    session,
     loading,
     signIn,
-    signOut,
-    refreshPartner
+    signOut
   };
 
   return (
@@ -223,7 +278,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth doit être utilisé dans un AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

@@ -170,8 +170,8 @@ export const alertService = {
       .select('*')
       .order('date_creation', { ascending: false })
     
-    // Pour l'instant, récupérer toutes les alertes
-    // car la table n'a pas de lien direct avec les partenaires
+      // Pour l'instant, récupérer toutes les alertes
+      // car la table n'a pas de lien direct avec les partenaires
     
     const { data, error } = await query
     return { data: data as Alert[], error }

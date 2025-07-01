@@ -22,7 +22,7 @@ export default function EntrepriseSidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { currentCompany, currentAdmin, logout } = useAuth();
+  const { session, signOut } = useAuth();
   
   // Générer les liens de navigation avec le slug
   const navItems = getNavItems();
@@ -36,6 +36,15 @@ export default function EntrepriseSidebar() {
       '--current-sidebar-width', 
       newCollapsedState ? 'var(--sidebar-collapsed-width)' : 'var(--sidebar-width)'
     );
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setMenuOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    }
   };
 
   // Fermer le menu déroulant si on clique en dehors
@@ -63,7 +72,7 @@ export default function EntrepriseSidebar() {
           <Link href="/dashboard" className="flex items-center">
             <div className="relative w-32 h-20 mr-3">
               <Image 
-                src="/images/logo_vertical.svg" 
+                src="/images/Logo_vertical.svg" 
                 alt="ZaLaMa Logo" 
                 fill
                 className="object-contain"
@@ -122,12 +131,14 @@ export default function EntrepriseSidebar() {
           >
             <div className={`flex items-center ${collapsed ? 'justify-center' : ''}`}>
               <div className="w-8 h-8 rounded-full bg-[var(--zalama-blue)] flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {currentAdmin?.name.charAt(0) || 'A'}
+                {session?.admin?.display_name?.charAt(0) || 'A'}
               </div>
               {!collapsed && (
                 <div className="ml-3 sidebar-text">
-                  <p className="text-sm font-medium">{currentCompany?.name || 'Entreprise'}</p>
-                  <p className="text-xs text-[var(--zalama-gray)]/60">{currentAdmin?.role || 'Administrateur'}</p>
+                  <p className="text-sm font-medium">{session?.partner?.nom || 'Entreprise'}</p>
+                  <p className="text-xs text-[var(--zalama-gray)]/60">
+                    {session?.admin?.role?.charAt(0).toUpperCase() + session?.admin?.role?.slice(1) || 'Administrateur'}
+                  </p>
                 </div>
               )}
             </div>
@@ -140,7 +151,7 @@ export default function EntrepriseSidebar() {
                 <li>
                   <button 
                     className="flex w-full items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
-                    onClick={logout}
+                    onClick={handleLogout}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Déconnexion

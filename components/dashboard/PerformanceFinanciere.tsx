@@ -249,8 +249,8 @@ const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className
           color="purple"
           subtitle={`Tous les ${financialData.jourPaiement} du mois`}
         />
-      </div>
-
+            </div>
+            
       {/* Section Cycle de Paiement avec Barre de Progression */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-4">
@@ -274,9 +274,9 @@ const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {financialData.joursRestants >= 0 ? 'jours restants' : 'jours de retard'}
             </p>
+            </div>
           </div>
-        </div>
-
+          
         {/* Informations sur le cycle */}
         <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
@@ -286,15 +286,15 @@ const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
             <p className="text-gray-600 dark:text-gray-400">Prochain paiement</p>
             <p className="font-semibold text-gray-900 dark:text-white">{formatDate(financialData.prochainPaiement)}</p>
-          </div>
-        </div>
+            </div>
+            </div>
 
         {/* Barre de progression */}
         <div className="space-y-3">
           <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
             <span>Jours écoulés: {financialData.joursEcoules}</span>
             <span>Cycle: {financialData.totalJours} jours</span>
-          </div>
+            </div>
           <ProgressBar 
             value={financialData.joursEcoules} 
             max={financialData.totalJours}
@@ -341,8 +341,8 @@ const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className
             </p>
           </div>
         )}
+        </div>
       </div>
-    </div>
   );
 };
 
