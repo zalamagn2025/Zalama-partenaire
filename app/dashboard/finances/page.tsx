@@ -37,6 +37,22 @@ const formatDate = (dateString: string) => {
   });
 };
 
+// Interface pour les statistiques financières
+interface FinancialStats {
+  totalDebloque: number;
+  totalRecupere: number;
+  totalRevenus: number;
+  totalRemboursements: number;
+  totalCommissions: number;
+  balance: number;
+  pendingTransactions: number;
+  totalTransactions: number;
+  montantMoyen: number;
+  evolutionMensuelle: any[];
+  repartitionParType: any[];
+  repartitionParStatut: any[];
+}
+
 export default function FinancesPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
@@ -44,7 +60,7 @@ export default function FinancesPage() {
   // États pour les données financières
   const [transactions, setTransactions] = useState<FinancialTransactionWithEmployee[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<FinancialTransactionWithEmployee[]>([]);
-  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [financialStats, setFinancialStats] = useState<FinancialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
@@ -57,6 +73,147 @@ export default function FinancesPage() {
     }
   }, [loading, session?.partner]);
 
+  // Calculer les statistiques financières dynamiques
+  const calculateFinancialStats = (transactions: FinancialTransactionWithEmployee[]): FinancialStats => {
+    // Calculs de base
+    const totalDebloque = transactions
+      .filter(t => t.type === 'Débloqué' && t.statut === 'Validé')
+      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    
+    const totalRecupere = transactions
+      .filter(t => t.type === 'Récupéré' && t.statut === 'Validé')
+      .reduce((sum, t) => sum + (t.montant || 0), 0);
+      
+    const totalRevenus = transactions
+      .filter(t => t.type === 'Revenu' && t.statut === 'Validé')
+      .reduce((sum, t) => sum + (t.montant || 0), 0);
+      
+    const totalRemboursements = transactions
+      .filter(t => t.type === 'Remboursement' && t.statut === 'Validé')
+      .reduce((sum, t) => sum + (t.montant || 0), 0);
+
+    const totalCommissions = transactions
+      .filter(t => t.type === 'Commission' && t.statut === 'Validé')
+      .reduce((sum, t) => sum + (t.montant || 0), 0);
+
+    const pendingTransactions = transactions.filter(t => t.statut === 'En attente').length;
+    const totalTransactions = transactions.length;
+    const balance = totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
+    const montantMoyen = totalTransactions > 0 
+      ? transactions.reduce((sum, t) => sum + (t.montant || 0), 0) / totalTransactions 
+      : 0;
+
+    // Calcul de l'évolution mensuelle
+    const evolutionMensuelle = calculateMonthlyEvolution(transactions);
+
+    // Répartition par type
+    const repartitionParType = calculateTypeDistribution(transactions);
+
+    // Répartition par statut
+    const repartitionParStatut = calculateStatusDistribution(transactions);
+
+    return {
+      totalDebloque,
+      totalRecupere,
+      totalRevenus,
+      totalRemboursements,
+      totalCommissions,
+      balance,
+      pendingTransactions,
+      totalTransactions,
+      montantMoyen,
+      evolutionMensuelle,
+      repartitionParType,
+      repartitionParStatut
+    };
+  };
+
+  // Calculer l'évolution mensuelle
+  const calculateMonthlyEvolution = (transactions: FinancialTransactionWithEmployee[]) => {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const currentYear = new Date().getFullYear();
+    
+    const monthlyData = months.map((month, index) => {
+      const monthTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date_transaction);
+        return transactionDate.getFullYear() === currentYear && transactionDate.getMonth() === index;
+      });
+
+      const debloque = monthTransactions
+        .filter(t => t.type === 'Débloqué' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + (t.montant || 0), 0);
+
+      const recupere = monthTransactions
+        .filter(t => t.type === 'Récupéré' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + (t.montant || 0), 0);
+
+      const revenus = monthTransactions
+        .filter(t => t.type === 'Revenu' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + (t.montant || 0), 0);
+
+      return {
+        mois: month,
+        debloque,
+        recupere,
+        revenus,
+        balance: debloque - recupere + revenus
+      };
+    });
+
+    return monthlyData;
+  };
+
+  // Calculer la répartition par type
+  const calculateTypeDistribution = (transactions: FinancialTransactionWithEmployee[]) => {
+    const typeMap = new Map<string, number>();
+    
+    transactions.forEach(t => {
+      if (t.statut === 'Validé') {
+        const type = t.type || 'Autre';
+        typeMap.set(type, (typeMap.get(type) || 0) + (t.montant || 0));
+      }
+    });
+
+    const colors = {
+      'Débloqué': '#3b82f6',
+      'Récupéré': '#10b981',
+      'Revenu': '#f59e0b',
+      'Remboursement': '#ef4444',
+      'Commission': '#8b5cf6',
+      'Autre': '#6b7280'
+    };
+
+    return Array.from(typeMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: colors[name as keyof typeof colors] || '#6b7280'
+    }));
+  };
+
+  // Calculer la répartition par statut
+  const calculateStatusDistribution = (transactions: FinancialTransactionWithEmployee[]) => {
+    const statusMap = new Map<string, number>();
+    
+    transactions.forEach(t => {
+      const status = t.statut || 'Inconnu';
+      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+    });
+
+    const colors = {
+      'Validé': '#10b981',
+      'En attente': '#f59e0b',
+      'Rejeté': '#ef4444',
+      'Annulé': '#6b7280',
+      'Inconnu': '#9ca3af'
+    };
+
+    return Array.from(statusMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: colors[name as keyof typeof colors] || '#9ca3af'
+    }));
+  };
+
   const loadFinancialData = async () => {
     if (!session?.partner) return;
     
@@ -67,6 +224,10 @@ export default function FinancesPage() {
       const transactions = await partnerService.getFinancialTransactions();
       
       setTransactions(transactions);
+      
+      // Calculer les statistiques financières
+      const stats = calculateFinancialStats(transactions);
+      setFinancialStats(stats);
 
     } catch (error) {
       console.error('Erreur lors du chargement des données financières:', error);
@@ -98,42 +259,6 @@ export default function FinancesPage() {
     setFilteredTransactions(filtered);
     setCurrentPage(1);
   }, [transactions, selectedType, selectedStatus]);
-
-  // Calculer les statistiques - utilisation des mêmes calculs que le dashboard
-  const totalDebloque = transactions
-    .filter(t => t.type === 'debloque' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-  
-  const totalRecupere = transactions
-    .filter(t => t.type === 'recupere' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-    
-  const totalRevenus = transactions
-    .filter(t => t.type === 'revenu' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-    
-  const totalRemboursements = transactions
-    .filter(t => t.type === 'remboursement' && t.statut === 'Validé')
-    .reduce((sum, t) => sum + t.montant, 0);
-
-  const pendingTransactions = transactions.filter(t => t.statut === 'En attente').length;
-  const balance = totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
-
-  // Données pour les graphiques
-  const evolutionData = [
-    { mois: 'Jan', debloque: 42000, recupere: 38000 },
-    { mois: 'Fév', debloque: 38000, recupere: 35000 },
-    { mois: 'Mar', debloque: 45000, recupere: 42000 },
-    { mois: 'Avr', debloque: 52000, recupere: 48000 },
-    { mois: 'Mai', debloque: 48000, recupere: 45000 },
-  ];
-
-  const repartitionData = [
-    { name: 'Débloqué', value: totalDebloque, color: '#3b82f6' },
-    { name: 'Récupéré', value: totalRecupere, color: '#10b981' },
-    { name: 'Revenus', value: totalRevenus, color: '#f59e0b' },
-    { name: 'Remboursements', value: totalRemboursements, color: '#ef4444' },
-  ];
 
   // Pagination
   const transactionsPerPage = 10;
@@ -231,79 +356,127 @@ export default function FinancesPage() {
       </div>
 
       {/* Statistiques principales */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Montant total débloqué"
-          value={gnfFormatter(totalDebloque)}
-          icon={TrendingUp}
-          color="green"
-        />
-        <StatCard
-          title="Montant total récupéré"
-          value={gnfFormatter(totalRecupere)}
-          icon={TrendingDown}
-          color="blue"
-        />
-        <StatCard
-          title="Balance actuelle"
-          value={gnfFormatter(balance)}
-          icon={Euro}
-          color={balance >= 0 ? "green" : "red"}
-        />
-        <StatCard
-          title="Transactions en attente"
-          value={pendingTransactions}
-          icon={CreditCard}
-          color="yellow"
-        />
-      </div>
+      {financialStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <StatCard
+            title="Montant total débloqué"
+            value={gnfFormatter(financialStats.totalDebloque)}
+            icon={TrendingUp}
+            color="green"
+          />
+          <StatCard
+            title="Montant total récupéré"
+            value={gnfFormatter(financialStats.totalRecupere)}
+            icon={TrendingDown}
+            color="blue"
+          />
+          <StatCard
+            title="Balance actuelle"
+            value={gnfFormatter(financialStats.balance)}
+            icon={Euro}
+            color={financialStats.balance >= 0 ? "green" : "red"}
+          />
+          <StatCard
+            title="Transactions en attente"
+            value={financialStats.pendingTransactions}
+            icon={CreditCard}
+            color="yellow"
+          />
+        </div>
+      )}
+
+      {/* Statistiques supplémentaires */}
+      {financialStats && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard
+            title="Total revenus"
+            value={gnfFormatter(financialStats.totalRevenus)}
+            icon={DollarSign}
+            color="yellow"
+          />
+          <StatCard
+            title="Total remboursements"
+            value={gnfFormatter(financialStats.totalRemboursements)}
+            icon={BarChart3}
+            color="red"
+          />
+          <StatCard
+            title="Montant moyen par transaction"
+            value={gnfFormatter(financialStats.montantMoyen)}
+            icon={Users}
+            color="purple"
+          />
+        </div>
+      )}
 
       {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Évolution des montants */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Évolution des montants
-          </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={evolutionData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mois" />
-              <YAxis />
-              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-              <Legend />
-              <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
-              <Line type="monotone" dataKey="recupere" stroke="#10b981" strokeWidth={2} name="Récupéré" />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+      {financialStats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Évolution des montants */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Évolution mensuelle des montants
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={financialStats.evolutionMensuelle}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="mois" />
+                <YAxis />
+                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+                <Legend />
+                <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
+                <Line type="monotone" dataKey="recupere" stroke="#10b981" strokeWidth={2} name="Récupéré" />
+                <Line type="monotone" dataKey="revenus" stroke="#f59e0b" strokeWidth={2} name="Revenus" />
+                <Line type="monotone" dataKey="balance" stroke="#8b5cf6" strokeWidth={2} name="Balance" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
 
-        {/* Répartition des transactions */}
+          {/* Répartition des transactions par type */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Répartition par type de transaction
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={financialStats.repartitionParType}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {financialStats.repartitionParType.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+
+      {/* Graphique de répartition par statut */}
+      {financialStats && financialStats.repartitionParStatut.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Répartition des transactions
+            Répartition par statut des transactions
           </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={repartitionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {repartitionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-            </PieChart>
+            <BarChart data={financialStats.repartitionParStatut}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" fill="#3b82f6" />
+            </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      )}
 
       {/* Filtres */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
@@ -323,6 +496,7 @@ export default function FinancesPage() {
               <option value="Récupéré">Récupéré</option>
               <option value="Revenu">Revenu</option>
               <option value="Remboursement">Remboursement</option>
+              <option value="Commission">Commission</option>
             </select>
           </div>
 
@@ -350,7 +524,7 @@ export default function FinancesPage() {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Historique des transactions
+            Historique des transactions ({filteredTransactions.length} transactions)
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -381,49 +555,58 @@ export default function FinancesPage() {
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {currentTransactions.map((transaction) => (
-                <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {formatDate(transaction.date_transaction)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
-                    {transaction.employees?.poste && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {transaction.employees.poste}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {transaction.description || 'Aucune description'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.type === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                      transaction.type === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      transaction.type === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {transaction.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {gnfFormatter(transaction.montant)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.statut === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      transaction.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {transaction.statut}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {transaction.reference || '-'}
+              {currentTransactions.length > 0 ? (
+                currentTransactions.map((transaction) => (
+                  <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {formatDate(transaction.date_transaction)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
+                      {transaction.employees?.poste && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {transaction.employees.poste}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                      {transaction.description || 'Aucune description'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        transaction.type === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        transaction.type === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        transaction.type === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        transaction.type === 'Commission' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {transaction.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {gnfFormatter(transaction.montant || 0)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        transaction.statut === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        transaction.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {transaction.statut}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {transaction.reference || '-'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Aucune transaction trouvée
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

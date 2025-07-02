@@ -102,10 +102,20 @@ const FinancialCard: React.FC<FinancialCardProps> = ({ title, value, icon: Icon,
 interface PerformanceFinanciereProps {
   className?: string;
   totalTransactions: string;
+  totalRecupere?: string;
+  totalRevenus?: string;
+  balance?: string;
   dateLimite: string;
 }
 
-const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className = '', totalTransactions, dateLimite }) => {
+const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ 
+  className = '', 
+  totalTransactions, 
+  totalRecupere = "0 GNF",
+  totalRevenus = "0 GNF",
+  balance = "0 GNF",
+  dateLimite 
+}) => {
   // Extraire le jour de paiement de la date d'adhésion
   const jourPaiement = new Date(dateLimite).getDate();
   
@@ -220,36 +230,36 @@ const PerformanceFinanciere: React.FC<PerformanceFinanciereProps> = ({ className
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <FinancialCard
           title="Montant Total Débloqué"
-          value={financialData.montantDebloque}
+          value={totalTransactions}
           icon={CreditCard}
           color="green"
           subtitle="Capital disponible"
         />
         
         <FinancialCard
-          title="Montant à Rembourser"
-          value={financialData.montantARembourser}
+          title="Montant Total Récupéré"
+          value={totalRecupere}
           icon={DollarSign}
           color="blue"
-          subtitle="Reste à payer"
+          subtitle="Montants récupérés"
         />
         
         <FinancialCard
-          title="Taux de Remboursement"
-          value={`${financialData.tauxRemboursement}%`}
+          title="Total Revenus"
+          value={totalRevenus}
           icon={TrendingUp}
           color="orange"
-          subtitle="Performance actuelle"
+          subtitle="Revenus générés"
         />
         
         <FinancialCard
-          title="Prochain Paiement"
-          value={formatDate(financialData.prochainPaiement)}
+          title="Balance Actuelle"
+          value={balance}
           icon={Calendar}
-          color="purple"
-          subtitle={`Tous les ${financialData.jourPaiement} du mois`}
+          color={balance.includes('-') ? "red" : "purple"}
+          subtitle="Solde disponible"
         />
-            </div>
+      </div>
             
       {/* Section Cycle de Paiement avec Barre de Progression */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">

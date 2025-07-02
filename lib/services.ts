@@ -232,7 +232,7 @@ export const financialService = {
   async getFinancialStats(partnerId?: string) {
     let query = supabase
       .from('financial_transactions')
-      .select('montant, type, statut');
+      .select('montant, type, statut, date_transaction');
 
     // Filtrer par partenaire si spécifié
     if (partnerId) {
@@ -246,54 +246,222 @@ export const financialService = {
       return { data: null, error };
     }
 
-    // Calculer les statistiques
+    // Calculer les statistiques avancées
+    const stats = this.calculateAdvancedStats(data || []);
+
+    return { data: stats, error: null };
+  },
+
+  // Calculer les statistiques financières avancées
+  calculateAdvancedStats(transactions: any[]) {
     const stats = {
       total_debloque: 0,
       total_recupere: 0,
       total_revenus: 0,
       total_remboursements: 0,
       total_commissions: 0,
-      total_transactions: data?.length || 0,
-      montant_moyen: 0
+      total_transactions: transactions.length,
+      montant_moyen: 0,
+      balance: 0,
+      pending_transactions: 0,
+      evolution_mensuelle: [] as any[],
+      repartition_par_type: [] as any[],
+      repartition_par_statut: [] as any[],
+      top_employes: [] as any[]
     };
 
-    if (data && data.length > 0) {
-      const totalMontant = data.reduce((sum, transaction) => sum + Number(transaction.montant), 0);
-      stats.montant_moyen = totalMontant / data.length;
+    if (transactions.length > 0) {
+      const totalMontant = transactions.reduce((sum, transaction) => sum + Number(transaction.montant || 0), 0);
+      stats.montant_moyen = totalMontant / transactions.length;
 
-      data.forEach(transaction => {
-        const montant = Number(transaction.montant);
-        switch (transaction.type.toLowerCase()) {
-          case 'debloque':
-            if (transaction.statut === 'Validé') {
+      // Calculer les totaux par type
+      transactions.forEach(transaction => {
+        const montant = Number(transaction.montant || 0);
+        const type = transaction.type;
+        const statut = transaction.statut;
+
+        if (statut === 'Validé') {
+          switch (type) {
+            case 'Débloqué':
               stats.total_debloque += montant;
-            }
-            break;
-          case 'recupere':
-            if (transaction.statut === 'Validé') {
+              break;
+            case 'Récupéré':
               stats.total_recupere += montant;
-            }
-            break;
-          case 'revenu':
-            if (transaction.statut === 'Validé') {
+              break;
+            case 'Revenu':
               stats.total_revenus += montant;
-            }
-            break;
-          case 'remboursement':
-            if (transaction.statut === 'Validé') {
+              break;
+            case 'Remboursement':
               stats.total_remboursements += montant;
-            }
-            break;
-          case 'commission':
-            if (transaction.statut === 'Validé') {
+              break;
+            case 'Commission':
               stats.total_commissions += montant;
-            }
-            break;
+              break;
+          }
+        }
+
+        if (statut === 'En attente') {
+          stats.pending_transactions++;
         }
       });
+
+      // Calculer la balance
+      stats.balance = stats.total_debloque - stats.total_recupere + stats.total_revenus - stats.total_remboursements;
+
+      // Calculer l'évolution mensuelle
+      stats.evolution_mensuelle = this.calculateMonthlyEvolution(transactions);
+
+      // Calculer la répartition par type
+      stats.repartition_par_type = this.calculateTypeDistribution(transactions);
+
+      // Calculer la répartition par statut
+      stats.repartition_par_statut = this.calculateStatusDistribution(transactions);
     }
 
-    return { data: stats, error: null };
+    return stats;
+  },
+
+  // Calculer l'évolution mensuelle
+  calculateMonthlyEvolution(transactions: any[]) {
+    const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+    const currentYear = new Date().getFullYear();
+    
+    return months.map((month, index) => {
+      const monthTransactions = transactions.filter(t => {
+        const transactionDate = new Date(t.date_transaction);
+        return transactionDate.getFullYear() === currentYear && transactionDate.getMonth() === index;
+      });
+
+      const debloque = monthTransactions
+        .filter(t => t.type === 'Débloqué' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + Number(t.montant || 0), 0);
+
+      const recupere = monthTransactions
+        .filter(t => t.type === 'Récupéré' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + Number(t.montant || 0), 0);
+
+      const revenus = monthTransactions
+        .filter(t => t.type === 'Revenu' && t.statut === 'Validé')
+        .reduce((sum, t) => sum + Number(t.montant || 0), 0);
+
+      return {
+        mois: month,
+        debloque,
+        recupere,
+        revenus,
+        balance: debloque - recupere + revenus
+      };
+    });
+  },
+
+  // Calculer la répartition par type
+  calculateTypeDistribution(transactions: any[]) {
+    const typeMap = new Map<string, number>();
+    
+    transactions.forEach(t => {
+      if (t.statut === 'Validé') {
+        const type = t.type || 'Autre';
+        typeMap.set(type, (typeMap.get(type) || 0) + Number(t.montant || 0));
+      }
+    });
+
+    const colors = {
+      'Débloqué': '#3b82f6',
+      'Récupéré': '#10b981',
+      'Revenu': '#f59e0b',
+      'Remboursement': '#ef4444',
+      'Commission': '#8b5cf6',
+      'Autre': '#6b7280'
+    };
+
+    return Array.from(typeMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: colors[name as keyof typeof colors] || '#6b7280'
+    }));
+  },
+
+  // Calculer la répartition par statut
+  calculateStatusDistribution(transactions: any[]) {
+    const statusMap = new Map<string, number>();
+    
+    transactions.forEach(t => {
+      const status = t.statut || 'Inconnu';
+      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+    });
+
+    const colors = {
+      'Validé': '#10b981',
+      'En attente': '#f59e0b',
+      'Rejeté': '#ef4444',
+      'Annulé': '#6b7280',
+      'Inconnu': '#9ca3af'
+    };
+
+    return Array.from(statusMap.entries()).map(([name, value]) => ({
+      name,
+      value,
+      color: colors[name as keyof typeof colors] || '#9ca3af'
+    }));
+  },
+
+  // Récupérer les transactions avec filtres avancés
+  async getFilteredTransactions(partnerId: string, filters: {
+    type?: string;
+    statut?: string;
+    dateDebut?: string;
+    dateFin?: string;
+    montantMin?: number;
+    montantMax?: number;
+  }) {
+    let query = supabase
+      .from('financial_transactions')
+      .select(`
+        *,
+        employees (
+          id,
+          nom,
+          prenom,
+          email,
+          poste
+        )
+      `)
+      .eq('partenaire_id', partnerId)
+      .order('date_transaction', { ascending: false });
+
+    // Appliquer les filtres
+    if (filters.type) {
+      query = query.eq('type', filters.type);
+    }
+
+    if (filters.statut) {
+      query = query.eq('statut', filters.statut);
+    }
+
+    if (filters.dateDebut) {
+      query = query.gte('date_transaction', filters.dateDebut);
+    }
+
+    if (filters.dateFin) {
+      query = query.lte('date_transaction', filters.dateFin);
+    }
+
+    if (filters.montantMin !== undefined) {
+      query = query.gte('montant', filters.montantMin);
+    }
+
+    if (filters.montantMax !== undefined) {
+      query = query.lte('montant', filters.montantMax);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Erreur lors de la récupération des transactions filtrées:', error);
+      return { data: null, error };
+    }
+
+    return { data, error: null };
   }
 }
 
@@ -717,7 +885,39 @@ export class PartnerDataService {
     }
   }
 
-  // Récupérer les statistiques du partenaire
+  // Récupérer les statistiques financières du partenaire
+  async getFinancialStats() {
+    try {
+      const transactions = await this.getFinancialTransactions();
+      
+      // Utiliser le service financier pour calculer les statistiques
+      const stats = financialService.calculateAdvancedStats(transactions);
+      
+      return {
+        ...stats,
+        partnerId: this.partnerId
+      };
+    } catch (error) {
+      console.error('Erreur lors du calcul des statistiques financières:', error);
+      return {
+        total_debloque: 0,
+        total_recupere: 0,
+        total_revenus: 0,
+        total_remboursements: 0,
+        total_commissions: 0,
+        total_transactions: 0,
+        montant_moyen: 0,
+        balance: 0,
+        pending_transactions: 0,
+        evolution_mensuelle: [],
+        repartition_par_type: [],
+        repartition_par_statut: [],
+        partnerId: this.partnerId
+      };
+    }
+  }
+
+  // Récupérer les statistiques générales du partenaire
   async getPartnerStats() {
     try {
       const [employees, transactions, alerts, avis, demandes] = await Promise.all([

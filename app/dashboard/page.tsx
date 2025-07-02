@@ -154,14 +154,18 @@ export default function EntrepriseDashboardPage() {
   const totalSalary = activeEmployees.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
   
   // Calculer les montants débloqués (même logique que la page finances)
-  const debloquedTransactions = transactions.filter(t => t.type === 'debloque' && t.statut === 'Validé');
-  const totalDebloque = debloquedTransactions.reduce((sum, trans) => sum + trans.montant, 0);
+  const debloquedTransactions = transactions.filter(t => t.type === 'Débloqué' && t.statut === 'Validé');
+  const totalDebloque = debloquedTransactions.reduce((sum, trans) => sum + (trans.montant || 0), 0);
   
   // Calculer les autres montants
-  const totalRecupere = transactions.filter(t => t.type === 'recupere' && t.statut === 'Validé').reduce((sum, trans) => sum + trans.montant, 0);
-  const totalCommissions = transactions.filter(t => t.type === 'commission').reduce((sum, trans) => sum + trans.montant, 0);
-  
+  const totalRecupere = transactions.filter(t => t.type === 'Récupéré' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
+  const totalRevenus = transactions.filter(t => t.type === 'Revenu' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
+  const totalRemboursements = transactions.filter(t => t.type === 'Remboursement' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
+  const totalCommissions = transactions.filter(t => t.type === 'Commission' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
 
+  // Calculer la balance
+  const balance = totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
+  
   const activeAlerts = alerts.filter(alert => alert.statut !== 'Résolue');
   const averageRating = avis.length > 0 ? avis.reduce((sum, av) => sum + av.note, 0) / avis.length : 0;
   const pendingDemandes = demandes.filter(dem => dem.statut === 'En attente');
@@ -306,12 +310,43 @@ export default function EntrepriseDashboardPage() {
         />
       </div>
 
+      {/* Cartes financières supplémentaires */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Montant total récupéré"
+          value={gnfFormatter(totalRecupere)}
+          icon={Download}
+          color="blue"
+        />
+        <StatCard
+          title="Total revenus"
+          value={gnfFormatter(totalRevenus)}
+          icon={BarChart2}
+          color="yellow"
+        />
+        <StatCard
+          title="Balance actuelle"
+          value={gnfFormatter(balance)}
+          icon={Building2}
+          color={balance >= 0 ? "green" : "red"}
+        />
+        <StatCard
+          title="Total commissions"
+          value={gnfFormatter(totalCommissions)}
+          icon={ThumbsUp}
+          color="purple"
+        />
+      </div>
+
       {/* Section Performance Financière */}
       {session?.partner && (
-        <PerformanceFinanciere 
-          className="mt-6" 
-          totalTransactions={gnfFormatter(totalDebloque)} 
-          dateLimite={session.partner.date_adhesion || new Date().toISOString()} 
+        <PerformanceFinanciere
+          className="mt-6"
+          totalTransactions={gnfFormatter(totalDebloque)}
+          totalRecupere={gnfFormatter(totalRecupere)}
+          totalRevenus={gnfFormatter(totalRevenus)}
+          balance={gnfFormatter(balance)}
+          dateLimite={session.partner.date_adhesion || new Date().toISOString()}
         />
       )}
 
