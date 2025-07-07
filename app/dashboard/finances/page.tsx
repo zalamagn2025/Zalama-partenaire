@@ -74,6 +74,8 @@ export default function FinancesPage() {
     nbEmployesApprouves: 0
   });
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
+  // Ajoute un état pour le payment_day
+  const [paymentDay, setPaymentDay] = useState<number | null>(null);
 
   // Charger les demandes d'avance de salaire dynamiquement
   useEffect(() => {
@@ -81,6 +83,40 @@ export default function FinancesPage() {
       loadSalaryAdvanceData();
     }
   }, [loading, session?.partner]);
+
+  // Récupère le payment_day du partenaire connecté
+  useEffect(() => {
+    const fetchPaymentDay = async () => {
+      if (!session?.partner) return;
+      const { data, error } = await supabase
+        .from('partnership_requests')
+        .select('payment_day')
+        .eq('company_name', session.partner.nom)
+        .eq('status', 'approved')
+        .single();
+      if (!error && data && data.payment_day) {
+        setPaymentDay(data.payment_day);
+      }
+    };
+    fetchPaymentDay();
+  }, [session?.partner]);
+
+  // Calcul de la date limite de remboursement
+  const now = new Date();
+  let dateLimite = '';
+  if (paymentDay) {
+    let mois = now.getMonth();
+    let annee = now.getFullYear();
+    if (now.getDate() > paymentDay) {
+      mois += 1;
+      if (mois > 11) {
+        mois = 0;
+        annee += 1;
+      }
+    }
+    const dateRemboursement = new Date(annee, mois, paymentDay);
+    dateLimite = dateRemboursement.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
 
   const loadSalaryAdvanceData = async () => {
     setIsLoading(true);
@@ -104,13 +140,13 @@ export default function FinancesPage() {
       const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
       const aRembourserMois = debloqueMois;
       // Date limite = date_validation dernière demande validée + 30j
-      let dateLimite = '';
-      if (demandesMois.length > 0) {
-        const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
-        const date = new Date(last.date_validation);
-        date.setDate(date.getDate() + 30);
-        dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-      }
+      // let dateLimite = ''; // This line is now redundant as dateLimite is calculated above
+      // if (demandesMois.length > 0) {
+      //   const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
+      //   const date = new Date(last.date_validation);
+      //   date.setDate(date.getDate() + 30);
+      //   dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+      // }
       // Nombre d'employés approuvés ce mois-ci
       const employesApprouves = new Set(demandesMois.map((d: any) => d.employe_id)).size;
       setStats({
@@ -420,7 +456,7 @@ export default function FinancesPage() {
         </div>
         <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
           <span className="text-gray-400 text-xs mb-1">Date limite de Remboursement</span>
-          <span className="text-2xl font-bold text-white">{stats.dateLimite}</span>
+          <span className="text-2xl font-bold text-white">{dateLimite}</span>
         </div>
       </div>
 

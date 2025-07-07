@@ -63,6 +63,9 @@ export default function EntrepriseDashboardPage() {
   // Ajoute le hook d'état pour les demandes d'avance
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
 
+  // Ajoute un état pour le payment_day
+  const [paymentDay, setPaymentDay] = useState<number | null>(null);
+
   // Charger les données au montage du composant
   useEffect(() => {
     if (!loading && session?.partner) {
@@ -173,6 +176,44 @@ export default function EntrepriseDashboardPage() {
     if (!loading && session?.partner) loadSalaryRequests();
   }, [loading, session?.partner]);
 
+  // Récupère le payment_day du partenaire connecté
+  useEffect(() => {
+    const fetchPaymentDay = async () => {
+      if (!session?.partner) return;
+      // On suppose que le nom du partenaire dans partners = company_name dans partnership_requests
+      const { data, error } = await supabase
+        .from('partnership_requests')
+        .select('payment_day')
+        .eq('company_name', session.partner.nom)
+        .eq('status', 'approved')
+        .single();
+      if (!error && data && data.payment_day) {
+        setPaymentDay(data.payment_day);
+      }
+    };
+    fetchPaymentDay();
+  }, [session?.partner]);
+
+  // Calcul de la date de remboursement et jours restants
+  const now = new Date();
+  let dateLimite = '';
+  let joursRestants = '-';
+  if (paymentDay) {
+    let mois = now.getMonth();
+    let annee = now.getFullYear();
+    if (now.getDate() > paymentDay) {
+      mois += 1;
+      if (mois > 11) {
+        mois = 0;
+        annee += 1;
+      }
+    }
+    const dateRemboursement = new Date(annee, mois, paymentDay);
+    dateLimite = dateRemboursement.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const diff = Math.ceil((dateRemboursement.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    joursRestants = diff > 0 ? `${diff} jours` : '0 jour';
+  }
+
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
@@ -208,7 +249,6 @@ export default function EntrepriseDashboardPage() {
   };
 
   // Calculs dynamiques pour la section Performance financière
-  const now = new Date();
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
   const demandesValidees = salaryRequests;
@@ -219,17 +259,24 @@ export default function EntrepriseDashboardPage() {
   const fluxFinance = demandesValidees.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
   const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
   const aRembourserMois = debloqueMois;
-  let dateLimite = '';
-  let joursRestants = '-';
-  if (demandesMois.length > 0) {
-    const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
-    const date = new Date(last.date_validation);
-    date.setDate(date.getDate() + 30);
-    dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-    const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    joursRestants = diff > 0 ? `${diff} jours` : '0 jour';
+  // Récupère la date de paiement (date_adhesion du partenaire connecté)
+  const datePaiement = session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion) : null;
+  let employesApprouves = 0;
+  if (datePaiement) {
+    // Cherche la dernière demande validée du mois
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const demandesMois = salaryRequests.filter((d: any) => {
+      const dVal = d.date_validation ? new Date(d.date_validation) : null;
+      return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
+    });
+    if (demandesMois.length > 0) {
+      const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
+      const dateValidation = new Date(last.date_validation);
+      employesApprouves = new Set(demandesMois.map((d: any) => d.utilisateur_id)).size;
+    }
   }
-  const employesApprouves = new Set(demandesMois.map((d: any) => d.utilisateur_id)).size;
 
   // Calculer la balance
   const totalRecupere = transactions.filter(t => t.type === 'Récupéré' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
