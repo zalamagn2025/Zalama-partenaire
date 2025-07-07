@@ -45,7 +45,7 @@ export default function GraphiquesVisualisations() {
       const monthlyData = calculateMonthlyData(financialData, demandesData);
       
       // Calculer les données comparatives (pour l'instant, on utilise les données du partenaire actuel)
-      const companiesData = [
+  const companiesData = [
         { name: session.partner.nom, value: 100 }
       ];
 

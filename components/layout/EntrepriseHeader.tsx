@@ -18,20 +18,16 @@ export default function EntrepriseHeader() {
   
   // Charger le nombre de notifications non lues
   const loadUnreadCount = async () => {
-    if (!session?.partner?.id) return;
-    
+    if (!session?.admin?.id) return;
     try {
-      // Compter les alertes non résolues (sans filtrage par partenaire car la colonne n'existe pas)
-      const { count: alertCount, error: alertError } = await supabase
-        .from('alerts')
+      // Compter les notifications non lues pour cet admin
+      const { count, error } = await supabase
+        .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .neq('statut', 'Résolue');
-
-      // Section messages supprimée - pas de comptage
-      const messageCount = 0;
-
-      if (!alertError) {
-        setUnreadCount((alertCount || 0) + messageCount);
+        .eq('user_id', session.admin.id)
+        .eq('lu', false);
+      if (!error) {
+        setUnreadCount(count || 0);
       }
     } catch (error) {
       console.error('Erreur lors du chargement du nombre de notifications:', error);
@@ -40,21 +36,21 @@ export default function EntrepriseHeader() {
 
   // Charger le nombre au montage et quand la session change
   useEffect(() => {
-    if (session?.partner?.id) {
+    if (session?.admin?.id) {
       loadUnreadCount();
     }
-  }, [session?.partner?.id]);
+  }, [session?.admin?.id]);
 
   // Recharger toutes les 30 secondes
   useEffect(() => {
     const interval = setInterval(() => {
-      if (session?.partner?.id) {
+      if (session?.admin?.id) {
         loadUnreadCount();
       }
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [session?.partner?.id]);
+  }, [session?.admin?.id]);
   
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {

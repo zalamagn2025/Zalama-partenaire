@@ -7,16 +7,18 @@ import Image from "next/image";
 
 export default function Home() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { session, loading } = useAuth();
 
   useEffect(() => {
-    // Rediriger vers le dashboard si l'utilisateur est authentifié, sinon vers la page de login
-    if (isAuthenticated) {
-      window.location.href = "/dashboard";
-    } else {
-      window.location.href = "/login";
+    if (typeof window === 'undefined') return; // S'assurer d'être côté client
+    if (!loading) {
+      if (session) {
+        router.replace("/dashboard");
+      } else {
+        router.replace("/login");
+      }
     }
-  }, [isAuthenticated]);
+  }, [session, loading, router]);
 
   // Afficher un écran de chargement pendant la redirection
   return (

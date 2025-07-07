@@ -24,6 +24,7 @@ import {
   BarChart,
   Bar
 } from 'recharts';
+import { supabase } from '@/lib/supabase';
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
@@ -58,20 +59,73 @@ export default function FinancesPage() {
   const router = useRouter();
   
   // États pour les données financières
-  const [transactions, setTransactions] = useState<FinancialTransactionWithEmployee[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [filteredTransactions, setFilteredTransactions] = useState<FinancialTransactionWithEmployee[]>([]);
   const [financialStats, setFinancialStats] = useState<FinancialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [stats, setStats] = useState({
+    fluxFinance: 0,
+    debloqueMois: 0,
+    aRembourserMois: 0,
+    dateLimite: '',
+    nbEmployesApprouves: 0
+  });
+  const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
 
-  // Charger les données financières
+  // Charger les demandes d'avance de salaire dynamiquement
   useEffect(() => {
     if (!loading && session?.partner) {
-      loadFinancialData();
+      loadSalaryAdvanceData();
     }
   }, [loading, session?.partner]);
+
+  const loadSalaryAdvanceData = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select('*')
+        .eq('partenaire_id', session?.partner?.id)
+        .eq('statut', 'Validé');
+      if (error) throw error;
+      setSalaryRequests(data || []);
+      // Calculs dynamiques SANS frais_service
+      const now = new Date();
+      const thisMonth = now.getMonth();
+      const thisYear = now.getFullYear();
+      const demandesMois = (data || []).filter((d: any) => {
+        const dVal = d.date_validation ? new Date(d.date_validation) : null;
+        return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
+      });
+      const fluxFinance = (data || []).reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+      const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+      const aRembourserMois = debloqueMois;
+      // Date limite = date_validation dernière demande validée + 30j
+      let dateLimite = '';
+      if (demandesMois.length > 0) {
+        const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
+        const date = new Date(last.date_validation);
+        date.setDate(date.getDate() + 30);
+        dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+      }
+      // Nombre d'employés approuvés ce mois-ci
+      const employesApprouves = new Set(demandesMois.map((d: any) => d.employe_id)).size;
+      setStats({
+        fluxFinance,
+        debloqueMois,
+        aRembourserMois,
+        dateLimite,
+        nbEmployesApprouves: employesApprouves
+      });
+    } catch (e) {
+      toast.error('Erreur lors du chargement des données financières');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculer les statistiques financières dynamiques
   const calculateFinancialStats = (transactions: FinancialTransactionWithEmployee[]): FinancialStats => {
@@ -237,6 +291,26 @@ export default function FinancesPage() {
     }
   };
 
+  // Pour l'historique des transactions, charge les données de financial_transactions :
+  const loadTransactions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('partenaire_id', session?.partner?.id)
+        .order('date_transaction', { ascending: false });
+      if (error) throw error;
+      setTransactions(data || []);
+    } catch (e) {
+      toast.error('Erreur lors du chargement des transactions');
+    }
+  };
+  useEffect(() => {
+    if (!loading && session?.partner) {
+      loadTransactions();
+    }
+  }, [loading, session?.partner]);
+
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
     if (!loading && !session) {
@@ -327,137 +401,94 @@ export default function FinancesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Finances
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {session.partner.nom} - Gestion financière
-          </p>
+      {/* En-tête Finances */}
+      <h1 className="text-2xl font-bold text-white mb-2">Finances</h1>
+      <p className="text-gray-400 mb-6">Entreprise: {session.partner.nom}</p>
+      {/* Cartes principales finances */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
+          <span className="text-gray-400 text-xs mb-1">Flux du Montant Financé</span>
+          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.fluxFinance)}</span>
         </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={loadFinancialData}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Actualiser
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Exporter CSV
-          </button>
+        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
+          <span className="text-gray-400 text-xs mb-1">Montant total debloqué ce mois ci</span>
+          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.debloqueMois)}</span>
+        </div>
+        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
+          <span className="text-gray-400 text-xs mb-1">Montant à rembourser ce mois ci</span>
+          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.aRembourserMois)}</span>
+        </div>
+        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
+          <span className="text-gray-400 text-xs mb-1">Date limite de Remboursement</span>
+          <span className="text-2xl font-bold text-white">{stats.dateLimite}</span>
         </div>
       </div>
 
-      {/* Statistiques principales */}
-      {financialStats && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Montant total débloqué"
-            value={gnfFormatter(financialStats.totalDebloque)}
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatCard
-            title="Montant total récupéré"
-            value={gnfFormatter(financialStats.totalRecupere)}
-            icon={TrendingDown}
-            color="blue"
-          />
-          <StatCard
-            title="Balance actuelle"
-            value={gnfFormatter(financialStats.balance)}
-            icon={Euro}
-            color={financialStats.balance >= 0 ? "green" : "red"}
-          />
-          <StatCard
-            title="Transactions en attente"
-            value={financialStats.pendingTransactions}
-            icon={CreditCard}
-            color="yellow"
-          />
-        </div>
-      )}
-
       {/* Statistiques supplémentaires */}
-      {financialStats && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard
-            title="Total revenus"
-            value={gnfFormatter(financialStats.totalRevenus)}
-            icon={DollarSign}
-            color="yellow"
-          />
-          <StatCard
-            title="Total remboursements"
-            value={gnfFormatter(financialStats.totalRemboursements)}
-            icon={BarChart3}
-            color="red"
-          />
-          <StatCard
-            title="Montant moyen par transaction"
-            value={gnfFormatter(financialStats.montantMoyen)}
+      {/* Remplace les cartes par :
+      - Flux du montant financé
+      - Montant total débloqué ce mois ci
+      - Montant à rembourser ce mois ci
+      - Date limite de remboursement
+      - Nombre d’employés approuvés ce mois ci */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StatCard
+            title="Nombre d'employés ayant eu une demande approuvée ce mois-ci"
+            value={stats.nbEmployesApprouves}
             icon={Users}
             color="purple"
-          />
-        </div>
-      )}
+        />
+      </div>
 
       {/* Graphiques */}
       {financialStats && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Évolution des montants */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Évolution des montants */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Évolution mensuelle des montants
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
               <LineChart data={financialStats.evolutionMensuelle}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mois" />
-                <YAxis />
-                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-                <Legend />
-                <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
-                <Line type="monotone" dataKey="recupere" stroke="#10b981" strokeWidth={2} name="Récupéré" />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mois" />
+              <YAxis />
+              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+              <Legend />
+              <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
+              <Line type="monotone" dataKey="recupere" stroke="#10b981" strokeWidth={2} name="Récupéré" />
                 <Line type="monotone" dataKey="revenus" stroke="#f59e0b" strokeWidth={2} name="Revenus" />
                 <Line type="monotone" dataKey="balance" stroke="#8b5cf6" strokeWidth={2} name="Balance" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
 
           {/* Répartition des transactions par type */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Répartition par type de transaction
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
                   data={financialStats.repartitionParType}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
                   {financialStats.repartitionParType.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
+      </div>
       )}
 
       {/* Graphique de répartition par statut */}
@@ -557,48 +588,48 @@ export default function FinancesPage() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {currentTransactions.length > 0 ? (
                 currentTransactions.map((transaction) => (
-                  <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {formatDate(transaction.date_transaction)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
-                      {transaction.employees?.poste && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {transaction.employees.poste}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      {transaction.description || 'Aucune description'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        transaction.type === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                        transaction.type === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        transaction.type === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {formatDate(transaction.date_transaction)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                    {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
+                    {transaction.employees?.poste && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {transaction.employees.poste}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                    {transaction.description || 'Aucune description'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      transaction.type === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                      transaction.type === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      transaction.type === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                         transaction.type === 'Commission' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {transaction.type}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {transaction.type}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {gnfFormatter(transaction.montant || 0)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        transaction.statut === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                        transaction.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                      }`}>
-                        {transaction.statut}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                      {transaction.reference || '-'}
-                    </td>
-                  </tr>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      transaction.statut === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                      transaction.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
+                      {transaction.statut}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                    {transaction.reference || '-'}
+                  </td>
+                </tr>
                 ))
               ) : (
                 <tr>

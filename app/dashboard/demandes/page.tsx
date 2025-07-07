@@ -44,7 +44,7 @@ export default function DemandesPage() {
         // Utiliser le service pour récupérer les vraies données
         const partnerService = new PartnerDataService(session.partner.id);
         const demandes = await partnerService.getSalaryAdvanceRequests();
-        
+
         setDemandesAvance(demandes);
 
       } catch (error) {

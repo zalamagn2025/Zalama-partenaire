@@ -93,7 +93,7 @@ export default function AvisPage() {
       // Utiliser le service pour récupérer les vraies données
       const partnerService = new PartnerDataService(session.partner.id);
       const avis = await partnerService.getAvis();
-      
+
       setAvis(avis);
       setFilteredAvis(avis);
 

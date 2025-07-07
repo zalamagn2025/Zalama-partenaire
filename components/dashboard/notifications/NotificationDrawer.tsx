@@ -22,43 +22,30 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   
-  // Charger les notifications filtrées par partenaire
+  // Charger les notifications filtrées par user_id (admin connecté)
   const loadNotifications = async () => {
-    if (!session?.partner?.id) return;
-    
+    if (!session?.admin?.id) return;
     setLoading(true);
     try {
-      // Récupérer les alertes (sans filtrage par partenaire pour l'instant car la table n'a pas cette colonne)
-      const { data: alerts, error: alertsError } = await supabase
-        .from('alerts')
+      const { data: notifs, error } = await supabase
+        .from('notifications')
         .select('*')
+        .eq('user_id', session.admin.id)
         .order('date_creation', { ascending: false })
-        .limit(10);
-
-      if (alertsError) {
-        console.error('Erreur lors du chargement des alertes:', alertsError);
+        .limit(20);
+      if (error) {
+        console.error('Erreur lors du chargement des notifications:', error);
       }
-
-      // Section messages supprimée - pas de messages
-      const messageNotifications: Notification[] = [];
-
-      // Convertir les alertes en notifications
-      const alertNotifications: Notification[] = (alerts || []).map((alert, index) => ({
-        id: index + 1,
-        title: alert.titre || 'Alerte',
-        message: alert.description || '',
-        type: alert.type?.toLowerCase() === 'critique' ? 'error' : 
-              alert.type?.toLowerCase() === 'importante' ? 'warning' : 'info',
-        timestamp: new Date(alert.date_creation),
-        read: alert.statut === 'Résolue',
-        link: `/dashboard/alertes`
+      const notifList: Notification[] = (notifs || []).map((notif) => ({
+        id: notif.id,
+        title: notif.titre,
+        message: notif.message,
+        type: notif.type, // On garde le type exact de la table
+        timestamp: new Date(notif.date_creation),
+        read: notif.lu,
+        link: undefined
       }));
-
-      // Combiner toutes les notifications et les trier par date
-      const allNotifications = [...alertNotifications, ...messageNotifications]
-        .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
-
-      setNotifications(allNotifications);
+      setNotifications(notifList);
     } catch (error) {
       console.error('Erreur lors du chargement des notifications:', error);
       toast.error('Erreur lors du chargement des notifications');
@@ -69,17 +56,17 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
 
   // Charger les notifications au montage et quand la session change
   useEffect(() => {
-    if (session?.partner?.id) {
+    if (session?.admin?.id) {
       loadNotifications();
     }
-  }, [session?.partner?.id]);
+  }, [session?.admin?.id]);
 
   // Recharger les notifications quand le drawer s'ouvre
   useEffect(() => {
-    if (isOpen && session?.partner?.id) {
+    if (isOpen && session?.admin?.id) {
       loadNotifications();
     }
-  }, [isOpen, session?.partner?.id]);
+  }, [isOpen, session?.admin?.id]);
   
   // Fermer le drawer si on clique en dehors
   useEffect(() => {

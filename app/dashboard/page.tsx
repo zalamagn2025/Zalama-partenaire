@@ -32,6 +32,7 @@ import {
 } from '@/lib/services';
 import { financialServiceFixed, messageServiceFixed, avisServiceFixed } from '@/lib/services_fixed';
 import type { Employee, FinancialTransaction, Alert, Message, Avis, SalaryAdvanceRequest } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
@@ -51,13 +52,16 @@ export default function EntrepriseDashboardPage() {
   
   // États pour les données dynamiques
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
-  const [avis, setAvis] = useState<Avis[]>([]);
+  const [avis, setAvis] = useState<any[]>([]);
   const [demandes, setDemandes] = useState<SalaryAdvanceRequest[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Ajoute le hook d'état pour les demandes d'avance
+  const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
 
   // Charger les données au montage du composant
   useEffect(() => {
@@ -124,6 +128,51 @@ export default function EntrepriseDashboardPage() {
     }
   }, [session?.partner, isLoading]);
 
+  // Ajoute une fonction utilitaire pour charger les avis dynamiquement :
+  const loadAvis = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('avis')
+        .select('*')
+        .eq('partner_id', session?.partner?.id)
+        .order('date_avis', { ascending: false });
+      if (error) throw error;
+      setAvis(data || []);
+    } catch (e) {
+      toast.error('Erreur lors du chargement des avis');
+    }
+  };
+  useEffect(() => {
+    if (!loading && session?.partner) {
+      loadAvis();
+    }
+  }, [loading, session?.partner]);
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      const { data, error } = await supabase
+        .from('financial_transactions')
+        .select('*')
+        .eq('partenaire_id', session?.partner?.id)
+        .eq('statut', 'Validé');
+      if (!error) setTransactions(data || []);
+    };
+    if (!loading && session?.partner) loadTransactions();
+  }, [loading, session?.partner]);
+
+  // Ajoute le hook d'état pour les demandes d'avance
+  useEffect(() => {
+    const loadSalaryRequests = async () => {
+      const { data, error } = await supabase
+        .from('salary_advance_requests')
+        .select('*')
+        .eq('partenaire_id', session?.partner?.id)
+        .eq('statut', 'Validé');
+      if (!error) setSalaryRequests(data || []);
+    };
+    if (!loading && session?.partner) loadSalaryRequests();
+  }, [loading, session?.partner]);
+
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
@@ -153,18 +202,41 @@ export default function EntrepriseDashboardPage() {
   const activeEmployees = employees.filter(emp => emp.actif);
   const totalSalary = activeEmployees.reduce((sum, emp) => sum + (emp.salaire_net || 0), 0);
   
-  // Calculer les montants débloqués (même logique que la page finances)
-  const debloquedTransactions = transactions.filter(t => t.type === 'Débloqué' && t.statut === 'Validé');
-  const totalDebloque = debloquedTransactions.reduce((sum, trans) => sum + (trans.montant || 0), 0);
-  
-  // Calculer les autres montants
+  // Fonction utilitaire pour calculer les montants dynamiques
+  const getMontantByType = (type: string) => {
+    return transactions.filter((t: any) => t.type === type && t.statut === 'Validé').reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
+  };
+
+  // Calculs dynamiques pour la section Performance financière
+  const now = new Date();
+  const thisMonth = now.getMonth();
+  const thisYear = now.getFullYear();
+  const demandesValidees = salaryRequests;
+  const demandesMois = demandesValidees.filter((d: any) => {
+    const dVal = d.date_validation ? new Date(d.date_validation) : null;
+    return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
+  });
+  const fluxFinance = demandesValidees.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+  const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+  const aRembourserMois = debloqueMois;
+  let dateLimite = '';
+  let joursRestants = '-';
+  if (demandesMois.length > 0) {
+    const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
+    const date = new Date(last.date_validation);
+    date.setDate(date.getDate() + 30);
+    dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+    const diff = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    joursRestants = diff > 0 ? `${diff} jours` : '0 jour';
+  }
+  const employesApprouves = new Set(demandesMois.map((d: any) => d.utilisateur_id)).size;
+
+  // Calculer la balance
   const totalRecupere = transactions.filter(t => t.type === 'Récupéré' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
   const totalRevenus = transactions.filter(t => t.type === 'Revenu' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
   const totalRemboursements = transactions.filter(t => t.type === 'Remboursement' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
   const totalCommissions = transactions.filter(t => t.type === 'Commission' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
-
-  // Calculer la balance
-  const balance = totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
+  const balance = totalRecupere - totalRemboursements + totalRevenus;
   
   const activeAlerts = alerts.filter(alert => alert.statut !== 'Résolue');
   const averageRating = avis.length > 0 ? avis.reduce((sum, av) => sum + av.note, 0) / avis.length : 0;
@@ -262,114 +334,100 @@ export default function EntrepriseDashboardPage() {
     <div className="p-6 space-y-6">
       {/* En-tête du tableau de bord */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Tableau de bord
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {session?.partner?.nom} - {session?.partner?.secteur}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="bg-blue-900 rounded-lg w-12 h-12 flex items-center justify-center">
+            <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,4)?.toUpperCase()}</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-white">{session?.partner?.nom}</h1>
+            <p className="text-gray-400 text-xs">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={loadDashboardData}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Actualiser
-          </button>
+        <div className="flex flex-col items-end">
+          <span className="text-blue-400 text-xs">Partenaire depuis {session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion).getFullYear() : ''}</span>
+          <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">Compte actif</span>
         </div>
       </div>
 
-      {/* Cartes de statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Cartes statistiques principales */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
-          title="Employés actifs"
-          value={activeEmployees.length}
-          total={employees.length}
+          title="Employés inscrits"
+          value={`${activeEmployees.length}/${employees.length}`}
           icon={Users}
           color="blue"
         />
         <StatCard
-          title="Montant total débloqué"
-          value={gnfFormatter(totalDebloque)}
-          icon={CreditCard}
-          color="green"
+          title="Demandes totales"
+          value={demandes.length}
+          icon={FileText}
+          color="purple"
+        />
+        <StatCard
+          title="Demandes par employé"
+          value={(activeEmployees.length > 0 ? (demandes.length/activeEmployees.length).toFixed(1) : '0.0')}
+          icon={ClipboardList}
+          color="yellow"
         />
         <StatCard
           title="Note moyenne"
           value={averageRating.toFixed(1)}
           icon={Star}
-          color="yellow"
-        />
-        <StatCard
-          title="Demandes en attente"
-          value={pendingDemandes.length}
-          icon={ClipboardList}
-          color="red"
+          color="green"
         />
       </div>
 
-      {/* Cartes financières supplémentaires */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Montant total récupéré"
-          value={gnfFormatter(totalRecupere)}
-          icon={Download}
-          color="blue"
-        />
-        <StatCard
-          title="Total revenus"
-          value={gnfFormatter(totalRevenus)}
-          icon={BarChart2}
-          color="yellow"
-        />
-        <StatCard
-          title="Balance actuelle"
-          value={gnfFormatter(balance)}
-          icon={Building2}
-          color={balance >= 0 ? "green" : "red"}
-        />
-        <StatCard
-          title="Total commissions"
-          value={gnfFormatter(totalCommissions)}
-          icon={ThumbsUp}
-          color="purple"
-        />
+      {/* Performance financière */}
+      <div className="bg-[#181F2A] rounded-xl p-6 mt-8">
+        <h2 className="text-white text-lg font-semibold mb-4">Performance financière</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+            <span className="text-gray-400 text-xs mb-1">Montant total débloqué</span>
+            <span className="text-2xl font-bold text-white">{gnfFormatter(debloqueMois)}</span>
+          </div>
+          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+            <span className="text-gray-400 text-xs mb-1">À rembourser ce mois</span>
+            <span className="text-2xl font-bold text-white">{gnfFormatter(aRembourserMois)}</span>
+          </div>
+          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+            <span className="text-gray-400 text-xs mb-1">Taux de remboursement</span>
+            <span className="text-2xl font-bold text-white">{((aRembourserMois/debloqueMois)*100 || 0).toFixed(1)}%</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+            <span className="text-gray-400 text-xs mb-1">Date limite de remboursement</span>
+            <span className="text-lg font-bold text-white">{dateLimite}</span>
+          </div>
+          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+            <span className="text-gray-400 text-xs mb-1">Jours restants avant Remboursement</span>
+            <span className="text-lg font-bold text-white">{joursRestants}</span>
+            <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+              <div className="bg-yellow-400 h-2 rounded-full" style={{width: `${(aRembourserMois/debloqueMois)*100}%`}}></div>
+            </div>
+            <span className="text-xs text-gray-400 mt-1">Remboursement cette semaine</span>
+          </div>
+        </div>
       </div>
 
-      {/* Section Performance Financière */}
-      {session?.partner && (
-        <PerformanceFinanciere
-          className="mt-6"
-          totalTransactions={gnfFormatter(totalDebloque)}
-          totalRecupere={gnfFormatter(totalRecupere)}
-          totalRevenus={gnfFormatter(totalRevenus)}
-          balance={gnfFormatter(balance)}
-          dateLimite={session.partner.date_adhesion || new Date().toISOString()}
-        />
-      )}
-
-      {/* Graphiques et visualisations */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Visualisations et Graphiques */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Évolution des demandes
-          </h3>
+        <div className="bg-[#181F2A] rounded-lg shadow p-6">
+          <h3 className="text-white text-base font-semibold mb-4">Évolution des demandes</h3>
           {hasDemandesData ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart data={demandesEvolutionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mois" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
+                <XAxis dataKey="mois" stroke="#A0AEC0" />
+                <YAxis stroke="#A0AEC0" />
                 <Tooltip />
                 <Legend />
-                <Line type="monotone" dataKey="demandes" stroke="#8884d8" strokeWidth={2} />
+                <Line type="monotone" dataKey="demandes" stroke="#4F8EF7" strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
               <div className="text-center">
                 <BarChart2 className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>Aucune donnée disponible</p>
@@ -377,25 +435,22 @@ export default function EntrepriseDashboardPage() {
             </div>
           )}
         </div>
-
-        {/* Évolution des montants */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Évolution des montants débloqués
-          </h3>
+        {/* Montants débloqués */}
+        <div className="bg-[#181F2A] rounded-lg shadow p-6">
+          <h3 className="text-white text-base font-semibold mb-4">Montants débloqués</h3>
           {hasDemandesData ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={montantsEvolutionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mois" />
-                <YAxis />
+                <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
+                <XAxis dataKey="mois" stroke="#A0AEC0" />
+                <YAxis stroke="#A0AEC0" />
                 <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
                 <Legend />
-                <Bar dataKey="montant" fill="#82ca9d" />
+                <Bar dataKey="montant" fill="#4F8EF7" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-center h-[200px] text-gray-500 dark:text-gray-400">
               <div className="text-center">
                 <CreditCard className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>Aucune donnée disponible</p>
@@ -405,42 +460,72 @@ export default function EntrepriseDashboardPage() {
         </div>
       </div>
 
-      {/* Alertes et avis récents */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Alertes récentes */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Alertes récentes
-          </h3>
-          <div className="space-y-3">
-            {activeAlerts.slice(0, 5).map((alert) => (
-              <div key={alert.id} className="flex items-start space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <AlertCircle className={`w-5 h-5 mt-0.5 ${
-                  alert.type === 'Critique' ? 'text-red-500' :
-                  alert.type === 'Importante' ? 'text-yellow-500' : 'text-blue-500'
-                }`} />
-                <div className="flex-1">
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                    {alert.titre}
-                  </h4>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    {alert.description}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
-                    {formatDate(alert.date_creation)}
-                  </p>
-                </div>
+      {/* Répartition par motif + Documents et rapports sur la même ligne */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+        {/* Répartition par motif */}
+        <div className="bg-[#181F2A] rounded-lg shadow p-6 flex flex-col items-center justify-center">
+          <h3 className="text-white text-base font-semibold mb-4">Répartition par motif</h3>
+          {hasMotifsData ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={repartitionMotifsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ motif, valeur }) => `${motif} (${valeur})`}
+                  outerRadius={70}
+                  fill="#4F8EF7"
+                  dataKey="valeur"
+                >
+                  {repartitionMotifsData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend verticalAlign="bottom" height={36} iconType="circle"/>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[220px] text-gray-500 dark:text-gray-400">
+              <div className="text-center">
+                <PieChart className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p>Aucune donnée disponible</p>
               </div>
+            </div>
+          )}
+        </div>
+        {/* Documents et rapports */}
+        <div className="bg-[#181F2A] rounded-xl p-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-white text-lg font-semibold">Documents et rapports</h2>
+            <button className="text-blue-400 text-sm hover:underline">Tout télécharger</button>
+          </div>
+          <div className="grid grid-cols-1 gap-4">
+            {[
+              { nom: 'Relevé mensuel - Mai 2025', type: 'PDF', size: '1.2 MB', url: '/docs/releve_mai2025.pdf' },
+              { nom: "Rapport d'activité - T1 2025", type: 'PDF', size: '2.8 MB', url: '/docs/rapport_t1_2025.pdf' },
+              { nom: 'Échéancier de remboursement', type: 'XLSX', size: '0.9 MB', url: '/docs/echeancier.xlsx' },
+              { nom: 'Statistiques utilisateurs', type: 'XLSX', size: '1.3 MB', url: '/docs/stats.xlsx' },
+              { nom: 'Contrat de partenariat', type: 'PDF', size: '3.2 MB', url: '/docs/contrat.pdf' },
+              { nom: "Guide d'utilisation", type: 'PDF', size: '4.5 MB', url: '/docs/guide.pdf' },
+            ].map((doc, idx) => (
+              <a key={idx} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center bg-[#232C3B] rounded-lg p-4 hover:bg-[#22304a] transition mb-2">
+                <span className="mr-4">
+                  {doc.type === 'PDF' ? (
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#2563eb"/><text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">PDF</text></svg>
+                  ) : (
+                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#059669"/><text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">XLSX</text></svg>
+                  )}
+                </span>
+                <div className="flex-1">
+                  <div className="text-white font-medium text-sm">{doc.nom}</div>
+                  <div className="text-gray-400 text-xs mt-1">{doc.type} • {doc.size}</div>
+                </div>
+              </a>
             ))}
-            {activeAlerts.length === 0 && (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-                Aucune alerte active
-              </p>
-            )}
           </div>
         </div>
-
-
       </div>
     </div>
   );
