@@ -210,11 +210,10 @@ export default function AvisPage() {
       </div>
 
       {/* Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* Évolution des notes */}
-        <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
+      <div className="mt-6">
+        <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6 w-full">
           <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">Évolution des notes</h2>
-          <div className="h-80">
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={getEvolutionNotesData(avis)}
@@ -237,8 +236,6 @@ export default function AvisPage() {
             </ResponsiveContainer>
           </div>
         </div>
-        
-
       </div>
       
       {/* Barre d'actions */}
