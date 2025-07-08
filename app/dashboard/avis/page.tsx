@@ -392,9 +392,9 @@ export default function AvisPage() {
                   <h3 className="text-base font-semibold text-[var(--zalama-text)] text-center">
                     {avis.employees ? `${avis.employees.prenom} ${avis.employees.nom}` : 'Utilisateur inconnu'}
                   </h3>
-                                      <p className="text-xs text-[var(--zalama-text)]/60 text-center">
+                  <p className="text-xs text-[var(--zalama-text)]/60 text-center">
                       {avis.employees?.poste || 'Poste non spécifié'}
-                    </p>
+                  </p>
                 </div>
                 
                 {/* Contenu de l'avis */}
@@ -441,9 +441,9 @@ export default function AvisPage() {
                       <MessageSquare className="h-3 w-3 mr-1" />
                       <span>Note: {avis.note} étoiles</span>
                     </div>
-                                          <div className="flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                    <div className="flex items-center px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                         <span>Poste: {avis.employees?.poste || 'Non spécifié'}</span>
-                      </div>
+                    </div>
                     <div className="ml-auto text-xs text-[var(--zalama-text)]/40">
                       {avis.id}
                     </div>

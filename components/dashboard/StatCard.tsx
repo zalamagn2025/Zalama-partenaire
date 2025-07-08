@@ -51,7 +51,7 @@ export default function StatCard({
   const colors = colorClasses[color];
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+    <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
           <div className={`w-12 h-12 rounded-lg ${colors.bg} flex items-center justify-center`}>

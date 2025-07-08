@@ -282,18 +282,18 @@ export const financialService = {
 
         if (statut === 'Validé') {
           switch (type) {
-            case 'Débloqué':
-              stats.total_debloque += montant;
-              break;
-            case 'Récupéré':
-              stats.total_recupere += montant;
-              break;
-            case 'Revenu':
-              stats.total_revenus += montant;
-              break;
-            case 'Remboursement':
-              stats.total_remboursements += montant;
-              break;
+          case 'Débloqué':
+            stats.total_debloque += montant;
+            break;
+          case 'Récupéré':
+            stats.total_recupere += montant;
+            break;
+          case 'Revenu':
+            stats.total_revenus += montant;
+            break;
+          case 'Remboursement':
+            stats.total_remboursements += montant;
+            break;
             case 'Commission':
               stats.total_commissions += montant;
               break;
@@ -745,7 +745,7 @@ export const demandeAvanceService = {
 
     return { error };
   }
-};
+}; 
 
 // Service pour récupérer les données dynamiques du partenaire connecté
 export class PartnerDataService {

@@ -385,7 +385,7 @@ export default function EntrepriseDashboardPage() {
           <div className="bg-blue-900 rounded-lg w-12 h-12 flex items-center justify-center">
             <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,4)?.toUpperCase()}</span>
           </div>
-          <div>
+        <div>
             <h1 className="text-xl font-bold text-white">{session?.partner?.nom}</h1>
             <p className="text-gray-400 text-xs">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
           </div>
@@ -425,28 +425,28 @@ export default function EntrepriseDashboardPage() {
       </div>
 
       {/* Performance financière */}
-      <div className="bg-[#181F2A] rounded-xl p-6 mt-8">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
         <h2 className="text-white text-lg font-semibold mb-4">Performance financière</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-400 text-xs mb-1">Montant total débloqué</span>
             <span className="text-2xl font-bold text-white">{gnfFormatter(debloqueMois)}</span>
           </div>
-          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-400 text-xs mb-1">À rembourser ce mois</span>
             <span className="text-2xl font-bold text-white">{gnfFormatter(aRembourserMois)}</span>
           </div>
-          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-400 text-xs mb-1">Taux de remboursement</span>
             <span className="text-2xl font-bold text-white">{((aRembourserMois/debloqueMois)*100 || 0).toFixed(1)}%</span>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-400 text-xs mb-1">Date limite de remboursement</span>
             <span className="text-lg font-bold text-white">{dateLimite}</span>
           </div>
-          <div className="bg-[#232C3B] rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-400 text-xs mb-1">Jours restants avant Remboursement</span>
             <span className="text-lg font-bold text-white">{joursRestants}</span>
             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
@@ -460,7 +460,7 @@ export default function EntrepriseDashboardPage() {
       {/* Visualisations et Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
-        <div className="bg-[#181F2A] rounded-lg shadow p-6">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
           <h3 className="text-white text-base font-semibold mb-4">Évolution des demandes</h3>
           {hasDemandesData ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -483,7 +483,7 @@ export default function EntrepriseDashboardPage() {
           )}
         </div>
         {/* Montants débloqués */}
-        <div className="bg-[#181F2A] rounded-lg shadow p-6">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
           <h3 className="text-white text-base font-semibold mb-4">Montants débloqués</h3>
           {hasDemandesData ? (
             <ResponsiveContainer width="100%" height={200}>
@@ -510,7 +510,7 @@ export default function EntrepriseDashboardPage() {
       {/* Répartition par motif + Documents et rapports sur la même ligne */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Répartition par motif */}
-        <div className="bg-[#181F2A] rounded-lg shadow p-6 flex flex-col items-center justify-center">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 flex flex-col items-center justify-center">
           <h3 className="text-white text-base font-semibold mb-4">Répartition par motif</h3>
           {hasMotifsData ? (
             <ResponsiveContainer width="100%" height={220}>
@@ -543,7 +543,7 @@ export default function EntrepriseDashboardPage() {
           )}
         </div>
         {/* Documents et rapports */}
-        <div className="bg-[#181F2A] rounded-xl p-6 flex flex-col justify-between">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-white text-lg font-semibold">Documents et rapports</h2>
             <button className="text-blue-400 text-sm hover:underline">Tout télécharger</button>
@@ -557,7 +557,7 @@ export default function EntrepriseDashboardPage() {
               { nom: 'Contrat de partenariat', type: 'PDF', size: '3.2 MB', url: '/docs/contrat.pdf' },
               { nom: "Guide d'utilisation", type: 'PDF', size: '4.5 MB', url: '/docs/guide.pdf' },
             ].map((doc, idx) => (
-              <a key={idx} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center bg-[#232C3B] rounded-lg p-4 hover:bg-[#22304a] transition mb-2">
+              <a key={idx} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 hover:bg-[#22304a] transition mb-2">
                 <span className="mr-4">
                   {doc.type === 'PDF' ? (
                     <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#2563eb"/><text x="50%" y="60%" textAnchor="middle" fill="#fff" fontSize="10" fontWeight="bold">PDF</text></svg>
