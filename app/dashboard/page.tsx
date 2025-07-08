@@ -380,18 +380,18 @@ export default function EntrepriseDashboardPage() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête du tableau de bord */}
-      <div className="flex items-center justify-between">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
         <div className="flex items-center gap-4">
           <div className="bg-blue-900 rounded-lg w-12 h-12 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,4)?.toUpperCase()}</span>
+            <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,1)?.toUpperCase()}</span>
           </div>
         <div>
-            <h1 className="text-xl font-bold text-white">{session?.partner?.nom}</h1>
-            <p className="text-gray-400 text-xs">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
+            <h1 className="text-3xl font-bold text-white">{session?.partner?.nom}</h1>
+            <p className="text-gray-400 text-lg">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-blue-400 text-xs">Partenaire depuis {session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion).getFullYear() : ''}</span>
+          <span className="text-blue-400 text-sm">Partenaire depuis {session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion).getFullYear() : ''}</span>
           <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">Compte actif</span>
         </div>
       </div>
