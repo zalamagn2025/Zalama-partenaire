@@ -442,22 +442,32 @@ export default function FinancesPage() {
       <p className="text-gray-400 mb-6">Entreprise: {session.partner.nom}</p>
       {/* Cartes principales finances */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
-          <span className="text-gray-400 text-xs mb-1">Flux du Montant Financé</span>
-          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.fluxFinance)}</span>
-        </div>
-        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
-          <span className="text-gray-400 text-xs mb-1">Montant total debloqué ce mois ci</span>
-          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.debloqueMois)}</span>
-        </div>
-        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
-          <span className="text-gray-400 text-xs mb-1">Montant à rembourser ce mois ci</span>
-          <span className="text-2xl font-bold text-white">{gnfFormatter(stats.aRembourserMois)}</span>
-        </div>
-        <div className="bg-[#181F2A] rounded-lg p-6 flex flex-col items-start">
-          <span className="text-gray-400 text-xs mb-1">Date limite de Remboursement</span>
-          <span className="text-2xl font-bold text-white">{dateLimite}</span>
-        </div>
+        
+        <StatCard
+          title="Flux du Montant Financé"
+          value={gnfFormatter(stats.fluxFinance)}
+          icon={Calendar}
+          color="green"
+        />
+        <StatCard
+          title="Montant total débloqué ce mois ci"
+          value={gnfFormatter(stats.debloqueMois)}
+          icon={Calendar}
+          color="green"
+        />
+        
+        <StatCard
+          title="Montant à rembourser ce mois ci"
+          value={gnfFormatter(stats.aRembourserMois)}
+          icon={Calendar}
+          color="green"
+        />
+        <StatCard
+          title="Date limite de Remboursement"
+          value={dateLimite}
+          icon={Calendar}
+          color="green"
+        />
       </div>
 
       {/* Statistiques supplémentaires */}
@@ -480,7 +490,7 @@ export default function FinancesPage() {
       {financialStats && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Évolution des montants */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Évolution mensuelle des montants
           </h3>
@@ -500,7 +510,7 @@ export default function FinancesPage() {
         </div>
 
           {/* Répartition des transactions par type */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Répartition par type de transaction
           </h3>
@@ -529,7 +539,7 @@ export default function FinancesPage() {
 
       {/* Graphique de répartition par statut */}
       {financialStats && financialStats.repartitionParStatut.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Répartition par statut des transactions
           </h3>
@@ -546,7 +556,7 @@ export default function FinancesPage() {
       )}
 
       {/* Filtres */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Filtre par type */}
           <div className="flex-1">
@@ -556,7 +566,7 @@ export default function FinancesPage() {
             <select
               value={selectedType || ''}
               onChange={(e) => setSelectedType(e.target.value || null)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
               <option value="">Tous les types</option>
               <option value="Débloqué">Débloqué</option>
@@ -575,7 +585,7 @@ export default function FinancesPage() {
             <select
               value={selectedStatus || ''}
               onChange={(e) => setSelectedStatus(e.target.value || null)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
               <option value="">Tous les statuts</option>
               <option value="En attente">En attente</option>
@@ -588,15 +598,15 @@ export default function FinancesPage() {
       </div>
 
       {/* Tableau des transactions */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Historique des transactions ({filteredTransactions.length} transactions)
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
+          <table className="min-w-full  dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date
@@ -621,7 +631,7 @@ export default function FinancesPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
               {currentTransactions.length > 0 ? (
                 currentTransactions.map((transaction) => (
                 <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
@@ -680,7 +690,7 @@ export default function FinancesPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => setCurrentPage(currentPage - 1)}

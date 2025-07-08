@@ -192,14 +192,14 @@ export default function ParametresPage() {
       {activeTab === 'profil' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Profil personnel */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Mon Profil
               </h2>
               <button
                 onClick={() => setIsEditingProfile(!isEditingProfile)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm hover:text-gray-300 transition-colors hover:bg-[var(--zalama-blue-accent)] bg-[var(--zalama-blue)] border border-[var(--zalama-border)] border-opacity-2  rounded-lg text-white py-2"
               >
                 <Edit3 className="w-4 h-4" />
                 {isEditingProfile ? 'Annuler' : 'Modifier'}
@@ -238,7 +238,7 @@ export default function ParametresPage() {
                   value={profileData.nom}
                   onChange={(e) => setProfileData({...profileData, nom: e.target.value})}
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                 />
               </div>
               
@@ -251,7 +251,7 @@ export default function ParametresPage() {
                   value={profileData.display_name}
                   onChange={(e) => setProfileData({...profileData, display_name: e.target.value})}
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                 />
               </div>
               
@@ -266,7 +266,7 @@ export default function ParametresPage() {
                     value={profileData.email}
                     onChange={(e) => setProfileData({...profileData, email: e.target.value})}
                     disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -282,7 +282,7 @@ export default function ParametresPage() {
                     value={profileData.telephone}
                     onChange={(e) => setProfileData({...profileData, telephone: e.target.value})}
                     disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -296,7 +296,7 @@ export default function ParametresPage() {
                   value={profileData.poste}
                   onChange={(e) => setProfileData({...profileData, poste: e.target.value})}
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
                 />
               </div>
               
@@ -321,7 +321,7 @@ export default function ParametresPage() {
           </div>
 
           {/* Informations de l'entreprise */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Informations de l'entreprise
             </h2>
@@ -337,7 +337,7 @@ export default function ParametresPage() {
                     type="text" 
                     value={partnerData.nom}
                     onChange={(e) => setPartnerData({...partnerData, nom: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function ParametresPage() {
                 <select 
                   value={partnerData.secteur}
                   onChange={(e) => setPartnerData({...partnerData, secteur: e.target.value})}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Sélectionner un secteur</option>
                   <option value="Technologie">Technologie</option>
@@ -373,7 +373,7 @@ export default function ParametresPage() {
                     type="email" 
                     value={partnerData.email}
                     onChange={(e) => setPartnerData({...partnerData, email: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -388,7 +388,7 @@ export default function ParametresPage() {
                     type="tel" 
                     value={partnerData.telephone}
                     onChange={(e) => setPartnerData({...partnerData, telephone: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -403,7 +403,7 @@ export default function ParametresPage() {
                     type="text" 
                     value={partnerData.adresse}
                     onChange={(e) => setPartnerData({...partnerData, adresse: e.target.value})}
-                    className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function ParametresPage() {
                     type="text" 
                     value={partnerData.ville}
                     onChange={(e) => setPartnerData({...partnerData, ville: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
                 <div>
@@ -428,7 +428,7 @@ export default function ParametresPage() {
                     type="text" 
                     value={partnerData.pays}
                     onChange={(e) => setPartnerData({...partnerData, pays: e.target.value})}
-                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -441,7 +441,7 @@ export default function ParametresPage() {
                   value={partnerData.description}
                   onChange={(e) => setPartnerData({...partnerData, description: e.target.value})}
                   rows={3}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Décrivez votre entreprise..."
                 />
               </div>
@@ -466,7 +466,7 @@ export default function ParametresPage() {
 
       {activeTab === 'securite' && (
         <div className="max-w-2xl">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Sécurité du compte
             </h2>
@@ -490,7 +490,7 @@ export default function ParametresPage() {
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
                         placeholder="Entrez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                       <button
                         type="button"
@@ -513,12 +513,12 @@ export default function ParametresPage() {
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                         placeholder="Confirmez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600 "
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
@@ -529,10 +529,10 @@ export default function ParametresPage() {
                     <button
                       onClick={handlePasswordChange}
                       disabled={isChangingPassword || !passwordData.newPassword || !passwordData.confirmPassword}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white rounded-lg hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {isChangingPassword ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent bg-[var(--zalama-green)]" />
                       ) : (
                         <Save className="w-4 h-4" />
                       )}
@@ -582,7 +582,7 @@ export default function ParametresPage() {
 
       {activeTab === 'apparence' && (
         <div className="max-w-2xl">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Préférences d'apparence
             </h2>
