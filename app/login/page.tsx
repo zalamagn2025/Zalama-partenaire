@@ -114,7 +114,7 @@ export default function LoginPage() {
             Accédez au tableau de bord partenaire
           </p>
         </div>
-
+        
         <Card>
           <CardHeader>
             <CardTitle className='text-center text-2xl font-bold'>Connexion</CardTitle>
@@ -129,33 +129,33 @@ export default function LoginPage() {
                 <Label htmlFor="email">Adresse email</Label>
                 <Input
                   id="email"
-                  type="email"
+                type="email"
                   placeholder="admin@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                />
-              </div>
+              />
+            </div>
               
               <div className="space-y-2">
                 <Label htmlFor="password">Mot de passe</Label>
-                <div className="relative">
+            <div className="relative">
                   <Input
-                    id="password"
+                id="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={isLoading}
-                  />
+              />
                   <Button
-                    type="button"
+                type="button"
                     variant="ghost"
                     size="sm"
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                    onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
                     {showPassword ? (
@@ -164,8 +164,8 @@ export default function LoginPage() {
                       <Eye className="h-4 w-4" />
                     )}
                   </Button>
-                </div>
-              </div>
+            </div>
+          </div>
 
               <Alert className='mt-4'>
                 <Shield className="h-4 w-4" />
@@ -177,9 +177,9 @@ export default function LoginPage() {
             
             <CardFooter className="flex flex-col space-y-4 mt-4">
               <Button
-                type="submit"
+              type="submit"
                 className="w-full"
-                disabled={isLoading}
+              disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
@@ -190,12 +190,12 @@ export default function LoginPage() {
                   <div className="flex items-center gap-2">
                     <LogIn className="w-4 h-4" />
                     Se connecter
-                  </div>
+          </div>
                 )}
               </Button>
               
             </CardFooter>
-          </form>
+        </form>
         </Card>
       </div>
     </div>

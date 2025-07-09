@@ -136,7 +136,7 @@ export default function ParametresPage() {
       day: 'numeric'
     });
   };
-
+  
   return (
     <div className="p-6 space-y-6">
       {/* En-tête */}
@@ -150,7 +150,7 @@ export default function ParametresPage() {
           </p>
         </div>
       </div>
-
+      
       {/* Onglets de paramètres */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         <button 
@@ -229,12 +229,12 @@ export default function ParametresPage() {
             </div>
             
             <div className="space-y-4">
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nom complet
                 </label>
-                <input 
-                  type="text" 
+                  <input 
+                    type="text" 
                   value={profileData.nom}
                   onChange={(e) => setProfileData({...profileData, nom: e.target.value})}
                   disabled={!isEditingProfile}
@@ -255,7 +255,7 @@ export default function ParametresPage() {
                 />
               </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email
                 </label>
@@ -271,7 +271,7 @@ export default function ParametresPage() {
                 </div>
               </div>
               
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Téléphone
                 </label>
@@ -319,7 +319,7 @@ export default function ParametresPage() {
               )}
             </div>
           </div>
-
+          
           {/* Informations de l'entreprise */}
           <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
@@ -327,7 +327,7 @@ export default function ParametresPage() {
             </h2>
             
             <div className="space-y-4">
-              <div>
+                <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nom de l'entreprise
                 </label>
@@ -376,9 +376,9 @@ export default function ParametresPage() {
                     className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
-              </div>
-              
-              <div>
+      </div>
+
+          <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Téléphone de l'entreprise
                 </label>
@@ -409,7 +409,7 @@ export default function ParametresPage() {
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Ville
                   </label>
@@ -420,7 +420,7 @@ export default function ParametresPage() {
                     className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
-                <div>
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Pays
                   </label>
@@ -433,7 +433,7 @@ export default function ParametresPage() {
                 </div>
               </div>
               
-              <div>
+                    <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Description
                 </label>
@@ -444,8 +444,8 @@ export default function ParametresPage() {
                   className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   placeholder="Décrivez votre entreprise..."
                 />
-              </div>
-              
+                  </div>
+                  
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
                   <Calendar className="w-4 h-4" />
@@ -460,11 +460,11 @@ export default function ParametresPage() {
                 </button>
               </div>
             </div>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {activeTab === 'securite' && (
+        {activeTab === 'securite' && (
         <div className="max-w-2xl">
           <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
@@ -485,7 +485,7 @@ export default function ParametresPage() {
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input 
+                    <input 
                         type={showNewPassword ? "text" : "password"}
                         value={passwordData.newPassword}
                         onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
@@ -508,7 +508,7 @@ export default function ParametresPage() {
                     </label>
                     <div className="relative">
                       <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input 
+                    <input 
                         type={showConfirmPassword ? "text" : "password"}
                         value={passwordData.confirmPassword}
                         onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
@@ -522,7 +522,7 @@ export default function ParametresPage() {
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
-                    </div>
+                  </div>
                   </div>
                   
                   <div className="pt-4">
@@ -534,14 +534,14 @@ export default function ParametresPage() {
                       {isChangingPassword ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent bg-[var(--zalama-green)]" />
                       ) : (
-                        <Save className="w-4 h-4" />
+                      <Save className="w-4 h-4" />
                       )}
                       {isChangingPassword ? 'Changement...' : 'Changer le mot de passe'}
                     </button>
                   </div>
                 </div>
               </div>
-
+              
               {/* Informations de sécurité */}
               <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                 <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
@@ -577,8 +577,8 @@ export default function ParametresPage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
+          </div>
+        )}
 
       {activeTab === 'apparence' && (
         <div className="max-w-2xl">
@@ -589,7 +589,7 @@ export default function ParametresPage() {
             
             <div className="space-y-6">
               {/* Thème */}
-              <div>
+                    <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
                   Mode d'affichage
                 </label>
@@ -605,11 +605,11 @@ export default function ParametresPage() {
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-yellow-100 rounded-lg">
                         <Sun className="w-5 h-5 text-yellow-600" />
-                      </div>
+                    </div>
                       <div className="text-left">
                         <div className="font-medium text-gray-900 dark:text-white">Clair</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">Thème lumineux</div>
-                      </div>
+                  </div>
                     </div>
                   </button>
                   
@@ -624,16 +624,16 @@ export default function ParametresPage() {
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gray-800 rounded-lg">
                         <Moon className="w-5 h-5 text-gray-100" />
-                      </div>
+                    </div>
                       <div className="text-left">
                         <div className="font-medium text-gray-900 dark:text-white">Sombre</div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">Thème sombre</div>
-                      </div>
+                  </div>
                     </div>
                   </button>
                 </div>
               </div>
-
+              
               {/* Informations sur le thème actuel */}
               <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
@@ -643,11 +643,11 @@ export default function ParametresPage() {
                 <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
                   Votre choix est automatiquement sauvegardé et synchronisé sur tous vos appareils.
                 </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }

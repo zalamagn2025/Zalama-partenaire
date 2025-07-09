@@ -54,13 +54,40 @@ interface FinancialStats {
   repartitionParStatut: any[];
 }
 
+// Interface pour les transactions avec employé
+interface TransactionWithEmployee {
+  id: string;
+  demande_avance_id: string | null;
+  employe_id: string | null;
+  entreprise_id: string;
+  montant: number;
+  numero_transaction: string;
+  methode_paiement: string;
+  numero_compte: string | null;
+  numero_reception: string | null;
+  date_transaction: string;
+  recu_url: string | null;
+  date_creation: string;
+  statut: string;
+  created_at: string;
+  updated_at: string;
+  description: string | null;
+  message_callback: string | null;
+  employees?: {
+    id: string;
+    prenom: string;
+    nom: string;
+    poste: string;
+  } | null;
+}
+
 export default function FinancesPage() {
   const { session, loading } = useAuth();
   const router = useRouter();
   
   // États pour les données financières
-  const [transactions, setTransactions] = useState<any[]>([]);
-  const [filteredTransactions, setFilteredTransactions] = useState<FinancialTransactionWithEmployee[]>([]);
+  const [transactions, setTransactions] = useState<TransactionWithEmployee[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<TransactionWithEmployee[]>([]);
   const [financialStats, setFinancialStats] = useState<FinancialStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedType, setSelectedType] = useState<string | null>(null);
@@ -121,34 +148,49 @@ export default function FinancesPage() {
   const loadSalaryAdvanceData = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // 1. Récupérer toutes les transactions valides pour l'entreprise (flux financier total)
+      const { data: allTransactions, error: transactionsError } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('entreprise_id', session?.partner?.id)
+        .eq('statut', 'EFFECTUEE');
+      
+      if (transactionsError) throw transactionsError;
+
+      // 2. Récupérer les demandes d'avance validées pour ce mois-ci
+      const { data: salaryRequests, error: salaryError } = await supabase
         .from('salary_advance_requests')
         .select('*')
         .eq('partenaire_id', session?.partner?.id)
         .eq('statut', 'Validé');
-      if (error) throw error;
-      setSalaryRequests(data || []);
-      // Calculs dynamiques SANS frais_service
+      
+      if (salaryError) throw salaryError;
+      
+      setSalaryRequests(salaryRequests || []);
+      
+      // Calculs selon votre logique
       const now = new Date();
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
-      const demandesMois = (data || []).filter((d: any) => {
+      
+      // Demandes validées ce mois-ci
+      const demandesMois = (salaryRequests || []).filter((d: any) => {
         const dVal = d.date_validation ? new Date(d.date_validation) : null;
         return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
       });
-      const fluxFinance = (data || []).reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+
+      // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
+      const fluxFinance = (allTransactions || []).reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
+      
+      // Montant débloqué ce mois-ci = somme des montants des demandes validées ce mois-ci
       const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+      
+      // Montant à rembourser ce mois-ci = même montant que débloqué (logique de remboursement)
       const aRembourserMois = debloqueMois;
-      // Date limite = date_validation dernière demande validée + 30j
-      // let dateLimite = ''; // This line is now redundant as dateLimite is calculated above
-      // if (demandesMois.length > 0) {
-      //   const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
-      //   const date = new Date(last.date_validation);
-      //   date.setDate(date.getDate() + 30);
-      //   dateLimite = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-      // }
+      
       // Nombre d'employés approuvés ce mois-ci
       const employesApprouves = new Set(demandesMois.map((d: any) => d.employe_id)).size;
+      
       setStats({
         fluxFinance,
         debloqueMois,
@@ -157,6 +199,7 @@ export default function FinancesPage() {
         nbEmployesApprouves: employesApprouves
       });
     } catch (e) {
+      console.error('Erreur lors du chargement des données financières:', e);
       toast.error('Erreur lors du chargement des données financières');
     } finally {
       setIsLoading(false);
@@ -164,29 +207,29 @@ export default function FinancesPage() {
   };
 
   // Calculer les statistiques financières dynamiques
-  const calculateFinancialStats = (transactions: FinancialTransactionWithEmployee[]): FinancialStats => {
-    // Calculs de base
+  const calculateFinancialStats = (transactions: TransactionWithEmployee[]): FinancialStats => {
+    // Calculs de base - adapter selon les types de transactions dans la table transactions
     const totalDebloque = transactions
-      .filter(t => t.type === 'Débloqué' && t.statut === 'Validé')
+      .filter(t => t.description?.includes('Débloqué') && t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
     
     const totalRecupere = transactions
-      .filter(t => t.type === 'Récupéré' && t.statut === 'Validé')
+      .filter(t => t.description?.includes('Récupéré') && t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
       
     const totalRevenus = transactions
-      .filter(t => t.type === 'Revenu' && t.statut === 'Validé')
+      .filter(t => t.description?.includes('Revenu') && t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
       
     const totalRemboursements = transactions
-      .filter(t => t.type === 'Remboursement' && t.statut === 'Validé')
+      .filter(t => t.description?.includes('Remboursement') && t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
 
     const totalCommissions = transactions
-      .filter(t => t.type === 'Commission' && t.statut === 'Validé')
+      .filter(t => t.description?.includes('Commission') && t.statut === 'EFFECTUEE')
       .reduce((sum, t) => sum + (t.montant || 0), 0);
 
-    const pendingTransactions = transactions.filter(t => t.statut === 'En attente').length;
+    const pendingTransactions = transactions.filter(t => t.statut === 'EN_COURS').length;
     const totalTransactions = transactions.length;
     const balance = totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
     const montantMoyen = totalTransactions > 0 
@@ -219,7 +262,7 @@ export default function FinancesPage() {
   };
 
   // Calculer l'évolution mensuelle
-  const calculateMonthlyEvolution = (transactions: FinancialTransactionWithEmployee[]) => {
+  const calculateMonthlyEvolution = (transactions: TransactionWithEmployee[]) => {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
     const currentYear = new Date().getFullYear();
     
@@ -230,15 +273,15 @@ export default function FinancesPage() {
       });
 
       const debloque = monthTransactions
-        .filter(t => t.type === 'Débloqué' && t.statut === 'Validé')
+        .filter(t => t.description?.includes('Débloqué') && t.statut === 'EFFECTUEE')
         .reduce((sum, t) => sum + (t.montant || 0), 0);
 
       const recupere = monthTransactions
-        .filter(t => t.type === 'Récupéré' && t.statut === 'Validé')
+        .filter(t => t.description?.includes('Récupéré') && t.statut === 'EFFECTUEE')
         .reduce((sum, t) => sum + (t.montant || 0), 0);
 
       const revenus = monthTransactions
-        .filter(t => t.type === 'Revenu' && t.statut === 'Validé')
+        .filter(t => t.description?.includes('Revenu') && t.statut === 'EFFECTUEE')
         .reduce((sum, t) => sum + (t.montant || 0), 0);
 
       return {
@@ -254,53 +297,40 @@ export default function FinancesPage() {
   };
 
   // Calculer la répartition par type
-  const calculateTypeDistribution = (transactions: FinancialTransactionWithEmployee[]) => {
-    const typeMap = new Map<string, number>();
+  const calculateTypeDistribution = (transactions: TransactionWithEmployee[]) => {
+    const typeCounts: { [key: string]: number } = {};
     
     transactions.forEach(t => {
-      if (t.statut === 'Validé') {
-        const type = t.type || 'Autre';
-        typeMap.set(type, (typeMap.get(type) || 0) + (t.montant || 0));
-      }
+      let type = 'Autre';
+      if (t.description?.includes('Débloqué')) type = 'Débloqué';
+      else if (t.description?.includes('Récupéré')) type = 'Récupéré';
+      else if (t.description?.includes('Revenu')) type = 'Revenu';
+      else if (t.description?.includes('Remboursement')) type = 'Remboursement';
+      else if (t.description?.includes('Commission')) type = 'Commission';
+      
+      typeCounts[type] = (typeCounts[type] || 0) + (t.montant || 0);
     });
 
-    const colors = {
-      'Débloqué': '#3b82f6',
-      'Récupéré': '#10b981',
-      'Revenu': '#f59e0b',
-      'Remboursement': '#ef4444',
-      'Commission': '#8b5cf6',
-      'Autre': '#6b7280'
-    };
-
-    return Array.from(typeMap.entries()).map(([name, value]) => ({
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    return Object.entries(typeCounts).map(([name, value], index) => ({
       name,
       value,
-      color: colors[name as keyof typeof colors] || '#6b7280'
+      color: colors[index % colors.length]
     }));
   };
 
   // Calculer la répartition par statut
-  const calculateStatusDistribution = (transactions: FinancialTransactionWithEmployee[]) => {
-    const statusMap = new Map<string, number>();
+  const calculateStatusDistribution = (transactions: TransactionWithEmployee[]) => {
+    const statusCounts: { [key: string]: number } = {};
     
     transactions.forEach(t => {
       const status = t.statut || 'Inconnu';
-      statusMap.set(status, (statusMap.get(status) || 0) + 1);
+      statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
 
-    const colors = {
-      'Validé': '#10b981',
-      'En attente': '#f59e0b',
-      'Rejeté': '#ef4444',
-      'Annulé': '#6b7280',
-      'Inconnu': '#9ca3af'
-    };
-
-    return Array.from(statusMap.entries()).map(([name, value]) => ({
+    return Object.entries(statusCounts).map(([name, value]) => ({
       name,
-      value,
-      color: colors[name as keyof typeof colors] || '#9ca3af'
+      value
     }));
   };
 
@@ -313,10 +343,10 @@ export default function FinancesPage() {
       const partnerService = new PartnerDataService(session.partner.id);
       const transactions = await partnerService.getFinancialTransactions();
       
-      setTransactions(transactions);
+      setTransactions(transactions as unknown as TransactionWithEmployee[]);
       
       // Calculer les statistiques financières
-      const stats = calculateFinancialStats(transactions);
+      const stats = calculateFinancialStats(transactions as unknown as TransactionWithEmployee[]);
       setFinancialStats(stats);
 
     } catch (error) {
@@ -327,16 +357,28 @@ export default function FinancesPage() {
     }
   };
 
-  // Pour l'historique des transactions, charge les données de financial_transactions :
+  // Pour l'historique des transactions, charge les données de transactions :
   const loadTransactions = async () => {
     try {
       const { data, error } = await supabase
-        .from('financial_transactions')
-        .select('*')
-        .eq('partenaire_id', session?.partner?.id)
+        .from('transactions')
+        .select(`
+          *,
+          employees (
+            id,
+            prenom,
+            nom,
+            poste
+          )
+        `)
+        .eq('entreprise_id', session?.partner?.id)
         .order('date_transaction', { ascending: false });
       if (error) throw error;
       setTransactions(data || []);
+      
+      // Calculer les statistiques financières
+      const stats = calculateFinancialStats(data || []);
+      setFinancialStats(stats);
     } catch (e) {
       toast.error('Erreur lors du chargement des transactions');
     }
@@ -359,11 +401,24 @@ export default function FinancesPage() {
     let filtered = transactions;
 
     if (selectedType) {
-      filtered = filtered.filter(transaction => transaction.type === selectedType);
+      filtered = filtered.filter(transaction => {
+        if (selectedType === 'Débloqué') return transaction.description?.includes('Débloqué');
+        if (selectedType === 'Récupéré') return transaction.description?.includes('Récupéré');
+        if (selectedType === 'Revenu') return transaction.description?.includes('Revenu');
+        if (selectedType === 'Remboursement') return transaction.description?.includes('Remboursement');
+        if (selectedType === 'Commission') return transaction.description?.includes('Commission');
+        return false;
+      });
     }
 
     if (selectedStatus) {
-      filtered = filtered.filter(transaction => transaction.statut === selectedStatus);
+      filtered = filtered.filter(transaction => {
+        if (selectedStatus === 'En attente') return transaction.statut === 'EN_COURS';
+        if (selectedStatus === 'Validé') return transaction.statut === 'EFFECTUEE';
+        if (selectedStatus === 'Rejeté') return transaction.statut === 'ECHEC';
+        if (selectedStatus === 'Annulé') return transaction.statut === 'ANNULEE';
+        return false;
+      });
     }
 
     setFilteredTransactions(filtered);
@@ -385,15 +440,15 @@ export default function FinancesPage() {
     const csvData = [
       headers.join(","),
       ...transactions.map(transaction => [
-        transaction.transaction_id,
+        transaction.id,
         formatDate(transaction.date_transaction),
         transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié',
         transaction.employees?.poste || 'Non spécifié',
         transaction.montant,
-        transaction.type,
+        transaction.description?.split(' ')[0] || 'Transaction',
         transaction.description || '',
         transaction.statut,
-        transaction.reference || ''
+        transaction.numero_transaction || ''
       ].join(","))
     ].join("\n");
 
@@ -436,12 +491,13 @@ export default function FinancesPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 space-y-4 max-w-full overflow-x-hidden">
       {/* En-tête Finances */}
       <h1 className="text-2xl font-bold text-white mb-2">Finances</h1>
-      <p className="text-gray-400 mb-6">Entreprise: {session.partner.nom}</p>
+      <p className="text-gray-400 mb-4">Entreprise: {session.partner.nom}</p>
+      
       {/* Cartes principales finances */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         
         <StatCard
           title="Flux du Montant Financé"
@@ -471,13 +527,7 @@ export default function FinancesPage() {
       </div>
 
       {/* Statistiques supplémentaires */}
-      {/* Remplace les cartes par :
-      - Flux du montant financé
-      - Montant total débloqué ce mois ci
-      - Montant à rembourser ce mois ci
-      - Date limite de remboursement
-      - Nombre d’employés approuvés ce mois ci */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <StatCard
             title="Nombre d'employés ayant eu une demande approuvée ce mois-ci"
             value={stats.nbEmployesApprouves}
@@ -488,9 +538,9 @@ export default function FinancesPage() {
 
       {/* Graphiques */}
       {financialStats && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
         {/* Évolution des montants */}
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Évolution mensuelle des montants
           </h3>
@@ -510,7 +560,7 @@ export default function FinancesPage() {
         </div>
 
           {/* Répartition des transactions par type */}
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
               Répartition par type de transaction
           </h3>
@@ -539,7 +589,7 @@ export default function FinancesPage() {
 
       {/* Graphique de répartition par statut */}
       {financialStats && financialStats.repartitionParStatut.length > 0 && (
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-4">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
             Répartition par statut des transactions
           </h3>
@@ -556,7 +606,7 @@ export default function FinancesPage() {
       )}
 
       {/* Filtres */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-4">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Filtre par type */}
           <div className="flex-1">
@@ -599,87 +649,104 @@ export default function FinancesPage() {
 
       {/* Tableau des transactions */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Historique des transactions ({filteredTransactions.length} transactions)
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-full  dark:divide-gray-700">
+          <table className="min-w-full dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Description
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Type
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Montant
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Référence
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
               {currentTransactions.length > 0 ? (
-                currentTransactions.map((transaction) => (
-                <tr key={transaction.transaction_id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {formatDate(transaction.date_transaction)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
-                    {transaction.employees?.poste && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {transaction.employees.poste}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                    {transaction.description || 'Aucune description'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.type === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                      transaction.type === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      transaction.type === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                        transaction.type === 'Commission' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {transaction.type}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {gnfFormatter(transaction.montant || 0)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      transaction.statut === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                      transaction.statut === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {transaction.statut}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                    {transaction.reference || '-'}
-                  </td>
-                </tr>
-                ))
+                currentTransactions.map((transaction) => {
+                  // Déterminer le type basé sur la description
+                  let transactionType = 'Transaction';
+                  if (transaction.description?.includes('Débloqué')) transactionType = 'Débloqué';
+                  else if (transaction.description?.includes('Récupéré')) transactionType = 'Récupéré';
+                  else if (transaction.description?.includes('Revenu')) transactionType = 'Revenu';
+                  else if (transaction.description?.includes('Remboursement')) transactionType = 'Remboursement';
+                  else if (transaction.description?.includes('Commission')) transactionType = 'Commission';
+
+                  // Mapper les statuts
+                  let statusDisplay = transaction.statut;
+                  if (transaction.statut === 'EN_COURS') statusDisplay = 'En attente';
+                  else if (transaction.statut === 'EFFECTUEE') statusDisplay = 'Validé';
+                  else if (transaction.statut === 'ECHEC') statusDisplay = 'Rejeté';
+                  else if (transaction.statut === 'ANNULEE') statusDisplay = 'Annulé';
+
+                  return (
+                    <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {formatDate(transaction.date_transaction)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                        {transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}
+                        {transaction.employees?.poste && (
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {transaction.employees.poste}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-sm text-gray-900 dark:text-white">
+                        {transaction.description || 'Aucune description'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          transactionType === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                          transactionType === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          transactionType === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                            transactionType === 'Commission' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                          {transactionType}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                          {gnfFormatter(transaction.montant || 0)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          statusDisplay === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          statusDisplay === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                        }`}>
+                          {statusDisplay}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                        {transaction.numero_transaction || '-'}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <td colSpan={7} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                     Aucune transaction trouvée
                   </td>
                 </tr>

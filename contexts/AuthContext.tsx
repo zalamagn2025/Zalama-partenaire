@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const initializeAuth = async () => {
-    try {
+      try {
       // 1. Vérifier d'abord le localStorage pour une restauration rapide
       const savedSession = localStorage.getItem('zalama_session');
       if (savedSession) {
@@ -132,13 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
          localStorage.removeItem('zalama_session');
          document.cookie = 'zalama_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
          console.log('Cleared invalid local session');
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Error initializing auth:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      } finally {
+        setLoading(false);
+      }
+    };
 
   const loadUserSession = async (authUser: User): Promise<AuthSession | null> => {
     try {
@@ -151,11 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', authUser.id)
         .eq('active', true)
         .single();
-
+      
       if (adminError || !adminData) {
         throw new Error('Utilisateur non autorisé - Profil admin introuvable');
       }
-
+      
       // 2. Vérifier le rôle (RH ou Responsable)
       if (!['rh', 'responsable'].includes(adminData.role.toLowerCase())) {
         throw new Error(`Accès refusé - Rôle non autorisé: ${adminData.role}`);
@@ -167,8 +167,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const { data: partnerData, error: partnerError } = await supabase
-        .from('partners')
-        .select('*')
+          .from('partners')
+          .select('*')
         .eq('id', adminData.partenaire_id)
         .eq('actif', true)
         .single();
@@ -176,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (partnerError || !partnerData) {
         throw new Error('Partenaire introuvable ou inactif');
       }
-
+      
       // 4. Mettre à jour last_login
       await supabase
         .from('admin_users')
