@@ -555,7 +555,7 @@ export default function FinancesPage() {
 
       {/* Graphiques */}
       {financialStats && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4">
         {/* Évolution des montants */}
         <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-3">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
@@ -574,34 +574,6 @@ export default function FinancesPage() {
                     <Line type="monotone" dataKey="revenus" stroke="#f59e0b" strokeWidth={2} name="Revenus" />
                     <Line type="monotone" dataKey="balance" stroke="#8b5cf6" strokeWidth={2} name="Balance" />*/}
               </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-          {/* Répartition des transactions par type */}
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-3">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3">
-              Répartition par type de transaction
-          </h3>
-          <div className="w-full h-64 sm:h-80">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                    data={financialStats.repartitionParType}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={60}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                    {financialStats.repartitionParType.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
