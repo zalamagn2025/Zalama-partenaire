@@ -633,9 +633,7 @@ export default function FinancesPage() {
               className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
               <option value="">Tous les statuts</option>
-              <option value="En attente">En attente</option>
               <option value="Validé">Validé</option>
-              <option value="Rejeté">Rejeté</option>
               <option value="Annulé">Annulé</option>
             </select>
           </div>
