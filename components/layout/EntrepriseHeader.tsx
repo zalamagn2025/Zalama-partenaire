@@ -88,7 +88,7 @@ export default function EntrepriseHeader() {
         <div className="flex items-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
           <div className="hidden md:flex items-center ml-6 text-gray-600 dark:text-gray-300 text-sm">
-            <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full">
+            <span className="bg-blue-100 text-xl dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6">
               {session?.partner?.nom || 'Dashboard'}
             </span>
           </div>
