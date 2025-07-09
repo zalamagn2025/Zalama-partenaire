@@ -54,22 +54,39 @@ export default function EntrepriseDashboardPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
-
   const [avis, setAvis] = useState<any[]>([]);
   const [demandes, setDemandes] = useState<SalaryAdvanceRequest[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Ajoute le hook d'état pour les demandes d'avance
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
-
-  // Ajoute un état pour le payment_day
   const [paymentDay, setPaymentDay] = useState<number | null>(null);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
 
   // Charger les données au montage du composant
   useEffect(() => {
     if (!loading && session?.partner) {
       loadDashboardData();
+    }
+  }, [loading, session?.partner]);
+
+  // Charger les transactions depuis la table transactions
+  useEffect(() => {
+    const loadTransactions = async () => {
+      if (!session?.partner) return;
+      try {
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('entreprise_id', session?.partner?.id)
+          .eq('statut', 'EFFECTUEE');
+        if (error) throw error;
+        setAllTransactions(data || []);
+      } catch (e) {
+        console.error('Erreur lors du chargement des transactions:', e);
+      }
+    };
+    if (!loading && session?.partner) {
+      loadTransactions();
     }
   }, [loading, session?.partner]);
 
@@ -251,32 +268,24 @@ export default function EntrepriseDashboardPage() {
   // Calculs dynamiques pour la section Performance financière
   const thisMonth = now.getMonth();
   const thisYear = now.getFullYear();
-  const demandesValidees = salaryRequests;
-  const demandesMois = demandesValidees.filter((d: any) => {
+  
+  // Transactions effectuées ce mois-ci (pour nombre d'employés)
+  const demandesMois = salaryRequests.filter((d: any) => {
     const dVal = d.date_validation ? new Date(d.date_validation) : null;
     return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
   });
-  const fluxFinance = demandesValidees.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
-  const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+
+  // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
+  const fluxFinance = allTransactions.reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
+  
+  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise
+  const debloqueMois = allTransactions.reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
+  
+  // Montant à rembourser = même montant que débloqué
   const aRembourserMois = debloqueMois;
-  // Récupère la date de paiement (date_adhesion du partenaire connecté)
-  const datePaiement = session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion) : null;
-  let employesApprouves = 0;
-  if (datePaiement) {
-    // Cherche la dernière demande validée du mois
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-    const demandesMois = salaryRequests.filter((d: any) => {
-      const dVal = d.date_validation ? new Date(d.date_validation) : null;
-      return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
-    });
-    if (demandesMois.length > 0) {
-      const last = demandesMois.reduce((a: any, b: any) => new Date(a.date_validation) > new Date(b.date_validation) ? a : b);
-      const dateValidation = new Date(last.date_validation);
-      employesApprouves = new Set(demandesMois.map((d: any) => d.utilisateur_id)).size;
-    }
-  }
+  
+  // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées ce mois-ci
+  const employesApprouves = demandesMois.length;
 
   // Calculer la balance
   const totalRecupere = transactions.filter(t => t.type === 'Récupéré' && t.statut === 'Validé').reduce((sum, trans) => sum + (trans.montant || 0), 0);
@@ -350,10 +359,10 @@ export default function EntrepriseDashboardPage() {
   });
 
   const montantsEvolutionData = monthsToShow.map(({ month, year, name }) => {
-    const total = demandes.filter(d => {
-      const demandDate = new Date(d.date_creation);
-      return demandDate.getMonth() === month && demandDate.getFullYear() === year;
-    }).reduce((sum, d) => sum + d.montant_demande, 0);
+    const total = allTransactions.filter(t => {
+      const transactionDate = new Date(t.created_at);
+      return transactionDate.getMonth() === month && transactionDate.getFullYear() === year;
+    }).reduce((sum, t) => sum + Number(t.montant || 0), 0);
     
     return { mois: name, montant: total };
   });
