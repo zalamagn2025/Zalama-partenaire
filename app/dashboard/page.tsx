@@ -386,8 +386,8 @@ export default function EntrepriseDashboardPage() {
             <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,1)?.toUpperCase()}</span>
           </div>
         <div>
-            <h1 className="text-3xl font-bold text-white">{session?.partner?.nom}</h1>
-            <p className="text-gray-400 text-lg">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
+            <h1 className="text-3xl font-bold dark:text-white">{session?.partner?.nom}</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
           </div>
         </div>
         <div className="flex flex-col items-end">
@@ -426,33 +426,33 @@ export default function EntrepriseDashboardPage() {
 
       {/* Performance financière */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
-        <h2 className="text-white text-lg font-semibold mb-4">Performance financière</h2>
+        <h2 className="text-gray-600 dark:text-white text-lg font-semibold mb-4">Performance financière</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
-            <span className="text-gray-400 text-xs mb-1">Montant total débloqué</span>
-            <span className="text-2xl font-bold text-white">{gnfFormatter(debloqueMois)}</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">Montant total débloqué</span>
+            <span className="text-2xl font-bold dark:text-white">{gnfFormatter(debloqueMois)}</span>
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
-            <span className="text-gray-400 text-xs mb-1">À rembourser ce mois</span>
-            <span className="text-2xl font-bold text-white">{gnfFormatter(aRembourserMois)}</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">À rembourser ce mois</span>
+            <span className="text-2xl font-bold dark:text-white">{gnfFormatter(aRembourserMois)}</span>
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
-            <span className="text-gray-400 text-xs mb-1">Taux de remboursement</span>
-            <span className="text-2xl font-bold text-white">{((aRembourserMois/debloqueMois)*100 || 0).toFixed(1)}%</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">Taux de remboursement</span>
+            <span className="text-2xl font-bold dark:text-white">{((aRembourserMois/debloqueMois)*100 || 0).toFixed(1)}%</span>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
-            <span className="text-gray-400 text-xs mb-1">Date limite de remboursement</span>
-            <span className="text-lg font-bold text-white">{dateLimite}</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">Date limite de remboursement</span>
+            <span className="text-lg font-bold dark:text-white">{dateLimite}</span>
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
-            <span className="text-gray-400 text-xs mb-1">Jours restants avant Remboursement</span>
-            <span className="text-lg font-bold text-white">{joursRestants}</span>
+            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">Jours restants avant Remboursement</span>
+            <span className="text-lg font-bold dark:text-white">{joursRestants}</span>
             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
               <div className="bg-yellow-400 h-2 rounded-full" style={{width: `${(aRembourserMois/debloqueMois)*100}%`}}></div>
             </div>
-            <span className="text-xs text-gray-400 mt-1">Remboursement cette semaine</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">Remboursement cette semaine</span>
           </div>
         </div>
       </div>
@@ -461,7 +461,7 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
-          <h3 className="text-white text-base font-semibold mb-4">Évolution des demandes</h3>
+          <h3 className="text-gray-600 dark:text-white text-base font-semibold mb-4">Évolution des demandes</h3>
           {hasDemandesData ? (
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={demandesEvolutionData}>
@@ -484,7 +484,7 @@ export default function EntrepriseDashboardPage() {
         </div>
         {/* Montants débloqués */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
-          <h3 className="text-white text-base font-semibold mb-4">Montants débloqués</h3>
+          <h3 className="text-gray-600 dark:text-white text-base font-semibold mb-4">Montants débloqués</h3>
           {hasDemandesData ? (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={montantsEvolutionData}>
@@ -511,7 +511,7 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Répartition par motif */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 flex flex-col items-center justify-center">
-          <h3 className="text-white text-base font-semibold mb-4">Répartition par motif</h3>
+          <h3 className="text-gray-600 dark:text-white text-base font-semibold mb-4">Répartition par motif</h3>
           {hasMotifsData ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
@@ -545,7 +545,7 @@ export default function EntrepriseDashboardPage() {
         {/* Documents et rapports */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-white text-lg font-semibold">Documents et rapports</h2>
+            <h2 className="text-gray-600 dark:text-white text-lg font-semibold">Documents et rapports</h2>
             <button className="text-blue-400 text-sm hover:underline">Tout télécharger</button>
           </div>
           <div className="grid grid-cols-1 gap-4">
@@ -566,8 +566,8 @@ export default function EntrepriseDashboardPage() {
                   )}
                 </span>
                 <div className="flex-1">
-                  <div className="text-white font-medium text-sm">{doc.nom}</div>
-                  <div className="text-gray-400 text-xs mt-1">{doc.type} • {doc.size}</div>
+                  <div className="text-gray-600 dark:text-white font-medium text-sm">{doc.nom}</div>
+                  <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">{doc.type} • {doc.size}</div>
                 </div>
               </a>
             ))}
