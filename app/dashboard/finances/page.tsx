@@ -157,6 +157,8 @@ export default function FinancesPage() {
       
       if (transactionsError) throw transactionsError;
 
+      console.log(allTransactions);
+
       // 2. Récupérer les demandes d'avance validées pour ce mois-ci
       const { data: salaryRequests, error: salaryError } = await supabase
         .from('salary_advance_requests')
@@ -173,7 +175,13 @@ export default function FinancesPage() {
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
       
-      // Demandes validées ce mois-ci
+      // Transactions effectuées ce mois-ci (pour montant débloqué et à rembourser)
+      const transactionsMois = (allTransactions || []).filter((t: any) => {
+        const tDate = t.created_at ? new Date(t.created_at) : null;
+        return tDate && tDate.getMonth() === thisMonth && tDate.getFullYear() === thisYear;
+      });
+
+      // Demandes validées ce mois-ci (pour nombre d'employés)
       const demandesMois = (salaryRequests || []).filter((d: any) => {
         const dVal = d.date_validation ? new Date(d.date_validation) : null;
         return dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear;
@@ -182,14 +190,14 @@ export default function FinancesPage() {
       // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
       const fluxFinance = (allTransactions || []).reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
       
-      // Montant débloqué ce mois-ci = somme des montants des demandes validées ce mois-ci
-      const debloqueMois = demandesMois.reduce((sum: number, d: any) => sum + Number(d.montant_demande || 0), 0);
+      // Montant débloqué ce mois-ci = somme des montants des transactions effectuées ce mois-ci
+      const debloqueMois = transactionsMois.reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
       
-      // Montant à rembourser ce mois-ci = même montant que débloqué (logique de remboursement)
+      // Montant à rembourser ce mois-ci = même montant que débloqué
       const aRembourserMois = debloqueMois;
       
-      // Nombre d'employés approuvés ce mois-ci
-      const employesApprouves = new Set(demandesMois.map((d: any) => d.employe_id)).size;
+      // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées ce mois-ci
+      const employesApprouves = demandesMois.length;
       
       setStats({
         fluxFinance,
