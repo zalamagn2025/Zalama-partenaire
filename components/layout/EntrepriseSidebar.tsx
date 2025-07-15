@@ -12,8 +12,9 @@ const getNavItems = () => [
   { label: 'Employés', icon: Users, href: `/dashboard/employes` },
   { label: 'Demandes', icon: FileText, href: `/dashboard/demandes` },
   { label: 'Finances', icon: CreditCard, href: `/dashboard/finances` },
+  // Ajout du lien Remboursements
+  { label: 'Remboursements', icon: BarChart2, href: `/dashboard/remboursements` },
   { label: 'Avis des Salariés', icon: Star, href: `/dashboard/avis` },
-
   { label: 'Paramètres', icon: Settings, href: `/dashboard/parametres` },
 ];
 
