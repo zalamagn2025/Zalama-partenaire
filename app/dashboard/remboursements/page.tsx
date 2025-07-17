@@ -38,6 +38,9 @@ export default function RemboursementsPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [payAll, setPayAll] = useState(false);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [payLoading, setPayLoading] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -83,28 +86,53 @@ export default function RemboursementsPage() {
   }, [loading, session?.partner]);
 
   // Action "Payer" un remboursement
-  const handlePayer = async (id: string) => {
-    setPaying(true);
-    await supabase
-      .from('remboursements')
-      .update({ statut: 'PAYE', date_remboursement_effectue: new Date().toISOString() })
-      .eq('id', id);
-    await fetchRemboursements();
-    setPaying(false);
+  const handlePaiementIndividuel = async () => {
+    if (!selectedRemboursement) return;
+    setPayLoading(true);
+    setPayError(null);
+    setPaymentUrl(null);
+    try {
+      const res = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remboursement_id: selectedRemboursement.id }),
+      });
+      const data = await res.json();
+      if (data.success && data.payment_url) {
+        setPaymentUrl(data.payment_url);
+        // Optionnel : window.open(data.payment_url, '_blank');
+      } else {
+        setPayError(data.error || "Erreur inconnue");
+      }
+    } catch (e) {
+      setPayError("Erreur réseau");
+    }
+    setPayLoading(false);
   };
 
   // Action "Payer tous"
-  const handlePayerTous = async () => {
-    setPaying(true);
-    const ids = remboursements.filter(r => r.statut === 'EN_ATTENTE').map(r => r.id);
-    if (ids.length > 0) {
-      await supabase
-        .from('remboursements')
-        .update({ statut: 'PAYE', date_remboursement_effectue: new Date().toISOString() })
-        .in('id', ids);
-      await fetchRemboursements();
+  const handlePaiementLot = async () => {
+    if (!session?.partner?.id) return;
+    setPayLoading(true);
+    setPayError(null);
+    setPaymentUrl(null);
+    try {
+      const res = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement-lot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partenaire_id: session.partner.id }),
+      });
+      const data = await res.json();
+      if (data.success && data.payment_url) {
+        setPaymentUrl(data.payment_url);
+        // Optionnel : window.open(data.payment_url, '_blank');
+      } else {
+        setPayError(data.error || "Erreur inconnue");
+      }
+    } catch (e) {
+      setPayError("Erreur réseau");
     }
-    setPaying(false);
+    setPayLoading(false);
   };
 
   // Handler pour ouvrir la modal de détail
@@ -131,6 +159,9 @@ export default function RemboursementsPage() {
     setShowPayModal(false);
     setSelectedRemboursement(null);
     setPayAll(false);
+    setPaymentUrl(null);
+    setPayError(null);
+    setPayLoading(false);
   };
 
   // Données pour les graphiques
@@ -335,8 +366,32 @@ export default function RemboursementsPage() {
           </form>
           <DialogFooter>
             <Button variant="outline" onClick={handleCloseModal}>Annuler</Button>
-            <Button disabled>{payAll ? 'Payer le total' : 'Payer ce remboursement'}</Button>
+            <Button
+              onClick={payAll ? handlePaiementLot : handlePaiementIndividuel}
+              disabled={payLoading}
+            >
+              {payLoading
+                ? 'Paiement en cours...'
+                : payAll
+                  ? 'Payer le total'
+                  : 'Payer ce remboursement'}
+            </Button>
           </DialogFooter>
+          {payError && (
+            <div className="text-red-600 text-sm mt-2">{payError}</div>
+          )}
+          {paymentUrl && (
+            <div className="mt-4">
+              <a
+                href={paymentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline font-semibold"
+              >
+                Accéder au paiement
+              </a>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

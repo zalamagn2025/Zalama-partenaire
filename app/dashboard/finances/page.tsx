@@ -512,7 +512,7 @@ export default function FinancesPage() {
         <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Finances</h1>
         <p className="text-sm text-gray-400">Entreprise: {session.partner.nom}</p>
       </div>
-      
+
       {/* Cartes principales finances */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
         
@@ -564,17 +564,17 @@ export default function FinancesPage() {
           <div className="w-full h-64 sm:h-80">
             <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={financialStats.evolutionMensuelle}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mois" />
-                <YAxis />
-                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-                <Legend />
-                <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="mois" />
+              <YAxis />
+              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+              <Legend />
+              <Line type="monotone" dataKey="debloque" stroke="#3b82f6" strokeWidth={2} name="Débloqué" />
                   {/*<Line type="monotone" dataKey="recupere" stroke="#10b981" strokeWidth={2} name="Récupéré" />
                     <Line type="monotone" dataKey="revenus" stroke="#f59e0b" strokeWidth={2} name="Revenus" />
                     <Line type="monotone" dataKey="balance" stroke="#8b5cf6" strokeWidth={2} name="Balance" />*/}
-              </LineChart>
-            </ResponsiveContainer>
+            </LineChart>
+          </ResponsiveContainer>
           </div>
         </div>
       </div>
@@ -595,9 +595,9 @@ export default function FinancesPage() {
                 <Tooltip />
                 <Bar dataKey="value" fill="#3b82f6" />
               </BarChart>
-            </ResponsiveContainer>
-          </div>
+          </ResponsiveContainer>
         </div>
+      </div>
       )}
 
       {/* Filtres */}
@@ -695,46 +695,46 @@ export default function FinancesPage() {
                   return (
                     <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
-                        {formatDate(transaction.date_transaction)}
-                      </td>
+                    {formatDate(transaction.date_transaction)}
+                  </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         <div className="flex flex-col">
                           <span>{transaction.employees ? `${transaction.employees.prenom} ${transaction.employees.nom}` : 'Non spécifié'}</span>
-                          {transaction.employees?.poste && (
+                    {transaction.employees?.poste && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {transaction.employees.poste}
+                        {transaction.employees.poste}
                             </span>
                           )}
-                        </div>
-                      </td>
+                      </div>
+                  </td>
                       <td className="px-3 py-2 text-xs sm:text-sm text-gray-900 dark:text-white hidden md:table-cell">
                         <div className="max-w-xs truncate" title={transaction.description || 'Aucune description'}>
-                          {transaction.description || 'Aucune description'}
+                    {transaction.description || 'Aucune description'}
                         </div>
-                      </td>
+                  </td>
                       <td className="px-3 py-2 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           transactionType === 'Débloqué' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                           transactionType === 'Récupéré' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                           transactionType === 'Revenu' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
                             transactionType === 'Commission' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
                           {transactionType}
-                        </span>
-                      </td>
+                    </span>
+                  </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                           {gnfFormatter(transaction.montant || 0)}
-                      </td>
+                  </td>
                       <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                           statusDisplay === 'Validé' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
                           statusDisplay === 'En attente' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                          'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                        }`}>
+                      'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                    }`}>
                           {statusDisplay}
-                        </span>
-                      </td>
+                    </span>
+                  </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                         <div className="max-w-24 truncate" title={transaction.numero_transaction || '-'}>
                           {transaction.numero_transaction || '-'}
