@@ -138,7 +138,10 @@ export default function EntrepriseSidebar() {
                 <div className="ml-3 sidebar-text">
                   <p className="text-sm font-medium">{session?.partner?.nom || 'Entreprise'}</p>
                   <p className="text-xs text-[var(--zalama-gray)]/60">
-                    {session?.admin?.role?.charAt(0).toUpperCase() + session?.admin?.role?.slice(1) || 'Administrateur'}
+                    {session?.admin?.role ? 
+                      session.admin.role.charAt(0).toUpperCase() + session.admin.role.slice(1) 
+                      : 'Administrateur'
+                    }
                   </p>
                 </div>
               )}

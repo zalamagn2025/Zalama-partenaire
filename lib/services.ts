@@ -1011,7 +1011,7 @@ export class PartnerDataService {
   // Fonction utilitaire pour grouper par mois
   private groupByMonth(data: any[], dateField: string) {
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
-    const grouped = {};
+    const grouped: { [key: string]: number } = {};
 
     data.forEach(item => {
       const date = new Date(item[dateField]);
@@ -1031,7 +1031,7 @@ export class PartnerDataService {
 
   // Fonction utilitaire pour grouper par type
   private groupByType(data: any[], typeField: string) {
-    const grouped = {};
+    const grouped: { [key: string]: number } = {};
 
     data.forEach(item => {
       const type = item[typeField];

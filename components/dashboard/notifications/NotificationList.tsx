@@ -31,13 +31,13 @@ export default function NotificationList({ notifications, onMarkAsRead }: Notifi
   // Fonction pour obtenir l'icône selon le type
   const getIcon = (type: NotificationType) => {
     switch (type) {
-      case 'Information':
+      case 'info':
         return <Info className="w-5 h-5 text-blue-500" />;
-      case 'Succès':
+      case 'success':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'Alerte':
+      case 'warning':
         return <AlertTriangle className="w-5 h-5 text-amber-500" />;
-      case 'Erreur':
+      case 'error':
         return <AlertCircle className="w-5 h-5 text-red-500" />;
       default:
         return <Info className="w-5 h-5 text-blue-500" />;

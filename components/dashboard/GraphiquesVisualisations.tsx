@@ -39,7 +39,7 @@ export default function GraphiquesVisualisations() {
       
       // Récupérer les données financières pour les graphiques
       const financialData = await partnerService.getFinancialTransactions();
-      const demandesData = await partnerService.getDemandesAvanceSalaire();
+      const demandesData = await partnerService.getSalaryAdvanceRequests();
       
       // Calculer les données mensuelles
       const monthlyData = calculateMonthlyData(financialData, demandesData);

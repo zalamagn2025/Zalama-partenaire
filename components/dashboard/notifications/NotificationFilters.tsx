@@ -9,10 +9,10 @@ interface NotificationFiltersProps {
 export default function NotificationFilters({ currentFilter, onFilterChange }: NotificationFiltersProps) {
   const filters = [
     { id: 'all', label: 'Toutes', icon: Filter },
-    { id: 'Information', label: 'Information', icon: Info, color: 'text-blue-500' },
-    { id: 'Alerte', label: 'Alerte', icon: AlertTriangle, color: 'text-amber-500' },
-    { id: 'Succès', label: 'Succès', icon: CheckCircle, color: 'text-green-500' },
-    { id: 'Erreur', label: 'Erreur', icon: AlertCircle, color: 'text-red-500' }
+    { id: 'info', label: 'Information', icon: Info, color: 'text-blue-500' },
+    { id: 'warning', label: 'Alerte', icon: AlertTriangle, color: 'text-amber-500' },
+    { id: 'success', label: 'Succès', icon: CheckCircle, color: 'text-green-500' },
+    { id: 'error', label: 'Erreur', icon: AlertCircle, color: 'text-red-500' }
   ];
 
   return (

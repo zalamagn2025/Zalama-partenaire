@@ -2,30 +2,40 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 
 export default function Home() {
   const router = useRouter();
-  const { session, loading } = useAuth();
 
   useEffect(() => {
     if (typeof window === 'undefined') return; // S'assurer d'être côté client
-    if (!loading) {
-      if (session) {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/login");
+    
+    // Vérifier si l'utilisateur est connecté via localStorage
+    const savedSession = localStorage.getItem('zalama_session');
+    
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        if (session && session.partner) {
+          router.replace("/dashboard");
+          return;
+        }
+      } catch (error) {
+        console.error('Error parsing saved session:', error);
+        localStorage.removeItem('zalama_session');
       }
     }
-  }, [session, loading, router]);
+    
+    // Si pas de session valide, rediriger vers login
+    router.replace("/login");
+  }, [router]);
 
   // Afficher un écran de chargement pendant la redirection
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="mb-8">
         <Image
-          src="/images/logo_vertical.svg"
+          src="/images/Logo_vertical.svg"
           alt="ZaLaMa Logo"
           width={150}
           height={150}
