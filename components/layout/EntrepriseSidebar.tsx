@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 // Les liens de navigation pour le tableau de bord
 const getNavItems = () => [
@@ -24,6 +25,7 @@ export default function EntrepriseSidebar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { session, signOut } = useAuth();
+  const router = useRouter();
   
   // Générer les liens de navigation avec le slug
   const navItems = getNavItems();
@@ -43,6 +45,7 @@ export default function EntrepriseSidebar() {
     try {
       await signOut();
       setMenuOpen(false);
+      router.replace('/login');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }

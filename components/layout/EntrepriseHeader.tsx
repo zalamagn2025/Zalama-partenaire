@@ -2,6 +2,7 @@
 import { Bell, Sun, Moon, LogOut, User } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
 import NotificationDrawer from '../../components/dashboard/notifications/NotificationDrawer';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -15,6 +16,7 @@ export default function EntrepriseHeader() {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { session, signOut } = useAuth();
+  const router = useRouter();
   
   // Charger le nombre de notifications non lues
   const loadUnreadCount = async () => {
@@ -76,6 +78,7 @@ export default function EntrepriseHeader() {
     try {
       await signOut();
       setProfileMenuOpen(false);
+      router.replace('/login');
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
     }

@@ -50,8 +50,10 @@ export default function FirstLoginChangePasswordPage() {
         .update({ require_password_change: false, updated_at: new Date().toISOString() })
         .eq("id", session.admin.id);
       if (dbError) throw dbError;
-      toast.success("Mot de passe modifié avec succès. Vous pouvez accéder au dashboard.");
-      router.replace("/dashboard");
+      toast.success("Mot de passe modifié avec succès. Veuillez vous reconnecter.");
+      await signOut();
+      router.replace("/login");
+      return;
     } catch (error: any) {
       toast.error(error.message || "Erreur lors du changement de mot de passe");
     } finally {
