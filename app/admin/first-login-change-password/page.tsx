@@ -10,6 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Lock, Eye, EyeOff } from "lucide-react";
 
+// Fonction utilitaire pour calculer la force du mot de passe
+function getPasswordStrength(password: string) {
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (password.length >= 12) score++;
+  if (score <= 1) return { label: "Faible", color: "bg-red-500", value: 1 };
+  if (score === 2 || score === 3) return { label: "Moyen", color: "bg-yellow-500", value: 2 };
+  return { label: "Élevé", color: "bg-green-600", value: 3 };
+}
+
 export default function FirstLoginChangePasswordPage() {
   const { session, signOut } = useAuth();
   const router = useRouter();
@@ -61,6 +74,8 @@ export default function FirstLoginChangePasswordPage() {
     }
   };
 
+  const strength = getPasswordStrength(newPassword);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <Card className="w-full max-w-md">
@@ -91,6 +106,15 @@ export default function FirstLoginChangePasswordPage() {
                   {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {/* Indicateur de force du mot de passe */}
+              {newPassword && (
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="w-28 h-2 rounded bg-gray-200 overflow-hidden">
+                    <div className={`h-2 rounded ${strength.color}`} style={{ width: strength.value === 1 ? '33%' : strength.value === 2 ? '66%' : '100%' }} />
+                  </div>
+                  <span className={`text-xs font-semibold ${strength.color.replace('bg-', 'text-')}`}>Sécurité: {strength.label}</span>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Confirmer le mot de passe</label>
