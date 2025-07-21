@@ -29,6 +29,13 @@ export default function EntrepriseLayout({ children }: { children: React.ReactNo
           return;
         }
 
+        // Redirection obligatoire si require_password_change est true
+        if (session.admin.require_password_change) {
+          console.log('Require password change detected, redirecting to first-login-change-password');
+          router.replace('/admin/first-login-change-password');
+          return;
+        }
+
         console.log('Session validated, dashboard access granted');
         setIsInitialized(true);
       }, 100); // Petit délai pour éviter les redirections prématurées

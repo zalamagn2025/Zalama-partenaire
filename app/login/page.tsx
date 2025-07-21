@@ -103,17 +103,6 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md space-y-8">
-        <div className="text-center">
-          <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900 rounded-full">
-            <Shield className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Connexion Administrateur
-          </h2>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Accédez au tableau de bord partenaire
-          </p>
-        </div>
         
         <Card>
           <CardHeader>

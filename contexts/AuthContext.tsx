@@ -15,6 +15,7 @@ export interface AdminUser {
   last_login?: string;
   created_at: string;
   updated_at: string;
+  require_password_change: boolean;
 }
 
 export interface Partner {
