@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -32,9 +32,13 @@ export default function FirstLoginChangePasswordPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!session?.admin) {
+      router.replace("/login");
+    }
+  }, [session, router]);
+
   if (!session?.admin) {
-    // Si pas de session admin, rediriger vers login
-    if (typeof window !== "undefined") router.replace("/login");
     return null;
   }
 
