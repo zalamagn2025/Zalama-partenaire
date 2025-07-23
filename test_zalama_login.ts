@@ -1,6 +1,6 @@
 // Script de test pour la connexion Zalama
-import { supabase } from './lib/supabase';
 import { createHash } from 'crypto';
+import { supabase } from './lib/supabase';
 
 // Fonction pour hasher un mot de passe
 const hashPassword = (password: string) => {
@@ -60,9 +60,9 @@ async function testZalamaLogin() {
         if (partnerError) {
           console.log(`⚠️  Partenaire non trouvé pour ${userData.email}:`, partnerError.message);
         } else {
-          console.log(`✅ Partenaire trouvé: ${partner.nom}`);
-          console.log(`   Représentant: ${partner.nom_representant}`);
-          console.log(`   RH: ${partner.nom_rh}`);
+              console.log(`✅ Partenaire trouvé: ${partner.company_name}`);
+    console.log(`   Représentant: ${partner.rep_full_name}`);
+    console.log(`   RH: ${partner.hr_full_name}`);
         }
       } else {
         console.error(`❌ Mot de passe incorrect pour ${userData.email}`);

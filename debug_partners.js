@@ -23,7 +23,7 @@ async function debugPartners() {
   
   console.log(`📋 Tous les partenaires (${allPartners?.length || 0}):`);
   allPartners?.forEach((partner, index) => {
-    console.log(`${index + 1}. ${partner.nom} (ID: ${partner.id}) - Type: ${partner.type}`);
+    console.log(`${index + 1}. ${partner.company_name} (ID: ${partner.id}) - Type: ${partner.legal_status}`);
   });
   
   console.log('\n=== RECHERCHE SPÉCIFIQUE ===');
@@ -32,7 +32,7 @@ async function debugPartners() {
   const { data: exactMatch, error: exactError } = await supabase
     .from('partners')
     .select('*')
-    .eq('nom', 'YouCompany');
+    .eq('company_name', 'YouCompany');
   
   console.log(`\n🔍 Recherche exacte "YouCompany":`);
   if (exactError) {
@@ -40,7 +40,7 @@ async function debugPartners() {
   } else {
     console.log(`✅ Trouvé ${exactMatch?.length || 0} résultat(s)`);
     exactMatch?.forEach((partner, index) => {
-      console.log(`  ${index + 1}. ${partner.nom} (ID: ${partner.id})`);
+      console.log(`  ${index + 1}. ${partner.company_name} (ID: ${partner.id})`);
     });
   }
   
@@ -48,7 +48,7 @@ async function debugPartners() {
   const { data: partialMatch, error: partialError } = await supabase
     .from('partners')
     .select('*')
-    .ilike('nom', '%YouCompany%');
+    .ilike('company_name', '%YouCompany%');
   
   console.log(`\n🔍 Recherche partielle "%YouCompany%":`);
   if (partialError) {
@@ -56,7 +56,7 @@ async function debugPartners() {
   } else {
     console.log(`✅ Trouvé ${partialMatch?.length || 0} résultat(s)`);
     partialMatch?.forEach((partner, index) => {
-      console.log(`  ${index + 1}. ${partner.nom} (ID: ${partner.id})`);
+      console.log(`  ${index + 1}. ${partner.company_name} (ID: ${partner.id})`);
     });
   }
   

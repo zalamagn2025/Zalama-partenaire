@@ -69,11 +69,11 @@ async function testYouCompanyLogin() {
         if (partnerError) {
           console.log(`⚠️  Partenaire non trouvé pour ${userData.email}:`, partnerError.message);
         } else {
-          console.log(`✅ Partenaire trouvé: ${partner.nom}`);
-          console.log(`   Représentant: ${partner.nom_representant}`);
-          console.log(`   RH: ${partner.nom_rh}`);
-          console.log(`   Nombre d'employés: ${partner.nombre_employes}`);
-          console.log(`   Salaire total: ${partner.salaire_net_total.toLocaleString()} GNF`);
+                      console.log(`✅ Partenaire trouvé: ${partner.company_name}`);
+              console.log(`   Représentant: ${partner.rep_full_name}`);
+    console.log(`   RH: ${partner.hr_full_name}`);
+    console.log(`   Nombre d'employés: ${partner.employees_count}`);
+    console.log(`   Payroll: ${partner.payroll}`);
         }
 
         // Récupérer les employés

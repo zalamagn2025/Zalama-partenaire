@@ -1,5 +1,5 @@
-import { supabase } from './supabase'
-import type { FinancialTransaction, Message, Avis } from './supabase'
+import type { Avis, FinancialTransaction, Message } from './supabase';
+import { supabase } from './supabase';
 
 // Service financier corrigé
 export const financialServiceFixed = {
@@ -50,7 +50,7 @@ export const messageServiceFixed = {
     // Récupérer le nom du partenaire
     const { data: partner, error: partnerError } = await supabase
       .from('partners')
-      .select('nom')
+      .select('company_name')
       .eq('id', partnerId)
       .single();
 
@@ -61,7 +61,7 @@ export const messageServiceFixed = {
     const { data, error } = await supabase
       .from('messages')
       .select('*')
-      .eq('destinataire', partner.nom)
+      .eq('destinataire', partner.company_name)
       .order('date_envoi', { ascending: false });
 
     return { data: data as Message[], error };

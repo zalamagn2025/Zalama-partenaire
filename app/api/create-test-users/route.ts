@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Interface pour les utilisateurs de test
 interface TestUser {
@@ -8,18 +8,29 @@ interface TestUser {
   display_name: string;
   role: 'rh' | 'responsable';
   partner: {
-    nom: string;
-    type: string;
-    secteur: string;
-    description: string;
-    nom_rh: string;
-    email_rh: string;
-    telephone_rh: string;
+    company_name: string;
+    legal_status: string;
     rccm: string;
     nif: string;
-    adresse: string;
-    nombre_employes: number;
-    salaire_net_total: number;
+    activity_domain: string;
+    headquarters_address: string;
+    phone: string;
+    email: string;
+    employees_count: number;
+    payroll: string;
+    cdi_count: number;
+    cdd_count: number;
+    payment_date: string;
+    rep_full_name: string;
+    rep_position: string;
+    rep_email: string;
+    rep_phone: string;
+    hr_full_name: string;
+    hr_email: string;
+    hr_phone: string;
+    agreement: boolean;
+    status: 'pending' | 'approved' | 'rejected' | 'in_review';
+    payment_day?: number;
   };
 }
 
@@ -31,18 +42,29 @@ const testUsers: TestUser[] = [
     display_name: 'Fatoumata CAMARA',
     role: 'rh',
     partner: {
-      nom: 'Innovatech Solutions',
-      type: 'Entreprise privée',
-      secteur: 'Technologies',
-      description: 'Solutions technologiques innovantes pour les entreprises',
-      nom_rh: 'Fatoumata CAMARA',
-      email_rh: 'rh@innovatech.com',
-      telephone_rh: '+224 123 456 789',
+      company_name: 'Innovatech Solutions',
+      legal_status: 'SARL',
       rccm: 'RCCM/GN/CON/2023/IT-001',
       nif: 'NIF123456789IT',
-      adresse: 'Quartier Almamya, Conakry, Guinée',
-      nombre_employes: 50,
-      salaire_net_total: 125000000,
+      activity_domain: 'Technologies',
+      headquarters_address: 'Quartier Almamya, Conakry, Guinée',
+      phone: '+224 123 456 789',
+      email: 'contact@innovatech.com',
+      employees_count: 50,
+      payroll: 'Mensuel',
+      cdi_count: 35,
+      cdd_count: 10,
+      payment_date: '2024-01-15',
+      rep_full_name: 'Mamadou DIALLO',
+      rep_position: 'Directeur Général',
+      rep_email: 'responsable@innovatech.com',
+      rep_phone: '+224 123 456 789',
+      hr_full_name: 'Fatoumata CAMARA',
+      hr_email: 'rh@innovatech.com',
+      hr_phone: '+224 123 456 789',
+      agreement: true,
+      status: 'approved',
+      payment_day: 25,
     }
   },
   {
@@ -51,18 +73,29 @@ const testUsers: TestUser[] = [
     display_name: 'Mamadou DIALLO',
     role: 'responsable',
     partner: {
-      nom: 'Innovatech Solutions',
-      type: 'Entreprise privée',
-      secteur: 'Technologies',
-      description: 'Solutions technologiques innovantes pour les entreprises',
-      nom_rh: 'Fatoumata CAMARA',
-      email_rh: 'rh@innovatech.com',
-      telephone_rh: '+224 123 456 789',
+      company_name: 'Innovatech Solutions',
+      legal_status: 'SARL',
       rccm: 'RCCM/GN/CON/2023/IT-001',
       nif: 'NIF123456789IT',
-      adresse: 'Quartier Almamya, Conakry, Guinée',
-      nombre_employes: 50,
-      salaire_net_total: 125000000,
+      activity_domain: 'Technologies',
+      headquarters_address: 'Quartier Almamya, Conakry, Guinée',
+      phone: '+224 123 456 789',
+      email: 'contact@innovatech.com',
+      employees_count: 50,
+      payroll: 'Mensuel',
+      cdi_count: 35,
+      cdd_count: 10,
+      payment_date: '2024-01-15',
+      rep_full_name: 'Mamadou DIALLO',
+      rep_position: 'Directeur Général',
+      rep_email: 'responsable@innovatech.com',
+      rep_phone: '+224 123 456 789',
+      hr_full_name: 'Fatoumata CAMARA',
+      hr_email: 'rh@innovatech.com',
+      hr_phone: '+224 123 456 789',
+      agreement: true,
+      status: 'approved',
+      payment_day: 25,
     }
   },
   {
@@ -71,18 +104,29 @@ const testUsers: TestUser[] = [
     display_name: 'Aissatou BAH',
     role: 'rh',
     partner: {
-      nom: 'EduCenter International',
-      type: 'ONG',
-      secteur: 'Éducation',
-      description: 'Organisation internationale pour le développement de l\'éducation',
-      nom_rh: 'Aissatou BAH',
-      email_rh: 'rh@educenter.org',
-      telephone_rh: '+224 987 654 321',
+      company_name: 'EduCenter International',
+      legal_status: 'ONG',
       rccm: 'RCCM/GN/CON/2023/EDU-002',
       nif: 'NIF987654321EDU',
-      adresse: 'Quartier Kaloum, Conakry, Guinée',
-      nombre_employes: 30,
-      salaire_net_total: 75000000,
+      activity_domain: 'Éducation',
+      headquarters_address: 'Quartier Kaloum, Conakry, Guinée',
+      phone: '+224 987 654 321',
+      email: 'contact@educenter.org',
+      employees_count: 30,
+      payroll: 'Mensuel',
+      cdi_count: 20,
+      cdd_count: 8,
+      payment_date: '2024-01-15',
+      rep_full_name: 'Ousmane SOW',
+      rep_position: 'Directeur Général',
+      rep_email: 'responsable@educenter.org',
+      rep_phone: '+224 987 654 321',
+      hr_full_name: 'Aissatou BAH',
+      hr_email: 'rh@educenter.org',
+      hr_phone: '+224 987 654 321',
+      agreement: true,
+      status: 'approved',
+      payment_day: 25,
     }
   },
   {
@@ -91,18 +135,29 @@ const testUsers: TestUser[] = [
     display_name: 'Ousmane SOW',
     role: 'responsable',
     partner: {
-      nom: 'EduCenter International',
-      type: 'ONG',
-      secteur: 'Éducation',
-      description: 'Organisation internationale pour le développement de l\'éducation',
-      nom_rh: 'Aissatou BAH',
-      email_rh: 'rh@educenter.org',
-      telephone_rh: '+224 987 654 321',
+      company_name: 'EduCenter International',
+      legal_status: 'ONG',
       rccm: 'RCCM/GN/CON/2023/EDU-002',
       nif: 'NIF987654321EDU',
-      adresse: 'Quartier Kaloum, Conakry, Guinée',
-      nombre_employes: 30,
-      salaire_net_total: 75000000,
+      activity_domain: 'Éducation',
+      headquarters_address: 'Quartier Kaloum, Conakry, Guinée',
+      phone: '+224 987 654 321',
+      email: 'contact@educenter.org',
+      employees_count: 30,
+      payroll: 'Mensuel',
+      cdi_count: 20,
+      cdd_count: 8,
+      payment_date: '2024-01-15',
+      rep_full_name: 'Ousmane SOW',
+      rep_position: 'Directeur Général',
+      rep_email: 'responsable@educenter.org',
+      rep_phone: '+224 987 654 321',
+      hr_full_name: 'Aissatou BAH',
+      hr_email: 'rh@educenter.org',
+      hr_phone: '+224 987 654 321',
+      agreement: true,
+      status: 'approved',
+      payment_day: 25,
     }
   }
 ];
@@ -117,14 +172,14 @@ export async function POST(request: NextRequest) {
     const partnersMap = new Map<string, string>();
     
     for (const testUser of testUsers) {
-      const partnerName = testUser.partner.nom;
+      const partnerName = testUser.partner.company_name;
       
       if (!partnersMap.has(partnerName)) {
         // Vérifier si le partenaire existe déjà
         const { data: existingPartner } = await supabase
           .from('partners')
           .select('id')
-          .eq('nom', partnerName)
+          .eq('company_name', partnerName)
           .single();
         
         if (existingPartner) {
@@ -150,7 +205,7 @@ export async function POST(request: NextRequest) {
     
     // Créer les utilisateurs
     for (const testUser of testUsers) {
-      const partnerId = partnersMap.get(testUser.partner.nom);
+      const partnerId = partnersMap.get(testUser.partner.company_name);
       
       try {
         // 1. Créer l'utilisateur dans auth.users

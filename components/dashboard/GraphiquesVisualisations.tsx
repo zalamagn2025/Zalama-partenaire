@@ -46,7 +46,7 @@ export default function GraphiquesVisualisations() {
       
       // Calculer les données comparatives (pour l'instant, on utilise les données du partenaire actuel)
   const companiesData = [
-        { name: session.partner.nom, value: 100 }
+        { name: session.partner.company_name, value: 100 }
       ];
 
       setChartData({ monthlyData, companiesData });

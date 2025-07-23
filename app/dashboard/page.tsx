@@ -1,38 +1,31 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { Users, FileText, Star, BarChart2, CreditCard, Clock, AlertCircle, Download, Building2, ThumbsUp, ClipboardList } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
-import PerformanceFinanciere from '@/components/dashboard/PerformanceFinanciere';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
-import Image from 'next/image';
-import { 
-  LineChart, 
-  Line, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import { 
-  employeeService, 
-  alertService, 
-  demandeAvanceService,
-  dashboardService,
-  PartnerDataService
+import {
+    PartnerDataService
 } from '@/lib/services';
-import { financialServiceFixed, messageServiceFixed, avisServiceFixed } from '@/lib/services_fixed';
-import type { Employee, FinancialTransaction, Alert, Message, Avis, SalaryAdvanceRequest } from '@/lib/supabase';
+import type { Alert, Employee, SalaryAdvanceRequest } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
+import { BarChart2, ClipboardList, CreditCard, FileText, Star, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
+} from 'recharts';
+import { toast } from 'sonner';
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
@@ -142,7 +135,7 @@ export default function EntrepriseDashboardPage() {
   // Afficher un message de bienvenue
   useEffect(() => {
     if (session?.partner && !isLoading) {
-      toast.success(`Bienvenue sur le tableau de bord de ${session.partner.nom}`, {
+              toast.success(`Bienvenue sur le tableau de bord de ${session.partner.company_name}`, {
         id: 'dashboard-welcome'
       });
     }
@@ -197,11 +190,11 @@ export default function EntrepriseDashboardPage() {
   useEffect(() => {
     const fetchPaymentDay = async () => {
       if (!session?.partner) return;
-      // On suppose que le nom du partenaire dans partners = company_name dans partnership_requests
+      // Utiliser company_name pour faire correspondre avec partnership_requests
       const { data, error } = await supabase
         .from('partnership_requests')
         .select('payment_day')
-        .eq('company_name', session.partner.nom)
+        .eq('company_name', session.partner.company_name)
         .eq('status', 'approved')
         .single();
       if (!error && data && data.payment_day) {

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { User, Palette, Moon, Sun, Save, Mail, Phone, Building, Calendar, MapPin, Edit3, Camera, Lock, Eye, EyeOff } from 'lucide-react';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import { Building, Calendar, Camera, Edit3, Eye, EyeOff, Lock, Mail, MapPin, Moon, Palette, Phone, Save, Sun, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 export default function ParametresPage() {
@@ -53,14 +53,14 @@ export default function ParametresPage() {
     }
     if (session?.partner) {
       setPartnerData({
-        nom: session.partner.nom || '',
-        secteur: session.partner.secteur || '',
-        adresse: session.partner.adresse || '',
-        telephone: session.partner.telephone || '',
-        email: session.partner.email || '',
-        description: session.partner.description || '',
-        date_adhesion: session.partner.date_adhesion || '',
-        ville: session.partner.adresse || '',
+        company_name: session.partner.company_name || '',
+                  activity_domain: session.partner.activity_domain || '',
+          headquarters_address: session.partner.headquarters_address || '',
+                  phone: session.partner.phone || '',
+          email: session.partner.email || '',
+                  legal_status: session.partner.legal_status || '',
+                  payment_date: session.partner.payment_date || '',
+          payment_day: session.partner.payment_day || 25,
         pays: 'Guinée'
       });
     }

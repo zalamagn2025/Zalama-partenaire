@@ -1,8 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 // Types pour le nouveau système d'authentification
 export interface AdminUser {
@@ -20,27 +20,32 @@ export interface AdminUser {
 
 export interface Partner {
   id: string;
-  nom: string;
-  type: string;
-  secteur: string;
-  description?: string;
-  nom_representant?: string;
-  email_representant?: string;
-  telephone_representant?: string;
-  nom_rh?: string;
-  email_rh?: string;
-  telephone_rh?: string;
-  rccm?: string;
-  nif?: string;
-  email?: string;
-  telephone?: string;
-  adresse?: string;
-  site_web?: string;
+  company_name: string;
+  legal_status: string;
+  rccm: string;
+  nif: string;
+  activity_domain: string;
+  headquarters_address: string;
+  phone: string;
+  email: string;
+  employees_count: number;
+  payroll: string;
+  cdi_count: number;
+  cdd_count: number;
+  payment_date: string;
+  rep_full_name: string;
+  rep_position: string;
+  rep_email: string;
+  rep_phone: string;
+  hr_full_name: string;
+  hr_email: string;
+  hr_phone: string;
+  agreement: boolean;
+  status: 'pending' | 'approved' | 'rejected' | 'in_review';
+  motivation_letter_url?: string;
+  motivation_letter_text?: string;
+  payment_day?: number;
   logo_url?: string;
-  date_adhesion: string;
-  actif: boolean;
-  nombre_employes: number;
-  salaire_net_total: number;
   created_at: string;
   updated_at: string;
 }
@@ -171,7 +176,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .from('partners')
           .select('*')
         .eq('id', adminData.partenaire_id)
-        .eq('actif', true)
+        .eq('status', 'approved')
         .single();
 
       if (partnerError || !partnerData) {
@@ -200,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // 7. Créer un cookie simple pour le middleware
       const sessionCookie = {
         admin: { id: adminData.id, role: adminData.role },
-        partner: { id: partnerData.id, actif: partnerData.actif }
+        partner: { id: partnerData.id, status: partnerData.status }
       };
       document.cookie = `zalama_session=${encodeURIComponent(JSON.stringify(sessionCookie))}; path=/; max-age=86400; SameSite=Lax`;
       

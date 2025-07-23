@@ -118,7 +118,7 @@ export default function FinancesPage() {
       const { data, error } = await supabase
         .from('partnership_requests')
         .select('payment_day')
-        .eq('company_name', session.partner.nom)
+        .eq('company_name', session.partner.company_name)
         .eq('status', 'approved')
         .single();
       if (!error && data && data.payment_day) {
@@ -471,7 +471,7 @@ export default function FinancesPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `transactions_${session.partner.nom}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `transactions_${session.partner.company_name}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -510,7 +510,7 @@ export default function FinancesPage() {
       {/* En-tête Finances */}
       <div className="mb-4">
         <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Finances</h1>
-        <p className="text-sm text-gray-400">Entreprise: {session.partner.nom}</p>
+                      <p className="text-sm text-gray-400">Entreprise: {session.partner.company_name}</p>
       </div>
 
       {/* Cartes principales finances */}

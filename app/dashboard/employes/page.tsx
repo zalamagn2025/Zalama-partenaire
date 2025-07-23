@@ -1,14 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Users, Search, Filter, Mail, Phone, Eye, Download, ChevronDown, Building2, Calendar, Clock, Plus, Edit, Trash2 } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-import { employeeService } from '@/lib/services';
 import type { Employee } from '@/lib/supabase';
 import { supabase } from '@/lib/supabase';
+import { Building2, Calendar, ChevronDown, Clock, Download, Eye, Filter, Search, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 // Fonction pour formatter les dates
 const formatDate = (dateString: string) => {
@@ -166,7 +165,7 @@ export default function EmployesPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `employes_${session.partner.nom}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `employes_${session.partner.company_name}_${new Date().toISOString().split('T')[0]}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

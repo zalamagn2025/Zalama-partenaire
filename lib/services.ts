@@ -1,5 +1,5 @@
+import type { Alert, Avis, Demande, Employee, FinancialTransaction, Message, Partner, PartnershipRequest, SalaryAdvanceRequest, Service } from './supabase'
 import { supabase } from './supabase'
-import type { User, Partner, Employee, Service, Alert, FinancialTransaction, Message, Avis, Demande, PartnershipRequest, DemandeAvanceSalaire, DemandeP2P, SalaryAdvanceRequest } from './supabase'
 
 // Service d'authentification
 export const authService = {
@@ -28,7 +28,7 @@ export const partnerService = {
     const { data, error } = await supabase
       .from('partners')
       .select('*')
-      .eq('actif', true)
+      .eq('status', 'approved')
       .order('created_at', { ascending: false })
     return { data: data as Partner[], error }
   },
@@ -43,19 +43,19 @@ export const partnerService = {
   },
 
   async getPartnerByEmail(email: string) {
-    // Essayer d'abord avec email_representant
+    // Essayer d'abord avec rep_email
     let { data, error } = await supabase
       .from('partners')
       .select('*')
-      .eq('email_representant', email)
+      .eq('rep_email', email)
       .single()
     
     if (error || !data) {
-      // Si pas trouvé, essayer avec email_rh
+      // Si pas trouvé, essayer avec hr_email
       const { data: data2, error: error2 } = await supabase
         .from('partners')
         .select('*')
-        .eq('email_rh', email)
+        .eq('hr_email', email)
         .single()
       
       data = data2;
@@ -77,11 +77,11 @@ export const partnerService = {
       return { data: null, error: userError };
     }
     
-    // Ensuite chercher le partenaire par nom d'organisation
+    // Ensuite chercher le partenaire par company_name
     const { data, error } = await supabase
       .from('partners')
       .select('*')
-      .eq('nom', user.organisation)
+      .eq('company_name', user.organisation)
       .single()
     return { data: data as Partner, error }
   },
