@@ -1,13 +1,12 @@
 "use client";
-import { Bell, Sun, Moon, LogOut, User } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
-import { useRouter } from 'next/navigation';
+import { Bell, LogOut, Moon, Sun, User } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
-import NotificationDrawer from '../../components/dashboard/notifications/NotificationDrawer';
-import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { supabase } from '@/lib/supabase';
+import NotificationDrawer from '../../components/dashboard/notifications/NotificationDrawer';
 
 export default function EntrepriseHeader() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -92,7 +91,7 @@ export default function EntrepriseHeader() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">{getPageTitle()}</h1>
           <div className="hidden md:flex items-center ml-6 text-gray-600 dark:text-gray-300 text-sm">
             <span className="bg-blue-100 text-xl dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6">
-              {session?.partner?.nom || 'Dashboard'}
+              {session?.partner?.company_name || 'Dashboard'}
             </span>
           </div>
         </div>

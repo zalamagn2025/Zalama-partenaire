@@ -1094,3 +1094,265 @@ export class NotificationService {
     }
   }
 } 
+
+// Service pour les remboursements
+export const remboursementService = {
+  // Récupérer tous les remboursements d'un partenaire
+  async getRemboursements(partnerId: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .select(`
+        *,
+        employee:employe_id (nom, prenom, salaire_net, poste),
+        demande_avance:demande_avance_id (montant_demande, date_validation, type_motif, motif),
+        transaction:transaction_id (numero_transaction, methode_paiement, date_transaction)
+      `)
+      .eq('partenaire_id', partnerId)
+      .order('date_limite_remboursement', { ascending: true });
+    
+    return { data, error };
+  },
+
+  // Récupérer un remboursement spécifique
+  async getRemboursementById(id: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .select(`
+        *,
+        employee:employe_id (nom, prenom, salaire_net, poste, email, telephone),
+        demande_avance:demande_avance_id (montant_demande, date_validation, type_motif, motif, frais_service),
+        transaction:transaction_id (numero_transaction, methode_paiement, date_transaction, numero_compte, numero_reception)
+      `)
+      .eq('id', id)
+      .single();
+    
+    return { data, error };
+  },
+
+  // Récupérer les remboursements par statut
+  async getRemboursementsByStatus(partnerId: string, status: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .select(`
+        *,
+        employee:employe_id (nom, prenom, salaire_net, poste),
+        demande_avance:demande_avance_id (montant_demande, date_validation, type_motif, motif)
+      `)
+      .eq('partenaire_id', partnerId)
+      .eq('statut', status)
+      .order('date_limite_remboursement', { ascending: true });
+    
+    return { data, error };
+  },
+
+  // Marquer un remboursement comme payé
+  async markAsPaid(id: string, commentairePartenaire?: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .update({
+        statut: 'PAYE',
+        date_remboursement_effectue: new Date().toISOString(),
+        commentaire_partenaire: commentairePartenaire,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+    
+    return { data, error };
+  },
+
+  // Marquer plusieurs remboursements comme payés
+  async markMultipleAsPaid(ids: string[], commentairePartenaire?: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .update({
+        statut: 'PAYE',
+        date_remboursement_effectue: new Date().toISOString(),
+        commentaire_partenaire: commentairePartenaire,
+        updated_at: new Date().toISOString()
+      })
+      .in('id', ids)
+      .select();
+    
+    return { data, error };
+  },
+
+  // Marquer un remboursement en retard
+  async markAsLate(id: string, motifRetard?: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .update({
+        statut: 'EN_RETARD',
+        motif_retard: motifRetard,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+    
+    return { data, error };
+  },
+
+  // Annuler un remboursement
+  async cancelRemboursement(id: string, motifAnnulation?: string) {
+    const { data, error } = await supabase
+      .from('remboursements')
+      .update({
+        statut: 'ANNULE',
+        commentaire_admin: motifAnnulation,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+    
+    return { data, error };
+  },
+
+  // Calculer les statistiques de remboursements
+  async getRemboursementStats(partnerId: string) {
+    const { data: remboursements, error } = await this.getRemboursements(partnerId);
+    
+    if (error || !remboursements) {
+      return { data: null, error };
+    }
+
+    const stats = {
+      total_remboursements: remboursements.length,
+      total_montant: remboursements.reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0),
+      total_frais_service: remboursements.reduce((sum, r) => sum + Number(r.frais_service || 0), 0),
+      en_attente: remboursements.filter(r => r.statut === 'EN_ATTENTE').length,
+      paye: remboursements.filter(r => r.statut === 'PAYE').length,
+      en_retard: remboursements.filter(r => r.statut === 'EN_RETARD').length,
+      annule: remboursements.filter(r => r.statut === 'ANNULE').length,
+      montant_en_attente: remboursements
+        .filter(r => r.statut === 'EN_ATTENTE')
+        .reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0),
+      montant_paye: remboursements
+        .filter(r => r.statut === 'PAYE')
+        .reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0),
+      montant_en_retard: remboursements
+        .filter(r => r.statut === 'EN_RETARD')
+        .reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0)
+    };
+
+    return { data: stats, error: null };
+  },
+
+  // Récupérer l'historique des remboursements
+  async getRemboursementHistory(remboursementId: string) {
+    const { data, error } = await supabase
+      .from('historique_remboursements')
+      .select(`
+        *,
+        utilisateur:utilisateur_id (display_name, role)
+      `)
+      .eq('remboursement_id', remboursementId)
+      .order('created_at', { ascending: false });
+    
+    return { data, error };
+  },
+
+  // Créer un nouvel historique de remboursement
+  async createHistoryEntry(remboursementId: string, action: string, details: any, userId?: string) {
+    const { data, error } = await supabase
+      .from('historique_remboursements')
+      .insert({
+        remboursement_id: remboursementId,
+        action,
+        description: details.description,
+        montant_avant: details.montant_avant,
+        montant_apres: details.montant_apres,
+        statut_avant: details.statut_avant,
+        statut_apres: details.statut_apres,
+        utilisateur_id: userId
+      });
+    
+    return { data, error };
+  },
+
+  // Vérifier les remboursements en retard
+  async checkLateRemboursements(partnerId: string) {
+    const now = new Date();
+    const { data, error } = await supabase
+      .from('remboursements')
+      .select('*')
+      .eq('partenaire_id', partnerId)
+      .eq('statut', 'EN_ATTENTE')
+      .lt('date_limite_remboursement', now.toISOString());
+    
+    return { data, error };
+  },
+
+  // Calculer les frais de service (6,5%)
+  calculateFraisService(montantDemande: number): number {
+    return montantDemande * 0.065;
+  },
+
+  // Calculer le montant reçu (avance - frais)
+  calculateMontantRecu(montantDemande: number, fraisService: number): number {
+    return montantDemande - fraisService;
+  },
+
+  // Calculer le remboursement dû à ZaLaMa
+  calculateRemboursementDu(montantDemande: number): number {
+    return montantDemande; // Le remboursement dû = montant demandé
+  },
+
+  // Calculer le salaire restant de l'employé
+  calculateSalaireRestant(salaireNet: number, montantDemande: number): number {
+    return Math.max(0, salaireNet - montantDemande);
+  },
+
+  // Formater un montant en GNF
+  formatGNF(value: number): string {
+    return `${value.toLocaleString()} GNF`;
+  }
+};
+
+// Service pour les remboursements intégraux (table alternative)
+export const remboursementIntegralService = {
+  // Récupérer tous les remboursements intégraux d'un partenaire
+  async getRemboursementsIntegraux(partnerId: string) {
+    const { data, error } = await supabase
+      .from('remboursements_integraux')
+      .select(`
+        *,
+        employee:employe_id (nom, prenom, salaire_net, poste),
+        demande_avance:demande_avance_id (montant_demande, date_validation, type_motif, motif),
+        transaction:transaction_id (numero_transaction, methode_paiement, date_transaction)
+      `)
+      .eq('entreprise_id', partnerId)
+      .order('date_limite_remboursement', { ascending: true });
+    
+    return { data, error };
+  },
+
+  // Marquer un remboursement intégral comme payé
+  async markIntegralAsPaid(id: string, commentaireEntreprise?: string) {
+    const { data, error } = await supabase
+      .from('remboursements_integraux')
+      .update({
+        statut: 'PAYE',
+        date_remboursement_effectue: new Date().toISOString(),
+        commentaire_entreprise: commentaireEntreprise,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select();
+    
+    return { data, error };
+  },
+
+  // Récupérer l'historique des remboursements intégraux
+  async getIntegralHistory(remboursementId: string) {
+    const { data, error } = await supabase
+      .from('historique_remboursements_integraux')
+      .select(`
+        *,
+        utilisateur:utilisateur_id (display_name, role)
+      `)
+      .eq('remboursement_id', remboursementId)
+      .order('created_at', { ascending: false });
+    
+    return { data, error };
+  }
+}; 

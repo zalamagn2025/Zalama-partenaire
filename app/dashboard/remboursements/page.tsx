@@ -1,15 +1,14 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
-import { Pie, Bar } from 'react-chartjs-2';
-import { Chart, ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend } from 'chart.js';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, CheckCircle2, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { supabase } from '@/lib/supabase';
+
+import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
+import { useEffect, useState } from 'react';
+import { Bar, Pie } from 'react-chartjs-2';
 
 Chart.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
@@ -36,7 +35,6 @@ type Remboursement = {
 };
 
 export default function RemboursementsPage() {
-  const supabase = createClientComponentClient();
   const { session, loading } = useAuth();
   const [remboursements, setRemboursements] = useState<Remboursement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,8 +42,7 @@ export default function RemboursementsPage() {
   const [paying, setPaying] = useState(false);
   const [selectedRemboursement, setSelectedRemboursement] = useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showPayModal, setShowPayModal] = useState(false);
-  const [payAll, setPayAll] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -121,29 +118,64 @@ export default function RemboursementsPage() {
     }
   }, [loading, session?.partner]);
 
-  // Action "Payer" un remboursement
+  // Action "Payer" un remboursement via l'API simplifiée
   const handlePayer = async (id: string) => {
     setPaying(true);
-    await supabase
-      .from('remboursements')
-      .update({ statut: 'PAYE', date_remboursement_effectue: new Date().toISOString() })
-      .eq('id', id);
-    await fetchRemboursements();
-    setPaying(false);
+    try {
+      const response = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remboursement_id: id })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Paiement initié:', data);
+        // Rediriger vers la page de paiement ou afficher un message de succès
+        window.open(data.payment_url, '_blank');
+        await fetchRemboursements();
+      } else {
+        console.error('Erreur lors du paiement:', data.error);
+        alert(`Erreur: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors du paiement:', error);
+      alert('Erreur lors du paiement');
+    } finally {
+      setPaying(false);
+    }
   };
 
-  // Action "Payer tous"
+  // Action "Payer tous" via l'API simplifiée
   const handlePayerTous = async () => {
+    if (!session?.partner?.id) return;
+    
     setPaying(true);
-    const ids = remboursements.filter(r => r.statut === 'EN_ATTENTE').map(r => r.id);
-    if (ids.length > 0) {
-      await supabase
-        .from('remboursements')
-        .update({ statut: 'PAYE', date_remboursement_effectue: new Date().toISOString() })
-        .in('id', ids);
-      await fetchRemboursements();
+    try {
+      const response = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement-lot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ partenaire_id: session.partner.id })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('Paiement en lot initié:', data);
+        // Rediriger vers la page de paiement ou afficher un message de succès
+        window.open(data.payment_url, '_blank');
+        await fetchRemboursements();
+      } else {
+        console.error('Erreur lors du paiement en lot:', data.error);
+        alert(`Erreur: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Erreur lors du paiement en lot:', error);
+      alert('Erreur lors du paiement en lot');
+    } finally {
+      setPaying(false);
     }
-    setPaying(false);
   };
 
   // Handler pour ouvrir la modal de détail
@@ -152,24 +184,10 @@ export default function RemboursementsPage() {
     setShowDetailModal(true);
   };
 
-  // Handler pour ouvrir la modal de paiement (individuel ou total)
-  const handleOpenPayModal = (remb?: Remboursement) => {
-    if (remb) {
-      setSelectedRemboursement(remb);
-      setPayAll(false);
-    } else {
-      setSelectedRemboursement(null);
-      setPayAll(true);
-    }
-    setShowPayModal(true);
-  };
-
-  // Handler pour fermer les modals
+  // Handler pour fermer la modal de détail
   const handleCloseModal = () => {
     setShowDetailModal(false);
-    setShowPayModal(false);
     setSelectedRemboursement(null);
-    setPayAll(false);
   };
 
   // Données pour les graphiques
@@ -232,7 +250,7 @@ export default function RemboursementsPage() {
     <div className="p-8 space-y-8">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Remboursements</h1>
-        <Button onClick={() => handleOpenPayModal()} disabled={paying || totalAttente === 0}>
+        <Button onClick={() => handlePayerTous()} disabled={paying || totalAttente === 0}>
           {paying ? 'Paiement...' : 'PAYER TOUS'}
         </Button>
       </div>
@@ -277,12 +295,27 @@ export default function RemboursementsPage() {
                 <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{gnfFormatter(calculateSalaireRestant(r))}</td>
                 <td className="px-4 py-3">{r.demande_avance?.date_validation ? new Date(r.demande_avance.date_validation).toLocaleDateString('fr-FR') : '-'}</td>
                 <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded text-xs font-semibold
-                    ${r.statut === 'PAYE' ? 'bg-green-100 text-green-700' :
-                      r.statut === 'EN_ATTENTE' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-gray-100 text-gray-700'}`}>
-                    {r.statut}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={`px-2 py-1 rounded text-xs font-semibold
+                      ${r.statut === 'PAYE' ? 'bg-green-100 text-green-700' :
+                        r.statut === 'EN_ATTENTE' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-gray-100 text-gray-700'}`}>
+                      {r.statut}
+                    </span>
+                    {r.statut === 'EN_ATTENTE' && (
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setSelectedRemboursement(r);
+                          setShowPaymentModal(true);
+                        }}
+                        disabled={paying}
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+                      >
+                        💳 Payer
+                      </Button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -383,8 +416,8 @@ export default function RemboursementsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal de paiement (individuel ou total) */}
-      <Dialog open={showPayModal} onOpenChange={setShowPayModal}>
+      {/* Modal de paiement */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Paiement via Orange Money (Lengopay)</DialogTitle>
@@ -392,27 +425,48 @@ export default function RemboursementsPage() {
               Confirmez le paiement via Lengopay. Les champs sont préremplis et non modifiables.
             </DialogDescription>
           </DialogHeader>
-          <form className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Montant à payer</label>
-              <Input value={payAll ? gnfFormatter(totalRemboursements) : gnfFormatter(Number(selectedRemboursement?.montant_total_remboursement || 0))} readOnly disabled />
+          {selectedRemboursement && (
+            <div className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2">Détails du paiement</h3>
+                <div className="space-y-2 text-sm">
+                  <div><span className="font-medium">Employé :</span> {selectedRemboursement.employee?.nom} {selectedRemboursement.employee?.prenom}</div>
+                  <div><span className="font-medium">Montant à rembourser :</span> <span className="font-semibold text-red-600">{gnfFormatter(calculateRemboursementDu(getMontantDemande(selectedRemboursement)))}</span></div>
+                  <div><span className="font-medium">Date limite :</span> {new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString('fr-FR')}</div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">Informations de paiement</h3>
+                <div className="space-y-2 text-sm">
+                  <div><span className="font-medium">Mode de paiement :</span> Orange Money via Lengopay</div>
+                  <div><span className="font-medium">Sécurité :</span> Transaction sécurisée SSL</div>
+                  <div><span className="font-medium">Confirmation :</span> Reçu électronique automatique</div>
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Numéro Orange Money</label>
-              <Input value={session?.partner?.telephone || ''} readOnly disabled />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">Service</label>
-              <Input value="Lengopay (Orange Money)" readOnly disabled />
-            </div>
-            {/* Ajouter d'autres champs si besoin */}
-          </form>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>Annuler</Button>
-            <Button disabled>{payAll ? 'Payer le total' : 'Payer ce remboursement'}</Button>
+          )}
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowPaymentModal(false)}>
+              Annuler
+            </Button>
+            <Button 
+              onClick={() => {
+                if (selectedRemboursement) {
+                  handlePayer(selectedRemboursement.id);
+                  setShowPaymentModal(false);
+                }
+              }}
+              disabled={paying}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {paying ? 'Traitement...' : 'Confirmer le paiement'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
     </div>
   );
 }
