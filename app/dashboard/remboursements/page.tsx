@@ -32,6 +32,16 @@ type Remboursement = {
     montant_demande: number;
     date_validation: string;
   };
+  tous_remboursements?: {
+    id: string;
+    montant_total_remboursement: number;
+    statut: string;
+    date_creation: string;
+    demande_avance?: {
+      montant_demande: number;
+      date_validation: string;
+    };
+  }[];
 };
 
 export default function RemboursementsPage() {
@@ -101,10 +111,47 @@ export default function RemboursementsPage() {
       })
     );
     
-    console.log('Remboursements avec demandes:', remboursementsAvecDemandes);
-    setRemboursements(remboursementsAvecDemandes);
-    // Calcul du total en attente
-    const total = (remboursementsAvecDemandes || [])
+    // Récupérer tous les remboursements de chaque employé pour calculer le salaire restant
+    const remboursementsAvecTousRemboursements = await Promise.all(
+      remboursementsAvecDemandes.map(async (r: any) => {
+        try {
+          // Récupérer tous les remboursements de cet employé (tous statuts)
+          const { data: tousRemboursements, error: tousRemboursementsError } = await supabase
+            .from('remboursements')
+            .select(`
+              id, montant_total_remboursement, statut, date_creation,
+              demande_avance:demande_avance_id (montant_demande, date_validation)
+            `)
+            .eq('employe_id', r.employe_id)
+            .order('date_creation', { ascending: true });
+          
+          if (tousRemboursementsError) {
+            console.error('Erreur récupération tous remboursements:', tousRemboursementsError);
+            return {
+              ...r,
+              tous_remboursements: []
+            };
+          }
+          
+          return {
+            ...r,
+            tous_remboursements: tousRemboursements || []
+          };
+        } catch (error) {
+          console.error('Erreur lors de la récupération de tous les remboursements:', error);
+          return {
+            ...r,
+            tous_remboursements: []
+          };
+        }
+      })
+    );
+    
+    console.log('Remboursements avec tous remboursements:', remboursementsAvecTousRemboursements);
+    setRemboursements(remboursementsAvecTousRemboursements);
+    
+    // Calcul du total en attente (seulement les remboursements en attente)
+    const total = (remboursementsAvecTousRemboursements || [])
       .filter((r: any) => r.statut === 'EN_ATTENTE')
       .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement), 0);
     setTotalAttente(total);
@@ -205,11 +252,30 @@ export default function RemboursementsPage() {
   // Fonction utilitaire pour formater en GNF
   const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
 
-  // Fonction pour calculer le salaire restant de l'employé après la demande d'avance
+  // Fonction pour calculer le salaire restant de l'employé en fonction de la position du remboursement
   const calculateSalaireRestant = (remboursement: Remboursement) => {
     const salaireNet = Number(remboursement.employee?.salaire_net || 0);
-    const montantDemande = Number(remboursement.demande_avance?.montant_demande || 0);
-    return Math.max(0, salaireNet - montantDemande);
+    
+    // Trouver la position de ce remboursement dans la liste chronologique
+    const tousRemboursements = remboursement.tous_remboursements || [];
+    const positionActuelle = tousRemboursements.findIndex(remb => remb.id === remboursement.id);
+    
+    // Si ce remboursement n'est pas trouvé, retourner le salaire net
+    if (positionActuelle === -1) {
+      return salaireNet;
+    }
+    
+    // Calculer le salaire restant en déduisant seulement les remboursements jusqu'à cette position
+    let salaireRestant = salaireNet;
+    
+    // Déduire les remboursements jusqu'à la position actuelle (inclusive)
+    for (let i = 0; i <= positionActuelle; i++) {
+      const remb = tousRemboursements[i];
+      const montantRemboursement = Number(remb.montant_total_remboursement || 0);
+      salaireRestant = Math.max(0, salaireRestant - montantRemboursement);
+    }
+    
+    return salaireRestant;
   };
 
   // Fonction pour calculer les frais de service (6,5%)
@@ -232,8 +298,10 @@ export default function RemboursementsPage() {
     return Number(remboursement.demande_avance?.montant_demande || 0);
   };
 
-  // Correction : total de tous les remboursements (pas seulement en attente)
-  const totalRemboursements = remboursements.reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
+  // Total des remboursements en attente seulement
+  const totalRemboursements = remboursements
+    .filter(r => r.statut === 'EN_ATTENTE')
+    .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
 
   // Skeleton
   if (isLoading) {
@@ -256,7 +324,7 @@ export default function RemboursementsPage() {
       </div>
 
       <div className="bg-[var(--zalama-card)] border rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between">
-        <div className="text-lg font-semibold">Total des remboursements :</div>
+        <div className="text-lg font-semibold">Total des remboursements en attente :</div>
         <div className="text-2xl font-bold text-orange-600">{gnfFormatter(totalRemboursements)}</div>
       </div>
 
@@ -397,6 +465,40 @@ export default function RemboursementsPage() {
               <div><span className="font-semibold">Montant reçu :</span> <span className="font-semibold">{gnfFormatter(calculateMontantRecu(getMontantDemande(selectedRemboursement), calculateFraisService(getMontantDemande(selectedRemboursement))))}</span></div>
               <div><span className="font-semibold text-red-600 dark:text-red-400">Remboursement dû à ZaLaMa :</span> <span className="text-red-600 dark:text-red-400 font-semibold">{gnfFormatter(calculateRemboursementDu(getMontantDemande(selectedRemboursement)))}</span></div>
               <div><span className="font-semibold text-emerald-600 dark:text-emerald-400">Salaire restant :</span> <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{gnfFormatter(calculateSalaireRestant(selectedRemboursement))}</span></div>
+              <div><span className="font-semibold">Total remboursements :</span> <span className="font-semibold">{selectedRemboursement.tous_remboursements?.length || 0} remboursement(s)</span></div>
+              <div><span className="font-semibold">Montant total des remboursements :</span> <span className="font-semibold">{gnfFormatter((selectedRemboursement.tous_remboursements || []).reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0))}</span></div>
+              
+              {/* Historique des remboursements */}
+              <div className="mt-4">
+                <h4 className="font-semibold mb-2">Historique des remboursements :</h4>
+                <div className="space-y-2 max-h-32 overflow-y-auto">
+                  {selectedRemboursement.tous_remboursements?.map((remb, index) => {
+                    // Calculer le salaire restant après ce remboursement
+                    let salaireRestantApres = Number(selectedRemboursement.employee?.salaire_net || 0);
+                    for (let i = 0; i <= index; i++) {
+                      const rembCourant = selectedRemboursement.tous_remboursements![i];
+                      const montantRemboursement = Number(rembCourant.montant_total_remboursement || 0);
+                      salaireRestantApres = Math.max(0, salaireRestantApres - montantRemboursement);
+                    }
+                    
+                    return (
+                      <div key={index} className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
+                        <div className="flex justify-between">
+                          <span>Remboursement #{index + 1}</span>
+                          <span className="font-semibold">{gnfFormatter(Number(remb.montant_total_remboursement || 0))}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-500">
+                          <span>{remb.statut}</span>
+                          <span>{remb.date_creation ? new Date(remb.date_creation).toLocaleDateString('fr-FR') : '-'}</span>
+                        </div>
+                        <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                          Salaire restant après : {gnfFormatter(salaireRestantApres)}
+                        </div>
+                      </div>
+                    );
+                  }) || <div className="text-gray-500 text-sm">Aucun remboursement trouvé</div>}
+                </div>
+              </div>
               <div><span className="font-semibold">Date de l'avance :</span> <span>{selectedRemboursement.demande_avance?.date_validation ? new Date(selectedRemboursement.demande_avance.date_validation).toLocaleDateString('fr-FR') : '-'}</span></div>
               <div><span className="font-semibold">Date limite remboursement :</span> <span>{new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString('fr-FR')}</span></div>
               <div><span className="font-semibold">Statut :</span> <span className={`px-2 py-1 rounded text-xs font-semibold
