@@ -3,6 +3,11 @@
 import StatCard from '@/components/dashboard/StatCard';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Employee } from '@/lib/supabase';
+
+// Type étendu pour inclure le salaire restant
+type EmployeeWithRemainingSalary = Employee & {
+  salaire_restant?: number;
+};
 import { supabase } from '@/lib/supabase';
 import { Building2, Calendar, ChevronDown, Clock, Download, Eye, Filter, Search, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -28,14 +33,14 @@ export default function EmployesPage() {
   const router = useRouter();
   
   // États pour la gestion des employés
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeWithRemainingSalary[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWithRemainingSalary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
   const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithRemainingSalary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
@@ -64,8 +69,48 @@ export default function EmployesPage() {
         return;
       }
 
-      setEmployees(employeesData || []);
-      setFilteredEmployees(employeesData || []);
+      // Récupérer les remboursements payés pour chaque employé
+      const employeesWithRemainingSalary = await Promise.all(
+        (employeesData || []).map(async (employee) => {
+          try {
+            // Récupérer tous les remboursements payés de cet employé
+            const { data: remboursements, error: rembError } = await supabase
+              .from('remboursements')
+              .select('montant_total_remboursement')
+              .eq('employe_id', employee.id)
+              .eq('statut', 'PAYE');
+
+            if (rembError) {
+              console.error('Erreur récupération remboursements:', rembError);
+              return {
+                ...employee,
+                salaire_restant: employee.salaire_net || 0
+              };
+            }
+
+            // Calculer le salaire restant
+            const totalRemboursements = (remboursements || []).reduce((sum, remb) => {
+              return sum + Number(remb.montant_total_remboursement || 0);
+            }, 0);
+
+            const salaireRestant = Math.max(0, (employee.salaire_net || 0) - totalRemboursements);
+
+            return {
+              ...employee,
+              salaire_restant: salaireRestant
+            };
+          } catch (error) {
+            console.error('Erreur calcul salaire restant:', error);
+            return {
+              ...employee,
+              salaire_restant: employee.salaire_net || 0
+            };
+          }
+        })
+      );
+
+      setEmployees(employeesWithRemainingSalary);
+      setFilteredEmployees(employeesWithRemainingSalary);
 
     } catch (error) {
       console.error('Erreur lors du chargement des employés:', error);
@@ -128,7 +173,7 @@ export default function EmployesPage() {
   const retentionRate = totalEmployees > 0 ? ((activeEmployees / totalEmployees) * 100).toFixed(1) : '0';
 
   // Ouvrir le modal de visualisation des détails
-  const openViewModal = (employee: Employee) => {
+  const openViewModal = (employee: EmployeeWithRemainingSalary) => {
     setSelectedEmployee(employee);
     setIsViewModalOpen(true);
   };
@@ -213,7 +258,7 @@ export default function EmployesPage() {
             Gestion des employés
           </h1>
                       <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {session?.partner?.nom} - {totalEmployees} employés
+              {session?.partner?.company_name} - {totalEmployees} employés
             </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -414,6 +459,9 @@ export default function EmployesPage() {
                   Salaire net
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Salaire restant
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date d'embauche
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -459,6 +507,9 @@ export default function EmployesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {employee.salaire_net ? formatSalary(employee.salaire_net) : 'Non défini'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    {employee.salaire_restant ? formatSalary(employee.salaire_restant) : 'Non défini'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {employee.date_embauche ? formatDate(employee.date_embauche) : 'Non définie'}
@@ -582,6 +633,12 @@ export default function EmployesPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire net</label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
                     {selectedEmployee.salaire_net ? formatSalary(selectedEmployee.salaire_net) : 'Non défini'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire restant</label>
+                  <p className="mt-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    {selectedEmployee.salaire_restant ? formatSalary(selectedEmployee.salaire_restant) : 'Non défini'}
                   </p>
                 </div>
                 <div>
