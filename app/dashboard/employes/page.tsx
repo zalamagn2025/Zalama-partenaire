@@ -8,6 +8,7 @@ import type { Employee } from '@/lib/supabase';
 type EmployeeWithRemainingSalary = Employee & {
   salaire_restant?: number;
 };
+
 import { supabase } from '@/lib/supabase';
 import { Building2, Calendar, ChevronDown, Clock, Download, Eye, Filter, Search, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -184,39 +185,94 @@ export default function EmployesPage() {
     setSelectedEmployee(null);
   };
 
-  // Exporter les données au format CSV
+    // Exporter les données au format CSV
   const handleExportCSV = () => {
     if (!session?.partner) return;
     
-    const headers = ["ID", "Nom", "Prénom", "Genre", "Email", "Téléphone", "Poste", "Type de contrat", "Salaire net", "Date d'embauche", "Statut"];
-    const csvData = [
-      headers.join(","),
-      ...employees.map(employee => [
-        employee.id,
-        employee.nom,
-        employee.prenom,
-        employee.genre,
-        employee.email || '',
-        employee.telephone || '',
-        employee.poste,
-        employee.type_contrat,
-        employee.salaire_net || 0,
-        employee.date_embauche || '',
-        employee.actif ? 'Actif' : 'Inactif'
-      ].join(","))
-    ].join("\n");
+    // Fonction pour nettoyer les données
+    const cleanData = (data: any) => {
+      if (data === null || data === undefined) return '';
+      return String(data).replace(/"/g, '""').trim();
+    };
 
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    // Fonction pour formater les montants
+    const formatAmount = (amount: number | null | undefined) => {
+      if (!amount) return '0';
+      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    };
+
+    // Fonction pour formater les dates
+    const formatDate = (dateString: string | null | undefined) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('fr-FR');
+      } catch {
+        return '';
+      }
+    };
+
+    // En-têtes
+    const headers = [
+      'ID Employe',
+      'Nom',
+      'Prenom',
+      'Genre',
+      'Email',
+      'Telephone',
+      'Poste',
+      'Role',
+      'Type de contrat',
+      'Salaire net (GNF)',
+      'Salaire restant (GNF)',
+      'Date embauche',
+      'Statut',
+      'Adresse',
+      'Date creation'
+    ];
+
+    // Données
+    const rows = employees.map(employee => [
+      cleanData(employee.id),
+      cleanData(employee.nom),
+      cleanData(employee.prenom),
+      cleanData(employee.genre),
+      cleanData(employee.email),
+      cleanData(employee.telephone),
+      cleanData(employee.poste),
+      cleanData(employee.role),
+      cleanData(employee.type_contrat),
+      formatAmount(employee.salaire_net),
+      formatAmount(employee.salaire_restant),
+      formatDate(employee.date_embauche),
+      employee.actif ? 'Actif' : 'Inactif',
+      cleanData(employee.adresse),
+      formatDate(employee.created_at)
+    ]);
+
+    // Créer le contenu CSV
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    // Créer le blob avec l'encodage UTF-8 BOM pour Excel
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { 
+      type: 'text/csv;charset=utf-8' 
+    });
+
+    // Télécharger le fichier
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-            link.setAttribute('download', `employes_${session.partner.company_name}_${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
+    link.href = url;
+    link.download = `employes_${session.partner.company_name}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     
-    toast.success('Export CSV réussi');
+    toast.success(`Export CSV réussi - ${employees.length} employés exportés`);
   };
 
   // Gérer le changement de page
@@ -259,7 +315,7 @@ export default function EmployesPage() {
           </h1>
                       <p className="text-gray-600 dark:text-gray-400 mt-1">
               {session?.partner?.company_name} - {totalEmployees} employés
-            </p>
+            </p>  
         </div>
         <div className="flex items-center space-x-4">
           <button

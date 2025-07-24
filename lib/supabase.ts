@@ -751,7 +751,8 @@ export interface Employee {
   poste: string
   role?: string
   type_contrat: 'CDI' | 'CDD' | 'Consultant' | 'Stage' | 'Autre'
-  salaire_net?: number
+  salaire_net?: number,
+  salaire_restant?: number,
   date_embauche?: string
   actif: boolean
   created_at: string
