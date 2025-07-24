@@ -385,11 +385,11 @@ export default function EntrepriseDashboardPage() {
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
         <div className="flex items-center gap-4">
           <div className="bg-blue-900 rounded-lg w-12 h-12 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">{session?.partner?.nom?.slice(0,1)?.toUpperCase()}</span>
+            <span className="text-white font-bold text-lg">{session?.partner?.company_name?.slice(0,1)?.toUpperCase()}</span>
           </div>
         <div>
-            <h1 className="text-3xl font-bold dark:text-white">{session?.partner?.nom}</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">{session?.partner?.secteur} • {activeEmployees.length} employés</p>
+            <h1 className="text-3xl font-bold dark:text-white">{session?.partner?.company_name}</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">{session?.partner?.sector} • {activeEmployees.length} employés</p>
           </div>
         </div>
         <div className="flex flex-col items-end">
