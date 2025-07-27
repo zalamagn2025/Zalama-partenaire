@@ -554,6 +554,7 @@ export default function FinancesPage() {
       </div>
 
       {/* Graphiques */}
+      <div className="grid grid-cols-2 gap-4">
       {financialStats && (
       <div className="grid grid-cols-1 gap-4">
         {/* Évolution des montants */}
@@ -599,6 +600,7 @@ export default function FinancesPage() {
         </div>
       </div>
       )}
+      </div>
 
       {/* Filtres */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-3">
