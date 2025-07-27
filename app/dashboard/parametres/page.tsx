@@ -29,15 +29,14 @@ export default function ParametresPage() {
     display_name: ''
   });
   const [partnerData, setPartnerData] = useState({
-    nom: '',
-    secteur: '',
-    adresse: '',
-    telephone: '',
+    company_name: '',
+    activity_domain: '',
+    headquarters_address: '',
+    phone: '',
     email: '',
-    description: '',
-    date_adhesion: '',
-    ville: '',
-    pays: ''
+    legal_status: '',
+    payment_date: '',
+    payment_day: 25
   });
 
   // Charger les données de session au montage
@@ -60,8 +59,7 @@ export default function ParametresPage() {
           email: session.partner.email || '',
                   legal_status: session.partner.legal_status || '',
                   payment_date: session.partner.payment_date || '',
-          payment_day: session.partner.payment_day || 25,
-        pays: 'Guinée'
+          payment_day: session.partner.payment_day || 25
       });
     }
   }, [session]);
@@ -223,7 +221,7 @@ export default function ParametresPage() {
                   {session?.admin?.display_name || 'Utilisateur'}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {session?.admin?.role || 'Rôle non défini'} • {session?.partner?.nom}
+                  {session?.admin?.role || 'Rôle non défini'} • {session?.partner?.company_name}
                 </p>
               </div>
             </div>
@@ -335,8 +333,8 @@ export default function ParametresPage() {
                   <Building className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input 
                     type="text" 
-                    value={partnerData.nom}
-                    onChange={(e) => setPartnerData({...partnerData, nom: e.target.value})}
+                    value={partnerData.company_name}
+                                          onChange={(e) => setPartnerData({...partnerData, company_name: e.target.value})}
                     className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -347,8 +345,8 @@ export default function ParametresPage() {
                   Secteur d'activité
                 </label>
                 <select 
-                  value={partnerData.secteur}
-                  onChange={(e) => setPartnerData({...partnerData, secteur: e.target.value})}
+                  value={partnerData.activity_domain}
+                                      onChange={(e) => setPartnerData({...partnerData, activity_domain: e.target.value})}
                   className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 >
                   <option value="">Sélectionner un secteur</option>
@@ -386,8 +384,8 @@ export default function ParametresPage() {
                   <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input 
                     type="tel" 
-                    value={partnerData.telephone}
-                    onChange={(e) => setPartnerData({...partnerData, telephone: e.target.value})}
+                    value={partnerData.phone}
+                    onChange={(e) => setPartnerData({...partnerData, phone: e.target.value})}
                     className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
@@ -401,56 +399,16 @@ export default function ParametresPage() {
                   <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input 
                     type="text" 
-                    value={partnerData.adresse}
-                    onChange={(e) => setPartnerData({...partnerData, adresse: e.target.value})}
+                    value={partnerData.headquarters_address}
+                    onChange={(e) => setPartnerData({...partnerData, headquarters_address: e.target.value})}
                     className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                    <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Ville
-                  </label>
-                  <input 
-                    type="text" 
-                    value={partnerData.ville}
-                    onChange={(e) => setPartnerData({...partnerData, ville: e.target.value})}
-                    className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-                    <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Pays
-                  </label>
-                  <input 
-                    type="text" 
-                    value={partnerData.pays}
-                    onChange={(e) => setPartnerData({...partnerData, pays: e.target.value})}
-                    className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
-                </div>
-              </div>
+
               
-                    <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Description
-                </label>
-                <textarea 
-                  value={partnerData.description}
-                  onChange={(e) => setPartnerData({...partnerData, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  placeholder="Décrivez votre entreprise..."
-                />
-                  </div>
-                  
               <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Date d'adhésion: {formatDate(partnerData.date_adhesion)}</span>
-                </div>
                 <button
                   onClick={handlePartnerSave}
                   className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

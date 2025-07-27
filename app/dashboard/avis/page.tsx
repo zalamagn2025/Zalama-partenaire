@@ -193,7 +193,7 @@ export default function AvisPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Avis des Salariés</h1>
-      <p className="text-[var(--zalama-text)]/70">Entreprise: {session?.partner?.nom}</p>
+      <p className="text-[var(--zalama-text)]/70">Entreprise: {session?.partner?.company_name}</p>
       
       {/* Statistiques */}
       <h2 className="text-xl font-bold text-[var(--zalama-text)] mt-2">Statistiques des avis</h2>

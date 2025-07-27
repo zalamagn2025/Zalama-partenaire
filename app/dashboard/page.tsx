@@ -389,11 +389,11 @@ export default function EntrepriseDashboardPage() {
           </div>
         <div>
             <h1 className="text-3xl font-bold dark:text-white">{session?.partner?.company_name}</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">{session?.partner?.sector} • {activeEmployees.length} employés</p>
+            <p className="text-gray-600 dark:text-gray-400 text-lg">{session?.partner?.activity_domain} • {activeEmployees.length} employés</p>
           </div>
         </div>
         <div className="flex flex-col items-end">
-          <span className="text-blue-400 text-sm">Partenaire depuis {session?.partner?.date_adhesion ? new Date(session.partner.date_adhesion).getFullYear() : ''}</span>
+          <span className="text-blue-400 text-sm">Partenaire depuis {session?.partner?.created_at ? new Date(session.partner.created_at).getFullYear() : ''}</span>
           <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">Compte actif</span>
         </div>
       </div>

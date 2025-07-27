@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
             email: testUser.email,
             display_name: testUser.display_name,
             role: testUser.role,
-            partner: testUser.partner.nom,
+            partner: testUser.partner.company_name,
             status: 'updated'
           });
         } else {
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
             email: testUser.email,
             display_name: testUser.display_name,
             role: testUser.role,
-            partner: testUser.partner.nom,
+            partner: testUser.partner.company_name,
             status: 'created'
           });
         }
@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
         email: u.email,
         password: u.password,
         role: u.role,
-        partner: u.partner.nom
+        partner: u.partner.company_name
       }))
     });
     
