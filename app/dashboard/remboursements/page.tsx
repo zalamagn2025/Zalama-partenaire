@@ -10,6 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
@@ -31,6 +32,11 @@ import {
   Eye,
   ArrowLeft,
   ArrowRight,
+  User,
+  Calendar,
+  Receipt,
+  History,
+  AlertCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
@@ -750,213 +756,323 @@ export default function RemboursementsPage() {
         </div>
       </div>
 
-      {/* Modal de détail */}
+      {/* Modal de détail professionnelle */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Détail du remboursement</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Receipt className="w-5 h-5 text-blue-600" />
+              Détail du remboursement
+            </DialogTitle>
             <DialogDescription>
-              Informations détaillées du remboursement sélectionné.
+              Informations complètes et historique de la demande d'avance
+              salariale
             </DialogDescription>
           </DialogHeader>
+
           {selectedRemboursement && (
-            <div className="space-y-3">
+            <div className="space-y-6">
+              {/* Section Employé */}
               <div>
-                <span className="font-semibold">Employé :</span>{" "}
-                <span className="text-gray-800 dark:text-gray-200">
-                  {selectedRemboursement.employee?.nom}{" "}
-                  {selectedRemboursement.employee?.prenom}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Salaire net :</span>{" "}
-                <span className="font-semibold">
-                  {gnfFormatter(
-                    Number(selectedRemboursement.employee?.salaire_net || 0)
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Montant demandé :</span>{" "}
-                <span className="font-semibold">
-                  {gnfFormatter(getMontantDemande(selectedRemboursement))}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Frais de service (6,5%) :</span>{" "}
-                <span className="font-semibold">
-                  {gnfFormatter(
-                    calculateFraisService(
-                      getMontantDemande(selectedRemboursement)
-                    )
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Montant reçu :</span>{" "}
-                <span className="font-semibold">
-                  {gnfFormatter(
-                    calculateMontantRecu(
-                      getMontantDemande(selectedRemboursement),
-                      calculateFraisService(
-                        getMontantDemande(selectedRemboursement)
-                      )
-                    )
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-red-600 dark:text-red-400">
-                  Remboursement dû à ZaLaMa :
-                </span>{" "}
-                <span className="text-red-600 dark:text-red-400 font-semibold">
-                  {gnfFormatter(
-                    calculateRemboursementDu(
-                      getMontantDemande(selectedRemboursement)
-                    )
-                  )}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  Salaire restant :
-                </span>{" "}
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
-                  {gnfFormatter(calculateSalaireRestant(selectedRemboursement))}
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">Total remboursements :</span>{" "}
-                <span className="font-semibold">
-                  {selectedRemboursement.tous_remboursements?.length || 0}{" "}
-                  remboursement(s)
-                </span>
-              </div>
-              <div>
-                <span className="font-semibold">
-                  Montant total des remboursements :
-                </span>{" "}
-                <span className="font-semibold">
-                  {gnfFormatter(
-                    (selectedRemboursement.tous_remboursements || []).reduce(
-                      (sum, r) =>
-                        sum + Number(r.montant_total_remboursement || 0),
-                      0
-                    )
-                  )}
-                </span>
-              </div>
-
-              {/* Historique des remboursements */}
-              <div className="mt-4">
-                <h4 className="font-semibold mb-2">
-                  Historique des remboursements :
-                </h4>
-                <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {selectedRemboursement.tous_remboursements?.map(
-                    (remb, index) => {
-                      // Calculer le salaire restant après ce remboursement
-                      let salaireRestantApres = Number(
-                        selectedRemboursement.employee?.salaire_net || 0
-                      );
-                      for (let i = 0; i <= index; i++) {
-                        const rembCourant =
-                          selectedRemboursement.tous_remboursements![i];
-                        const montantRemboursement = Number(
-                          rembCourant.montant_total_remboursement || 0
-                        );
-                        salaireRestantApres = Math.max(
-                          0,
-                          salaireRestantApres - montantRemboursement
-                        );
-                      }
-
-                      return (
-                        <div
-                          key={index}
-                          className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded"
-                        >
-                          <div className="flex justify-between">
-                            <span>Remboursement #{index + 1}</span>
-                            <span className="font-semibold">
-                              {gnfFormatter(
-                                Number(remb.montant_total_remboursement || 0)
-                              )}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <span>{remb.statut}</span>
-                            <span>
-                              {remb.date_creation
-                                ? new Date(
-                                    remb.date_creation
-                                  ).toLocaleDateString("fr-FR")
-                                : "-"}
-                            </span>
-                          </div>
-                          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                            Salaire restant après :{" "}
-                            {gnfFormatter(salaireRestantApres)}
-                          </div>
-                        </div>
-                      );
-                    }
-                  ) || (
-                    <div className="text-gray-500 text-sm">
-                      Aucun remboursement trouvé
-                    </div>
-                  )}
+                <div className="flex items-center gap-2 mb-3">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Informations employé
+                  </h3>
+                </div>
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Nom complet
+                    </span>
+                    <span className="font-medium">
+                      {selectedRemboursement.employee?.nom}{" "}
+                      {selectedRemboursement.employee?.prenom}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Salaire net mensuel
+                    </span>
+                    <span className="font-medium">
+                      {gnfFormatter(
+                        Number(selectedRemboursement.employee?.salaire_net || 0)
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <Separator />
+
+              {/* Section Détails financiers */}
               <div>
-                <span className="font-semibold">Date de l'avance :</span>{" "}
-                <span>
-                  {selectedRemboursement.demande_avance?.date_validation
-                    ? new Date(
-                        selectedRemboursement.demande_avance.date_validation
-                      ).toLocaleDateString("fr-FR")
-                    : "-"}
-                </span>
+                <div className="flex items-center gap-2 mb-3">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Détails financiers
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+                    <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">
+                      Montant demandé
+                    </div>
+                    <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
+                      {gnfFormatter(getMontantDemande(selectedRemboursement))}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                      Frais de service (6,5%)
+                    </div>
+                    <div className="text-lg font-bold text-gray-800 dark:text-gray-300">
+                      {gnfFormatter(
+                        calculateFraisService(
+                          getMontantDemande(selectedRemboursement)
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
+                    <div className="text-sm text-green-600 dark:text-green-400 mb-1">
+                      Montant reçu par l'employé
+                    </div>
+                    <div className="text-lg font-bold text-green-800 dark:text-green-300">
+                      {gnfFormatter(
+                        calculateMontantRecu(
+                          getMontantDemande(selectedRemboursement),
+                          calculateFraisService(
+                            getMontantDemande(selectedRemboursement)
+                          )
+                        )
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
+                    <div className="text-sm text-red-600 dark:text-red-400 mb-1">
+                      Dû à ZaLaMa
+                    </div>
+                    <div className="text-lg font-bold text-red-800 dark:text-red-300">
+                      {gnfFormatter(
+                        calculateRemboursementDu(
+                          getMontantDemande(selectedRemboursement)
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
+                  <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">
+                    Salaire restant après remboursement
+                  </div>
+                  <div className="text-xl font-bold text-orange-800 dark:text-orange-300">
+                    {gnfFormatter(
+                      calculateSalaireRestant(selectedRemboursement)
+                    )}
+                  </div>
+                </div>
               </div>
+
+              <Separator />
+
+              {/* Section Dates */}
               <div>
-                <span className="font-semibold">
-                  Date limite remboursement :
-                </span>{" "}
-                <span>
-                  {new Date(
-                    selectedRemboursement.date_limite_remboursement
-                  ).toLocaleDateString("fr-FR")}
-                </span>
+                <div className="flex items-center gap-2 mb-3">
+                  <Calendar className="w-4 h-4 text-purple-600" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Informations temporelles
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Date de l'avance
+                    </div>
+                    <div className="font-medium">
+                      {selectedRemboursement.demande_avance?.date_validation
+                        ? new Date(
+                            selectedRemboursement.demande_avance.date_validation
+                          ).toLocaleDateString("fr-FR")
+                        : "-"}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Date limite remboursement
+                    </div>
+                    <div className="font-medium">
+                      {new Date(
+                        selectedRemboursement.date_limite_remboursement
+                      ).toLocaleDateString("fr-FR")}
+                    </div>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                      Date de paiement
+                    </div>
+                    <div className="font-medium">
+                      {selectedRemboursement.date_remboursement_effectue
+                        ? new Date(
+                            selectedRemboursement.date_remboursement_effectue
+                          ).toLocaleDateString("fr-FR")
+                        : "Non payé"}
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              <Separator />
+
+              {/* Section Statut */}
               <div>
-                <span className="font-semibold">Statut :</span>{" "}
-                <span
-                  className={`px-2 py-1 rounded text-xs font-semibold
-                ${
-                  selectedRemboursement.statut === "PAYE"
-                    ? "bg-green-100 text-green-700"
-                    : selectedRemboursement.statut === "EN_ATTENTE"
-                    ? "bg-yellow-100 text-yellow-700"
-                    : "bg-gray-100 text-gray-700"
-                }`}
-                >
-                  {selectedRemboursement.statut}
-                </span>
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertCircle className="w-4 h-4 text-gray-600" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Statut actuel
+                  </h3>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span
+                    className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium
+                    ${
+                      selectedRemboursement.statut === "PAYE"
+                        ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                        : selectedRemboursement.statut === "EN_ATTENTE"
+                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                    }`}
+                  >
+                    {selectedRemboursement.statut === "PAYE" ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        Payé
+                      </>
+                    ) : selectedRemboursement.statut === "EN_ATTENTE" ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-2" />
+                        En attente
+                      </>
+                    ) : (
+                      selectedRemboursement.statut
+                    )}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="font-semibold">Date paiement :</span>{" "}
-                <span>
-                  {selectedRemboursement.date_remboursement_effectue
-                    ? new Date(
-                        selectedRemboursement.date_remboursement_effectue
-                      ).toLocaleDateString("fr-FR")
-                    : "-"}
-                </span>
-              </div>
+
+              {/* Section Historique */}
+              {selectedRemboursement.tous_remboursements &&
+                selectedRemboursement.tous_remboursements.length > 0 && (
+                  <>
+                    <Separator />
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <History className="w-4 h-4 text-indigo-600" />
+                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                          Historique des remboursements
+                        </h3>
+                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-full">
+                          {selectedRemboursement.tous_remboursements.length}{" "}
+                          remboursement(s)
+                        </span>
+                      </div>
+                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                        {selectedRemboursement.tous_remboursements.map(
+                          (remb, index) => {
+                            // Calculer le salaire restant après ce remboursement
+                            let salaireRestantApres = Number(
+                              selectedRemboursement.employee?.salaire_net || 0
+                            );
+                            for (let i = 0; i <= index; i++) {
+                              const rembCourant =
+                                selectedRemboursement.tous_remboursements![i];
+                              const montantRemboursement = Number(
+                                rembCourant.montant_total_remboursement || 0
+                              );
+                              salaireRestantApres = Math.max(
+                                0,
+                                salaireRestantApres - montantRemboursement
+                              );
+                            }
+
+                            return (
+                              <div
+                                key={index}
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-800 dark:text-indigo-400">
+                                      {index + 1}
+                                    </div>
+                                    <span className="font-medium">
+                                      Remboursement #{index + 1}
+                                    </span>
+                                  </div>
+                                  <span className="font-bold text-lg">
+                                    {gnfFormatter(
+                                      Number(
+                                        remb.montant_total_remboursement || 0
+                                      )
+                                    )}
+                                  </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Statut:{" "}
+                                    </span>
+                                    <span
+                                      className={`font-medium ${
+                                        remb.statut === "PAYE"
+                                          ? "text-green-600"
+                                          : "text-yellow-600"
+                                      }`}
+                                    >
+                                      {remb.statut}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">
+                                      Date:{" "}
+                                    </span>
+                                    <span className="font-medium">
+                                      {remb.date_creation
+                                        ? new Date(
+                                            remb.date_creation
+                                          ).toLocaleDateString("fr-FR")
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                  <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                                    <span className="font-medium">
+                                      Salaire restant après ce remboursement:{" "}
+                                    </span>
+                                    <span className="font-bold">
+                                      {gnfFormatter(salaireRestantApres)}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseModal}>
+
+          <DialogFooter className="mt-6">
+            <Button
+              variant="outline"
+              onClick={handleCloseModal}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
               Fermer
             </Button>
           </DialogFooter>
