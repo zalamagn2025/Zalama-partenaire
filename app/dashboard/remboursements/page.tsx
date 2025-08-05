@@ -1,16 +1,48 @@
-'use client';
+"use client";
 
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
-import { ArcElement, BarElement, CategoryScale, Chart, Legend, LinearScale, Tooltip } from 'chart.js';
-import { useEffect, useState } from 'react';
-import { Bar, Pie } from 'react-chartjs-2';
+import {
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  Chart,
+  Legend,
+  LinearScale,
+  Tooltip,
+} from "chart.js";
+import {
+  DollarSign,
+  BarChart3,
+  Clock,
+  CheckCircle,
+  CreditCard,
+  Eye,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bar, Pie } from "react-chartjs-2";
 
-Chart.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+Chart.register(
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  Tooltip,
+  Legend
+);
 
 type Remboursement = {
   id: string;
@@ -50,7 +82,8 @@ export default function RemboursementsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [totalAttente, setTotalAttente] = useState(0);
   const [paying, setPaying] = useState(false);
-  const [selectedRemboursement, setSelectedRemboursement] = useState<Remboursement | null>(null);
+  const [selectedRemboursement, setSelectedRemboursement] =
+    useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
@@ -58,109 +91,129 @@ export default function RemboursementsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const totalPages = Math.ceil(remboursements.length / itemsPerPage);
-  const paginatedRemboursements = remboursements.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedRemboursements = remboursements.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   // Fonction de récupération des remboursements
   const fetchRemboursements = async () => {
     if (!session?.partner) return;
     setIsLoading(true);
     const { data, error } = await supabase
-      .from('remboursements')
-      .select(`
+      .from("remboursements")
+      .select(
+        `
         id, employe_id, partenaire_id, demande_avance_id, montant_transaction, frais_service, montant_total_remboursement, date_limite_remboursement, statut, date_remboursement_effectue,
         employee:employe_id (nom, prenom, salaire_net)
-      `)
-      .eq('partenaire_id', session.partner.id)
-      .order('date_limite_remboursement', { ascending: true });
+      `
+      )
+      .eq("partenaire_id", session.partner.id)
+      .order("date_limite_remboursement", { ascending: true });
     if (error) {
-      console.error('Erreur récupération remboursements:', error);
+      console.error("Erreur récupération remboursements:", error);
     }
-    
+
     // Récupérer les données de demande d'avance pour chaque remboursement
     const remboursementsAvecDemandes = await Promise.all(
       (data || []).map(async (r: any) => {
         try {
           const { data: demandeData, error: demandeError } = await supabase
-            .from('salary_advance_requests')
-            .select('montant_demande, date_validation')
-            .eq('id', r.demande_avance_id)
+            .from("salary_advance_requests")
+            .select("montant_demande, date_validation")
+            .eq("id", r.demande_avance_id)
             .single();
-          
+
           if (demandeError) {
-            console.error('Erreur récupération demande avance:', demandeError);
+            console.error("Erreur récupération demande avance:", demandeError);
             return {
               ...r,
               employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-              demande_avance: null
+              demande_avance: null,
             };
           }
-          
+
           return {
             ...r,
             employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-            demande_avance: demandeData
+            demande_avance: demandeData,
           };
         } catch (error) {
-          console.error('Erreur lors de la récupération de la demande:', error);
+          console.error("Erreur lors de la récupération de la demande:", error);
           return {
             ...r,
             employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-            demande_avance: null
+            demande_avance: null,
           };
         }
       })
     );
-    
+
     // Récupérer tous les remboursements de chaque employé pour calculer le salaire restant
     const remboursementsAvecTousRemboursements = await Promise.all(
       remboursementsAvecDemandes.map(async (r: any) => {
         try {
           // Récupérer tous les remboursements de cet employé (tous statuts)
-          const { data: tousRemboursements, error: tousRemboursementsError } = await supabase
-            .from('remboursements')
-            .select(`
+          const { data: tousRemboursements, error: tousRemboursementsError } =
+            await supabase
+              .from("remboursements")
+              .select(
+                `
               id, montant_total_remboursement, statut, date_creation,
               demande_avance:demande_avance_id (montant_demande, date_validation)
-            `)
-            .eq('employe_id', r.employe_id)
-            .order('date_creation', { ascending: true });
-          
+            `
+              )
+              .eq("employe_id", r.employe_id)
+              .order("date_creation", { ascending: true });
+
           if (tousRemboursementsError) {
-            console.error('Erreur récupération tous remboursements:', tousRemboursementsError);
+            console.error(
+              "Erreur récupération tous remboursements:",
+              tousRemboursementsError
+            );
             return {
               ...r,
-              tous_remboursements: []
+              tous_remboursements: [],
             };
           }
-          
+
           return {
             ...r,
-            tous_remboursements: tousRemboursements || []
+            tous_remboursements: tousRemboursements || [],
           };
         } catch (error) {
-          console.error('Erreur lors de la récupération de tous les remboursements:', error);
+          console.error(
+            "Erreur lors de la récupération de tous les remboursements:",
+            error
+          );
           return {
             ...r,
-            tous_remboursements: []
+            tous_remboursements: [],
           };
         }
       })
     );
-    
-    console.log('Remboursements avec tous remboursements:', remboursementsAvecTousRemboursements);
+
+    console.log(
+      "Remboursements avec tous remboursements:",
+      remboursementsAvecTousRemboursements
+    );
     setRemboursements(remboursementsAvecTousRemboursements);
-    
+
     // Calcul du total en attente (seulement les remboursements en attente)
     const total = (remboursementsAvecTousRemboursements || [])
-      .filter((r: any) => r.statut === 'EN_ATTENTE')
-      .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement), 0);
+      .filter((r: any) => r.statut === "EN_ATTENTE")
+      .reduce(
+        (sum: number, r: any) => sum + Number(r.montant_total_remboursement),
+        0
+      );
     setTotalAttente(total);
     setIsLoading(false);
   };
 
   useEffect(() => {
     if (!loading && session?.partner) {
-      console.log('Session:', session);
+      console.log("Session:", session);
       fetchRemboursements();
     }
   }, [loading, session?.partner]);
@@ -169,26 +222,29 @@ export default function RemboursementsPage() {
   const handlePayer = async (id: string) => {
     setPaying(true);
     try {
-      const response = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ remboursement_id: id })
-      });
+      const response = await fetch(
+        "https://admin.zalamasas.com/api/remboursements/simple-paiement",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ remboursement_id: id }),
+        }
+      );
 
       const data = await response.json();
-      
+
       if (data.success) {
-        console.log('Paiement initié:', data);
+        console.log("Paiement initié:", data);
         // Rediriger vers la page de paiement ou afficher un message de succès
-        window.open(data.payment_url, '_blank');
+        window.open(data.payment_url, "_blank");
         await fetchRemboursements();
       } else {
-        console.error('Erreur lors du paiement:', data.error);
+        console.error("Erreur lors du paiement:", data.error);
         alert(`Erreur: ${data.error}`);
       }
     } catch (error) {
-      console.error('Erreur lors du paiement:', error);
-      alert('Erreur lors du paiement');
+      console.error("Erreur lors du paiement:", error);
+      alert("Erreur lors du paiement");
     } finally {
       setPaying(false);
     }
@@ -197,29 +253,32 @@ export default function RemboursementsPage() {
   // Action "Payer tous" via l'API simplifiée
   const handlePayerTous = async () => {
     if (!session?.partner?.id) return;
-    
+
     setPaying(true);
     try {
-      const response = await fetch('https://admin.zalamasas.com/api/remboursements/simple-paiement-lot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ partenaire_id: session.partner.id })
-      });
+      const response = await fetch(
+        "https://admin.zalamasas.com/api/remboursements/simple-paiement-lot",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ partenaire_id: session.partner.id }),
+        }
+      );
 
       const data = await response.json();
-      
+
       if (data.success) {
-        console.log('Paiement en lot initié:', data);
+        console.log("Paiement en lot initié:", data);
         // Rediriger vers la page de paiement ou afficher un message de succès
-        window.open(data.payment_url, '_blank');
+        window.open(data.payment_url, "_blank");
         await fetchRemboursements();
       } else {
-        console.error('Erreur lors du paiement en lot:', data.error);
+        console.error("Erreur lors du paiement en lot:", data.error);
         alert(`Erreur: ${data.error}`);
       }
     } catch (error) {
-      console.error('Erreur lors du paiement en lot:', error);
-      alert('Erreur lors du paiement en lot');
+      console.error("Erreur lors du paiement en lot:", error);
+      alert("Erreur lors du paiement en lot");
     } finally {
       setPaying(false);
     }
@@ -244,7 +303,7 @@ export default function RemboursementsPage() {
   }, {} as Record<string, number>);
 
   const employeStats = remboursements.reduce((acc, r) => {
-    const nom = r.employee?.nom + ' ' + r.employee?.prenom;
+    const nom = r.employee?.nom + " " + r.employee?.prenom;
     acc[nom] = (acc[nom] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -255,26 +314,30 @@ export default function RemboursementsPage() {
   // Fonction pour calculer le salaire restant de l'employé en fonction de la position du remboursement
   const calculateSalaireRestant = (remboursement: Remboursement) => {
     const salaireNet = Number(remboursement.employee?.salaire_net || 0);
-    
+
     // Trouver la position de ce remboursement dans la liste chronologique
     const tousRemboursements = remboursement.tous_remboursements || [];
-    const positionActuelle = tousRemboursements.findIndex(remb => remb.id === remboursement.id);
-    
+    const positionActuelle = tousRemboursements.findIndex(
+      (remb) => remb.id === remboursement.id
+    );
+
     // Si ce remboursement n'est pas trouvé, retourner le salaire net
     if (positionActuelle === -1) {
       return salaireNet;
     }
-    
+
     // Calculer le salaire restant en déduisant seulement les remboursements jusqu'à cette position
     let salaireRestant = salaireNet;
-    
+
     // Déduire les remboursements jusqu'à la position actuelle (inclusive)
     for (let i = 0; i <= positionActuelle; i++) {
       const remb = tousRemboursements[i];
-      const montantRemboursement = Number(remb.montant_total_remboursement || 0);
+      const montantRemboursement = Number(
+        remb.montant_total_remboursement || 0
+      );
       salaireRestant = Math.max(0, salaireRestant - montantRemboursement);
     }
-    
+
     return salaireRestant;
   };
 
@@ -284,7 +347,10 @@ export default function RemboursementsPage() {
   };
 
   // Fonction pour calculer le montant reçu (avance - frais)
-  const calculateMontantRecu = (montantDemande: number, fraisService: number) => {
+  const calculateMontantRecu = (
+    montantDemande: number,
+    fraisService: number
+  ) => {
     return montantDemande - fraisService;
   };
 
@@ -300,7 +366,7 @@ export default function RemboursementsPage() {
 
   // Total des remboursements en attente seulement
   const totalRemboursements = remboursements
-    .filter(r => r.statut === 'EN_ATTENTE')
+    .filter((r) => r.statut === "EN_ATTENTE")
     .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
 
   // Skeleton
@@ -315,135 +381,372 @@ export default function RemboursementsPage() {
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Remboursements</h1>
-        <Button onClick={() => handlePayerTous()} disabled={paying || totalAttente === 0}>
-          {paying ? 'Paiement...' : 'PAYER TOUS'}
-        </Button>
-      </div>
-
-      <div className="bg-[var(--zalama-card)] border rounded-xl shadow p-6 flex flex-col md:flex-row md:items-center md:justify-between">
-        <div className="text-lg font-semibold">Total des remboursements en attente :</div>
-        <div className="text-2xl font-bold text-orange-600">{gnfFormatter(totalRemboursements)}</div>
-      </div>
-
-      {/* Liste des remboursements */}
-      <div className="bg-[var(--zalama-card)] border rounded-xl shadow p-0 overflow-x-auto">
-        <table className="w-full text-sm border-separate border-spacing-0">
-          <thead className="sticky top-0 z-10 bg-[var(--zalama-card)]">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold border-b">Employé</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Salaire net (GNF)</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Montant demandé (avance)</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Frais service (6,5%)</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Montant reçu (avance)</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Remboursement dû à ZaLaMa</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Salaire restant</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Date de l'avance</th>
-              <th className="px-4 py-3 text-left font-semibold border-b">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedRemboursements.length === 0 && (
-              <tr>
-                <td colSpan={9} className="text-center py-8 text-gray-400">Aucun remboursement trouvé.</td>
-              </tr>
+    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+      {/* En-tête professionnel */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              Gestion des remboursements
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Suivi et traitement des remboursements d'avances salariales
+            </p>
+          </div>
+          <Button
+            onClick={() => handlePayerTous()}
+            disabled={paying || totalAttente === 0}
+            size="sm"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
+          >
+            {paying ? (
+              <>
+                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                Traitement...
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4 mr-2" />
+                Payer tous les remboursements
+              </>
             )}
-            {paginatedRemboursements.map((r, idx) => (
-              <tr key={r.id} className={
-                `transition-colors ${idx % 2 === 0 ? 'bg-white/60 dark:bg-white/5' : 'bg-gray-50 dark:bg-gray-900/10'} hover:bg-blue-50 dark:hover:bg-blue-900/10 border-b last:border-b-0`
-              }>
-                <td className="px-4 py-3 whitespace-nowrap">{r.employee?.nom} {r.employee?.prenom}</td>
-                <td className="px-4 py-3">{gnfFormatter(Number(r.employee?.salaire_net || 0))}</td>
-                <td className="px-4 py-3">{gnfFormatter(getMontantDemande(r))}</td>
-                <td className="px-4 py-3">{gnfFormatter(calculateFraisService(getMontantDemande(r)))}</td>
-                <td className="px-4 py-3">{gnfFormatter(calculateMontantRecu(getMontantDemande(r), calculateFraisService(getMontantDemande(r))))}</td>
-                <td className="px-4 py-3 font-semibold text-red-600 dark:text-red-400">{gnfFormatter(calculateRemboursementDu(getMontantDemande(r)))}</td>
-                <td className="px-4 py-3 font-semibold text-emerald-600 dark:text-emerald-400">{gnfFormatter(calculateSalaireRestant(r))}</td>
-                <td className="px-4 py-3">{r.demande_avance?.date_validation ? new Date(r.demande_avance.date_validation).toLocaleDateString('fr-FR') : '-'}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-2">
-                    <span className={`px-2 py-1 rounded text-xs font-semibold
-                      ${r.statut === 'PAYE' ? 'bg-green-100 text-green-700' :
-                        r.statut === 'EN_ATTENTE' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-gray-100 text-gray-700'}`}>
-                      {r.statut}
+          </Button>
+        </div>
+      </div>
+
+      {/* Statistiques détaillées */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+              <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            </div>
+            <div className="ml-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Total en attente
+              </div>
+              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                {gnfFormatter(totalRemboursements)}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="ml-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Total remboursements
+              </div>
+              <div className="text-lg font-bold text-gray-900 dark:text-white">
+                {remboursements.length}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <div className="ml-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                En attente
+              </div>
+              <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+                {remboursements.filter((r) => r.statut === "EN_ATTENTE").length}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="ml-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                Payés
+              </div>
+              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+                {remboursements.filter((r) => r.statut === "PAYE").length}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tableau des remboursements */}
+      <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            Liste des remboursements
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Gestion et suivi de tous les remboursements d'avances salariales
+          </p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Employé
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Montant demandé
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Frais service (6,5%)
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Montant reçu
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Remboursement dû
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Salaire restant
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Date avance
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Statut
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {paginatedRemboursements.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={9}
+                    className="text-center py-6 text-gray-400 text-sm"
+                  >
+                    Aucun remboursement trouvé.
+                  </td>
+                </tr>
+              )}
+              {paginatedRemboursements.map((r, idx) => (
+                <tr
+                  key={r.id}
+                  className="dark:bg-[var(--zalama-card)]  transition-colors"
+                >
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {r.employee?.nom} {r.employee?.prenom}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {gnfFormatter(Number(r.employee?.salaire_net || 0))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
+                    {gnfFormatter(getMontantDemande(r))}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-500">
+                    {gnfFormatter(calculateFraisService(getMontantDemande(r)))}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
+                    {gnfFormatter(
+                      calculateMontantRecu(
+                        getMontantDemande(r),
+                        calculateFraisService(getMontantDemande(r))
+                      )
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400">
+                    {gnfFormatter(
+                      calculateRemboursementDu(getMontantDemande(r))
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    {gnfFormatter(calculateSalaireRestant(r))}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-gray-500">
+                    {r.demande_avance?.date_validation
+                      ? new Date(
+                          r.demande_avance.date_validation
+                        ).toLocaleDateString("fr-FR")
+                      : "-"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
+                      ${
+                        r.statut === "PAYE"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                          : r.statut === "EN_ATTENTE"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
+                      }`}
+                    >
+                      {r.statut === "PAYE"
+                        ? "Payé"
+                        : r.statut === "EN_ATTENTE"
+                        ? "En attente"
+                        : r.statut}
                     </span>
-                    {r.statut === 'EN_ATTENTE' && (
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      {r.statut === "EN_ATTENTE" && (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedRemboursement(r);
+                            setShowPaymentModal(true);
+                          }}
+                          disabled={paying}
+                          className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-1 h-7 flex items-center gap-1"
+                        >
+                          <CreditCard className="w-3 h-3" />
+                          Payer
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        onClick={() => {
-                          setSelectedRemboursement(r);
-                          setShowPaymentModal(true);
-                        }}
-                        disabled={paying}
-                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs"
+                        variant="outline"
+                        onClick={() => handleViewDetail(r)}
+                        className="text-xs px-2 py-1 h-7 flex items-center gap-1"
                       >
-                        💳 Payer
+                        <Eye className="w-3 h-3" />
+                        Voir
                       </Button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
+      {/* Pagination compacte */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-4 py-4">
-          <button
-            className="px-3 py-1 rounded border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-          >
-            Précédent
-          </button>
-          <span className="text-sm font-medium">
-            Page {currentPage} / {totalPages}
-          </span>
-          <button
-            className="px-3 py-1 rounded border bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 disabled:opacity-50"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-          >
-            Suivant
-          </button>
+        <div className="flex items-center justify-between bg-[var(--zalama-card)] border rounded-lg px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-500">
+              {(currentPage - 1) * itemsPerPage + 1}-
+              {Math.min(currentPage * itemsPerPage, remboursements.length)} sur{" "}
+              {remboursements.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="h-8 w-8 p-0"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <span className="text-sm font-medium">
+              {currentPage} / {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="h-8 w-8 p-0"
+            >
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       )}
 
-      {/* Graphiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="bg-[var(--zalama-card)] border rounded-xl shadow p-6">
-          <h2 className="font-semibold mb-2">Répartition par statut</h2>
-          <Pie
-            data={{
-              labels: Object.keys(stats),
-              datasets: [{
-                data: Object.values(stats),
-                backgroundColor: ['#fbbf24', '#34d399', '#a1a1aa', '#f87171'],
-              }]
-            }}
-          />
+      {/* Graphiques compacts */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[var(--zalama-card)] border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            Répartition par statut
+          </h3>
+          <div className="h-48">
+            <Pie
+              data={{
+                labels: Object.keys(stats),
+                datasets: [
+                  {
+                    data: Object.values(stats),
+                    backgroundColor: [
+                      "#f59e0b",
+                      "#10b981",
+                      "#6b7280",
+                      "#ef4444",
+                    ],
+                    borderWidth: 0,
+                  },
+                ],
+              }}
+              options={{
+                plugins: {
+                  legend: {
+                    position: "bottom",
+                    labels: {
+                      padding: 15,
+                      usePointStyle: true,
+                      font: { size: 11 },
+                    },
+                  },
+                },
+                maintainAspectRatio: false,
+              }}
+            />
+          </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border rounded-xl shadow p-6">
-          <h2 className="font-semibold mb-2">Répartition par employé</h2>
-          <Bar
-            data={{
-              labels: Object.keys(employeStats),
-              datasets: [{
-                label: 'Nombre de remboursements',
-                data: Object.values(employeStats),
-                backgroundColor: '#6366f1',
-              }]
-            }}
-            options={{
-              indexAxis: 'y' as const,
-              plugins: { legend: { display: false } }
-            }}
-          />
+        <div className="bg-[var(--zalama-card)] border rounded-lg p-4">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            Par employé
+          </h3>
+          <div className="h-48">
+            <Bar
+              data={{
+                labels: Object.keys(employeStats).map(
+                  (name) => name.split(" ")[0]
+                ), // Prenom uniquement
+                datasets: [
+                  {
+                    data: Object.values(employeStats),
+                    backgroundColor: "#6366f1",
+                    borderRadius: 4,
+                    barThickness: 20,
+                  },
+                ],
+              }}
+              options={{
+                indexAxis: "y" as const,
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      title: (context) =>
+                        Object.keys(employeStats)[context[0].dataIndex],
+                      label: (context) =>
+                        `${context.parsed.x} remboursement(s)`,
+                    },
+                  },
+                },
+                scales: {
+                  x: {
+                    display: false,
+                    grid: { display: false },
+                  },
+                  y: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10 } },
+                  },
+                },
+                maintainAspectRatio: false,
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -458,56 +761,198 @@ export default function RemboursementsPage() {
           </DialogHeader>
           {selectedRemboursement && (
             <div className="space-y-3">
-              <div><span className="font-semibold">Employé :</span> <span className="text-gray-800 dark:text-gray-200">{selectedRemboursement.employee?.nom} {selectedRemboursement.employee?.prenom}</span></div>
-              <div><span className="font-semibold">Salaire net :</span> <span className="font-semibold">{gnfFormatter(Number(selectedRemboursement.employee?.salaire_net || 0))}</span></div>
-              <div><span className="font-semibold">Montant demandé :</span> <span className="font-semibold">{gnfFormatter(getMontantDemande(selectedRemboursement))}</span></div>
-              <div><span className="font-semibold">Frais de service (6,5%) :</span> <span className="font-semibold">{gnfFormatter(calculateFraisService(getMontantDemande(selectedRemboursement)))}</span></div>
-              <div><span className="font-semibold">Montant reçu :</span> <span className="font-semibold">{gnfFormatter(calculateMontantRecu(getMontantDemande(selectedRemboursement), calculateFraisService(getMontantDemande(selectedRemboursement))))}</span></div>
-              <div><span className="font-semibold text-red-600 dark:text-red-400">Remboursement dû à ZaLaMa :</span> <span className="text-red-600 dark:text-red-400 font-semibold">{gnfFormatter(calculateRemboursementDu(getMontantDemande(selectedRemboursement)))}</span></div>
-              <div><span className="font-semibold text-emerald-600 dark:text-emerald-400">Salaire restant :</span> <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{gnfFormatter(calculateSalaireRestant(selectedRemboursement))}</span></div>
-              <div><span className="font-semibold">Total remboursements :</span> <span className="font-semibold">{selectedRemboursement.tous_remboursements?.length || 0} remboursement(s)</span></div>
-              <div><span className="font-semibold">Montant total des remboursements :</span> <span className="font-semibold">{gnfFormatter((selectedRemboursement.tous_remboursements || []).reduce((sum, r) => sum + Number(r.montant_total_remboursement || 0), 0))}</span></div>
-              
+              <div>
+                <span className="font-semibold">Employé :</span>{" "}
+                <span className="text-gray-800 dark:text-gray-200">
+                  {selectedRemboursement.employee?.nom}{" "}
+                  {selectedRemboursement.employee?.prenom}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Salaire net :</span>{" "}
+                <span className="font-semibold">
+                  {gnfFormatter(
+                    Number(selectedRemboursement.employee?.salaire_net || 0)
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Montant demandé :</span>{" "}
+                <span className="font-semibold">
+                  {gnfFormatter(getMontantDemande(selectedRemboursement))}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Frais de service (6,5%) :</span>{" "}
+                <span className="font-semibold">
+                  {gnfFormatter(
+                    calculateFraisService(
+                      getMontantDemande(selectedRemboursement)
+                    )
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Montant reçu :</span>{" "}
+                <span className="font-semibold">
+                  {gnfFormatter(
+                    calculateMontantRecu(
+                      getMontantDemande(selectedRemboursement),
+                      calculateFraisService(
+                        getMontantDemande(selectedRemboursement)
+                      )
+                    )
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  Remboursement dû à ZaLaMa :
+                </span>{" "}
+                <span className="text-red-600 dark:text-red-400 font-semibold">
+                  {gnfFormatter(
+                    calculateRemboursementDu(
+                      getMontantDemande(selectedRemboursement)
+                    )
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                  Salaire restant :
+                </span>{" "}
+                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                  {gnfFormatter(calculateSalaireRestant(selectedRemboursement))}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Total remboursements :</span>{" "}
+                <span className="font-semibold">
+                  {selectedRemboursement.tous_remboursements?.length || 0}{" "}
+                  remboursement(s)
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">
+                  Montant total des remboursements :
+                </span>{" "}
+                <span className="font-semibold">
+                  {gnfFormatter(
+                    (selectedRemboursement.tous_remboursements || []).reduce(
+                      (sum, r) =>
+                        sum + Number(r.montant_total_remboursement || 0),
+                      0
+                    )
+                  )}
+                </span>
+              </div>
+
               {/* Historique des remboursements */}
               <div className="mt-4">
-                <h4 className="font-semibold mb-2">Historique des remboursements :</h4>
+                <h4 className="font-semibold mb-2">
+                  Historique des remboursements :
+                </h4>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {selectedRemboursement.tous_remboursements?.map((remb, index) => {
-                    // Calculer le salaire restant après ce remboursement
-                    let salaireRestantApres = Number(selectedRemboursement.employee?.salaire_net || 0);
-                    for (let i = 0; i <= index; i++) {
-                      const rembCourant = selectedRemboursement.tous_remboursements![i];
-                      const montantRemboursement = Number(rembCourant.montant_total_remboursement || 0);
-                      salaireRestantApres = Math.max(0, salaireRestantApres - montantRemboursement);
+                  {selectedRemboursement.tous_remboursements?.map(
+                    (remb, index) => {
+                      // Calculer le salaire restant après ce remboursement
+                      let salaireRestantApres = Number(
+                        selectedRemboursement.employee?.salaire_net || 0
+                      );
+                      for (let i = 0; i <= index; i++) {
+                        const rembCourant =
+                          selectedRemboursement.tous_remboursements![i];
+                        const montantRemboursement = Number(
+                          rembCourant.montant_total_remboursement || 0
+                        );
+                        salaireRestantApres = Math.max(
+                          0,
+                          salaireRestantApres - montantRemboursement
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={index}
+                          className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded"
+                        >
+                          <div className="flex justify-between">
+                            <span>Remboursement #{index + 1}</span>
+                            <span className="font-semibold">
+                              {gnfFormatter(
+                                Number(remb.montant_total_remboursement || 0)
+                              )}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>{remb.statut}</span>
+                            <span>
+                              {remb.date_creation
+                                ? new Date(
+                                    remb.date_creation
+                                  ).toLocaleDateString("fr-FR")
+                                : "-"}
+                            </span>
+                          </div>
+                          <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+                            Salaire restant après :{" "}
+                            {gnfFormatter(salaireRestantApres)}
+                          </div>
+                        </div>
+                      );
                     }
-                    
-                    return (
-                      <div key={index} className="text-sm bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                        <div className="flex justify-between">
-                          <span>Remboursement #{index + 1}</span>
-                          <span className="font-semibold">{gnfFormatter(Number(remb.montant_total_remboursement || 0))}</span>
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>{remb.statut}</span>
-                          <span>{remb.date_creation ? new Date(remb.date_creation).toLocaleDateString('fr-FR') : '-'}</span>
-                        </div>
-                        <div className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
-                          Salaire restant après : {gnfFormatter(salaireRestantApres)}
-                        </div>
-                      </div>
-                    );
-                  }) || <div className="text-gray-500 text-sm">Aucun remboursement trouvé</div>}
+                  ) || (
+                    <div className="text-gray-500 text-sm">
+                      Aucun remboursement trouvé
+                    </div>
+                  )}
                 </div>
               </div>
-              <div><span className="font-semibold">Date de l'avance :</span> <span>{selectedRemboursement.demande_avance?.date_validation ? new Date(selectedRemboursement.demande_avance.date_validation).toLocaleDateString('fr-FR') : '-'}</span></div>
-              <div><span className="font-semibold">Date limite remboursement :</span> <span>{new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString('fr-FR')}</span></div>
-              <div><span className="font-semibold">Statut :</span> <span className={`px-2 py-1 rounded text-xs font-semibold
-                ${selectedRemboursement.statut === 'PAYE' ? 'bg-green-100 text-green-700' :
-                  selectedRemboursement.statut === 'EN_ATTENTE' ? 'bg-yellow-100 text-yellow-700' :
-                    'bg-gray-100 text-gray-700'}`}>
-                {selectedRemboursement.statut}
-              </span></div>
-              <div><span className="font-semibold">Date paiement :</span> <span>{selectedRemboursement.date_remboursement_effectue ? new Date(selectedRemboursement.date_remboursement_effectue).toLocaleDateString('fr-FR') : '-'}</span></div>
+              <div>
+                <span className="font-semibold">Date de l'avance :</span>{" "}
+                <span>
+                  {selectedRemboursement.demande_avance?.date_validation
+                    ? new Date(
+                        selectedRemboursement.demande_avance.date_validation
+                      ).toLocaleDateString("fr-FR")
+                    : "-"}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">
+                  Date limite remboursement :
+                </span>{" "}
+                <span>
+                  {new Date(
+                    selectedRemboursement.date_limite_remboursement
+                  ).toLocaleDateString("fr-FR")}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Statut :</span>{" "}
+                <span
+                  className={`px-2 py-1 rounded text-xs font-semibold
+                ${
+                  selectedRemboursement.statut === "PAYE"
+                    ? "bg-green-100 text-green-700"
+                    : selectedRemboursement.statut === "EN_ATTENTE"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
+                >
+                  {selectedRemboursement.statut}
+                </span>
+              </div>
+              <div>
+                <span className="font-semibold">Date paiement :</span>{" "}
+                <span>
+                  {selectedRemboursement.date_remboursement_effectue
+                    ? new Date(
+                        selectedRemboursement.date_remboursement_effectue
+                      ).toLocaleDateString("fr-FR")
+                    : "-"}
+                </span>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -524,7 +969,8 @@ export default function RemboursementsPage() {
           <DialogHeader>
             <DialogTitle>Paiement via Orange Money (Lengopay)</DialogTitle>
             <DialogDescription>
-              Confirmez le paiement via Lengopay. Les champs sont préremplis et non modifiables.
+              Confirmez le paiement via Lengopay. Les champs sont préremplis et
+              non modifiables.
             </DialogDescription>
           </DialogHeader>
           {selectedRemboursement && (
@@ -532,27 +978,59 @@ export default function RemboursementsPage() {
               <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                 <h3 className="font-semibold mb-2">Détails du paiement</h3>
                 <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Employé :</span> {selectedRemboursement.employee?.nom} {selectedRemboursement.employee?.prenom}</div>
-                  <div><span className="font-medium">Montant à rembourser :</span> <span className="font-semibold text-red-600">{gnfFormatter(calculateRemboursementDu(getMontantDemande(selectedRemboursement)))}</span></div>
-                  <div><span className="font-medium">Date limite :</span> {new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString('fr-FR')}</div>
+                  <div>
+                    <span className="font-medium">Employé :</span>{" "}
+                    {selectedRemboursement.employee?.nom}{" "}
+                    {selectedRemboursement.employee?.prenom}
+                  </div>
+                  <div>
+                    <span className="font-medium">Montant à rembourser :</span>{" "}
+                    <span className="font-semibold text-red-600">
+                      {gnfFormatter(
+                        calculateRemboursementDu(
+                          getMontantDemande(selectedRemboursement)
+                        )
+                      )}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Date limite :</span>{" "}
+                    {new Date(
+                      selectedRemboursement.date_limite_remboursement
+                    ).toLocaleDateString("fr-FR")}
+                  </div>
                 </div>
               </div>
-              
+
               <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">Informations de paiement</h3>
+                <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">
+                  Informations de paiement
+                </h3>
                 <div className="space-y-2 text-sm">
-                  <div><span className="font-medium">Mode de paiement :</span> Orange Money via Lengopay</div>
-                  <div><span className="font-medium">Sécurité :</span> Transaction sécurisée SSL</div>
-                  <div><span className="font-medium">Confirmation :</span> Reçu électronique automatique</div>
+                  <div>
+                    <span className="font-medium">Mode de paiement :</span>{" "}
+                    Orange Money via Lengopay
+                  </div>
+                  <div>
+                    <span className="font-medium">Sécurité :</span> Transaction
+                    sécurisée SSL
+                  </div>
+                  <div>
+                    <span className="font-medium">Confirmation :</span> Reçu
+                    électronique automatique
+                  </div>
                 </div>
               </div>
             </div>
           )}
           <DialogFooter className="flex gap-2">
-            <Button variant="outline" onClick={() => setShowPaymentModal(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setShowPaymentModal(false)}
+            >
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={() => {
                 if (selectedRemboursement) {
                   handlePayer(selectedRemboursement.id);
@@ -562,13 +1040,11 @@ export default function RemboursementsPage() {
               disabled={paying}
               className="bg-orange-600 hover:bg-orange-700"
             >
-              {paying ? 'Traitement...' : 'Confirmer le paiement'}
+              {paying ? "Traitement..." : "Confirmer le paiement"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-
     </div>
   );
 }
