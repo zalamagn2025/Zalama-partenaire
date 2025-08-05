@@ -664,12 +664,12 @@ export default function EntrepriseDashboardPage() {
       {/* Répartition par motif + Documents et rapports sur la même ligne */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Répartition par motif */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 flex flex-col items-center justify-center">
-          <h3 className="text-gray-600 dark:text-white text-base font-semibold mb-4">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+          <h3 className="text-gray-600 dark:text-white text-base font-semibold mb-8 text-center">
             Répartition par motif
           </h3>
           {hasMotifsData ? (
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={450}>
               <PieChart>
                 <Pie
                   data={repartitionMotifsData}
@@ -677,20 +677,35 @@ export default function EntrepriseDashboardPage() {
                   cy="50%"
                   labelLine={false}
                   label={({ motif, valeur }) => `${motif} (${valeur})`}
-                  outerRadius={70}
+                  outerRadius={100}
+                  innerRadius={40}
                   fill="#4F8EF7"
                   dataKey="valeur"
+                  paddingAngle={2}
                 >
                   {repartitionMotifsData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Tooltip
+                  formatter={(value, name) => [`demandes`, name]}
+                  labelStyle={{ color: "#374151" }}
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                  }}
+                />
+                {/* <Legend
+                  verticalAlign="bottom"
+                  height={60}
+                  iconType="circle"
+                  wrapperStyle={{ paddingTop: "20px" }}
+                /> */}
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[220px] text-gray-500 dark:text-gray-400">
+            <div className="flex items-center justify-center h-[350px] text-gray-500 dark:text-gray-400">
               <div className="text-center">
                 <PieChart className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p>Aucune donnée disponible</p>
