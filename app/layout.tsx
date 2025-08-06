@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Montserrat, Roboto } from "next/font/google";
+import { DM_Sans } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
 
-const montserrat = Montserrat({
-  variable: "--font-montserrat",
-  subsets: ["latin"],
-});
-
-const roboto = Roboto({
-  variable: "--font-roboto",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
   title: "ZaLaMa Partner Dashboard",
   description: "Tableau de bord des partenaires ZaLaMa",
+  icons: {
+    icon: "/images/logo-fav.png",
+    shortcut: "/images/logo-fav.png",
+    apple: "/images/logo-fav.png",
+  },
 };
 
 export default function RootLayout({
@@ -27,9 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body
-        className={`${montserrat.variable} ${roboto.variable} antialiased`}
-      >
+      <body className={`${dmSans.variable} antialiased font-sans`}>
         <ThemeProvider>
           <AuthProvider>
             <Toaster position="top-right" />
