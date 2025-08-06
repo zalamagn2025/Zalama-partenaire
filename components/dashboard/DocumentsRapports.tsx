@@ -28,13 +28,14 @@ import {
 import { useRapports } from "@/hooks/useRapports";
 import { RapportFilters, RapportCategorie, RapportType } from "@/types/rapport";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
 interface DocumentsRapportsProps {
   className?: string;
   compact?: boolean;
 }
 
-// Icônes pour les types de fichiers
+// Icônes et couleurs pour les types de fichiers
 const getFileIcon = (type: RapportType) => {
   switch (type) {
     case "pdf":
@@ -45,6 +46,34 @@ const getFileIcon = (type: RapportType) => {
       return File;
     default:
       return FileText;
+  }
+};
+
+// Couleurs pour les icônes de fichiers
+const getFileIconColor = (type: RapportType) => {
+  switch (type) {
+    case "pdf":
+      return "text-red-500"; // Rouge pour PDF
+    case "xlsx":
+      return "text-green-500"; // Vert pour Excel
+    case "docx":
+      return "text-blue-500"; // Bleu pour Word
+    default:
+      return "text-gray-500";
+  }
+};
+
+// Couleur de fond pour les icônes de fichiers
+const getFileIconBgColor = (type: RapportType) => {
+  switch (type) {
+    case "pdf":
+      return "bg-red-50 dark:bg-red-900/20"; // Fond rouge clair pour PDF
+    case "xlsx":
+      return "bg-green-50 dark:bg-green-900/20"; // Fond vert clair pour Excel
+    case "docx":
+      return "bg-blue-50 dark:bg-blue-900/20"; // Fond bleu clair pour Word
+    default:
+      return "bg-gray-50 dark:bg-gray-900/20";
   }
 };
 
@@ -94,6 +123,7 @@ export default function DocumentsRapports({
 }: DocumentsRapportsProps) {
   const [filters, setFilters] = useState<RapportFilters>({});
   const [showFilters, setShowFilters] = useState(false);
+  const router = useRouter();
 
   const {
     rapports,
@@ -293,9 +323,29 @@ export default function DocumentsRapports({
                   className="flex items-center space-x-4 p-3 rounded-lg border border-[var(--zalama-border)] hover:bg-[var(--zalama-bg-light)] transition-colors"
                 >
                   {/* Icône du fichier */}
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 rounded-lg bg-[var(--zalama-bg-light)] flex items-center justify-center">
-                      <FileIcon className="w-5 h-5 text-[var(--zalama-blue)]" />
+                  <div className="flex-shrink-0 relative">
+                    <div
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center ${getFileIconBgColor(
+                        rapport.type
+                      )}`}
+                    >
+                      <FileIcon
+                        className={`w-5 h-5 ${getFileIconColor(rapport.type)}`}
+                      />
+                    </div>
+                    {/* Badge avec l'extension */}
+                    <div
+                      className={`absolute -top-1 -right-1 px-1 py-0.5 rounded text-xs font-bold text-white text-[9px] leading-none ${
+                        rapport.type === "pdf"
+                          ? "bg-red-500"
+                          : rapport.type === "xlsx"
+                          ? "bg-green-500"
+                          : rapport.type === "docx"
+                          ? "bg-blue-500"
+                          : "bg-gray-500"
+                      }`}
+                    >
+                      {rapport.type.toUpperCase()}
                     </div>
                   </div>
 
@@ -318,7 +368,6 @@ export default function DocumentsRapports({
 
                     <div className="flex items-center space-x-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
                       <span>{formatFileSize(rapport.taille)}</span>
-                      <span>{rapport.type.toUpperCase()}</span>
                       <span>
                         {new Date(rapport.date_creation).toLocaleDateString(
                           "fr-FR"
@@ -355,7 +404,11 @@ export default function DocumentsRapports({
             {/* Lien pour voir plus en mode compact */}
             {compact && rapports.length > 5 && (
               <div className="text-center pt-4">
-                <Button variant="link" className="text-[var(--zalama-blue)]">
+                <Button
+                  variant="link"
+                  className="text-[var(--zalama-blue)]"
+                  onClick={() => router.push("/dashboard/documents")}
+                >
                   Voir tous les documents ({rapports.length})
                 </Button>
               </div>
