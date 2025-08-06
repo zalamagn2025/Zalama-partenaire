@@ -1,6 +1,7 @@
 "use client";
 
 import StatCard from "@/components/dashboard/StatCard";
+import DocumentsRapports from "@/components/dashboard/DocumentsRapports";
 import { useAuth } from "@/contexts/AuthContext";
 import { PartnerDataService } from "@/lib/services";
 import type { Alert, Employee, SalaryAdvanceRequest } from "@/lib/supabase";
@@ -714,104 +715,7 @@ export default function EntrepriseDashboardPage() {
           )}
         </div>
         {/* Documents et rapports */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-gray-600 dark:text-white text-lg font-semibold">
-              Documents et rapports
-            </h2>
-            <button className="text-blue-400 text-sm hover:underline">
-              Tout télécharger
-            </button>
-          </div>
-          <div className="grid grid-cols-1 gap-4">
-            {[
-              {
-                nom: "Relevé mensuel - Mai 2025",
-                type: "PDF",
-                size: "1.2 MB",
-                url: "/docs/releve_mai2025.pdf",
-              },
-              {
-                nom: "Rapport d'activité - T1 2025",
-                type: "PDF",
-                size: "2.8 MB",
-                url: "/docs/rapport_t1_2025.pdf",
-              },
-              {
-                nom: "Échéancier de remboursement",
-                type: "XLSX",
-                size: "0.9 MB",
-                url: "/docs/echeancier.xlsx",
-              },
-              {
-                nom: "Statistiques utilisateurs",
-                type: "XLSX",
-                size: "1.3 MB",
-                url: "/docs/stats.xlsx",
-              },
-              {
-                nom: "Contrat de partenariat",
-                type: "PDF",
-                size: "3.2 MB",
-                url: "/docs/contrat.pdf",
-              },
-              {
-                nom: "Guide d'utilisation",
-                type: "PDF",
-                size: "4.5 MB",
-                url: "/docs/guide.pdf",
-              },
-            ].map((doc, idx) => (
-              <a
-                key={idx}
-                href={doc.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 hover:bg-[#22304a] transition mb-2"
-              >
-                <span className="mr-4">
-                  {doc.type === "PDF" ? (
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                      <rect width="24" height="24" rx="4" fill="#2563eb" />
-                      <text
-                        x="50%"
-                        y="60%"
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize="10"
-                        fontWeight="bold"
-                      >
-                        PDF
-                      </text>
-                    </svg>
-                  ) : (
-                    <svg width="24" height="24" fill="none" viewBox="0 0 24 24">
-                      <rect width="24" height="24" rx="4" fill="#059669" />
-                      <text
-                        x="50%"
-                        y="60%"
-                        textAnchor="middle"
-                        fill="#fff"
-                        fontSize="10"
-                        fontWeight="bold"
-                      >
-                        XLSX
-                      </text>
-                    </svg>
-                  )}
-                </span>
-                <div className="flex-1">
-                  <div className="text-gray-600 dark:text-white font-medium text-sm">
-                    {doc.nom}
-                  </div>
-                  <div className="text-gray-600 dark:text-gray-400 text-xs mt-1">
-                    {doc.type} • {doc.size}
-                  </div>
-                </div>
-              </a>
-            ))}
-          </div>
-        </div>
+        <DocumentsRapports compact={true} />
       </div>
     </div>
   );
