@@ -1,36 +1,41 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useTheme } from "@/contexts/ThemeContext";
 import {
-  CheckCircle,
+  CheckCircle2,
   XCircle,
-  AlertCircle,
   ArrowLeft,
   Download,
-  RefreshCw,
+  Loader2,
   Receipt,
-  Building,
+  Building2,
   DollarSign,
   Hash,
   Calendar,
-  FileText,
+  FileCheck,
+  AlertTriangle,
   Home,
   RotateCcw,
+  Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { toast } from "sonner";
 
-type PaymentStatus = "success" | "pending";
+type PaymentStatus = "pending" | "success" | "failed";
 
 interface PaymentResult {
   status: PaymentStatus;
@@ -38,6 +43,7 @@ interface PaymentResult {
   montantTotal: number;
   type: string;
   timestamp: string;
+  referenceTransaction?: string;
 }
 
 interface PartenaireData {
@@ -46,133 +52,205 @@ interface PartenaireData {
   logo_url?: string;
 }
 
-interface RemboursementData {
-  id: string;
-  montant_total_remboursement: number;
-  statut: string;
-  date_creation: string;
-  employee: {
-    nom: string;
-    prenom: string;
-  };
+interface RemboursementStatus {
+  totalRemboursements: number;
+  remboursementsPayes: number;
+  pourcentagePaye: number;
+  statut: "PAYE" | "EN_ATTENTE" | "PARTIEL";
 }
 
 function PaymentResultContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session } = useAuth();
+  const { theme } = useTheme();
+
   const [paymentResult, setPaymentResult] = useState<PaymentResult | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [partenaireData, setPartenaireData] = useState<PartenaireData | null>(
     null
   );
-  const [remboursementsData, setRemboursementsData] = useState<
-    RemboursementData[]
-  >([]);
+  const [remboursementStatus, setRemboursementStatus] =
+    useState<RemboursementStatus | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFailureModal, setShowFailureModal] = useState(false);
   const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
-  const [nombreRemboursements, setNombreRemboursements] = useState(0);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  // Classes dynamiques pour le thème
+  const getBgClass = () => {
+    return theme === "dark"
+      ? "bg-gradient-to-br from-[#0a1525] via-[#061020] to-[#0e1e36]"
+      : "bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50";
+  };
+
+  const getCardClass = () => {
+    return theme === "dark"
+      ? "bg-[#0c1a2e] border-[#1e3a70] shadow-2xl shadow-black/20"
+      : "bg-white border-gray-200 shadow-xl shadow-blue-100/20";
+  };
+
+  const getTextClass = () => {
+    return theme === "dark" ? "text-[#e5e7ef]" : "text-gray-900";
+  };
+
+  const getSecondaryTextClass = () => {
+    return theme === "dark" ? "text-[#a0aec0]" : "text-gray-600";
+  };
+
+  const getAccentClass = () => {
+    return "bg-gradient-to-r from-[#3b82f6] to-[#60a5fa]";
+  };
 
   useEffect(() => {
     const partenaireId = searchParams.get("partenaire_id");
     const montantTotal = searchParams.get("montant_total");
     const type = searchParams.get("type");
-
-    // Déterminer le statut : si pending = échec, sinon success
-    const urlStatus = searchParams.get("status");
-    const paymentStatus: PaymentStatus =
-      urlStatus === "pending" ? "pending" : "success";
+    const status = searchParams.get("status");
 
     if (partenaireId && montantTotal && type) {
-      setPaymentResult({
-        status: paymentStatus,
+      const result: PaymentResult = {
+        status: "pending", // Toujours pending au début
         partenaireId,
         montantTotal: parseFloat(montantTotal),
         type,
         timestamp: new Date().toISOString(),
-      });
+        referenceTransaction: `ZLM-${Date.now()}`,
+      };
 
-      // Récupérer les données du partenaire et des remboursements
-      fetchPaymentData(partenaireId, parseFloat(montantTotal));
+      setPaymentResult(result);
+      initializePaymentFlow(partenaireId);
     } else {
       setIsLoading(false);
+      toast.error("Paramètres de paiement manquants");
     }
   }, [searchParams]);
 
-  const fetchPaymentData = async (
-    partenaireId: string,
-    montantTotal: number
-  ) => {
+  const initializePaymentFlow = async (partenaireId: string) => {
     try {
-      // Récupérer les données du partenaire
-      const { data: partenaireData, error: partenaireError } = await supabase
-        .from("partners")
-        .select("id, company_name, logo_url")
-        .eq("id", partenaireId)
-        .single();
+      // 1. Récupérer les données du partenaire
+      await fetchPartenaireData(partenaireId);
 
-      if (partenaireError) {
-        console.error("Erreur partenaire:", partenaireError);
-      } else {
-        setPartenaireData(partenaireData);
-      }
-
-      // Récupérer les remboursements en attente pour ce partenaire
-      const { data: remboursementsData, error: remboursementsError } =
-        await supabase
-          .from("remboursements")
-          .select(
-            `
-          id,
-          montant_total_remboursement,
-          statut,
-          date_creation,
-          employee:employees(nom, prenom)
-        `
-          )
-          .eq("partenaire_id", partenaireId)
-          .eq("statut", "EN_ATTENTE");
-
-      if (remboursementsError) {
-        console.error("Erreur remboursements:", remboursementsError);
-      } else {
-        // Transformer les données pour correspondre au type attendu
-        const transformedData: RemboursementData[] = (
-          remboursementsData || []
-        ).map((item) => ({
-          ...item,
-          employee: Array.isArray(item.employee)
-            ? item.employee[0]
-            : item.employee,
-        }));
-        setRemboursementsData(transformedData);
-        setNombreRemboursements(remboursementsData?.length || 0);
-      }
+      // 2. Démarrer la vérification du statut des remboursements
+      startStatusChecking(partenaireId);
     } catch (error) {
-      console.error("Erreur lors de la récupération des données:", error);
-    } finally {
+      console.error("Erreur lors de l'initialisation:", error);
       setIsLoading(false);
     }
   };
 
-  // Auto-téléchargement du PDF pour les paiements réussis
-  useEffect(() => {
-    if (
-      paymentResult?.status === "success" &&
-      partenaireData &&
-      !isDownloadingPDF
-    ) {
-      // Délai de 2 secondes pour l'UX, puis téléchargement automatique
-      setTimeout(() => {
-        handleDownloadPDF();
-        toast.success("Reçu de paiement téléchargé automatiquement !", {
-          description: "Votre reçu de paiement a été généré et téléchargé.",
-          duration: 5000,
-        });
-      }, 2000);
+  const fetchPartenaireData = async (partenaireId: string) => {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id, company_name, logo_url")
+      .eq("id", partenaireId)
+      .single();
+
+    if (error) {
+      console.error("Erreur partenaire:", error);
+      return;
     }
-  }, [paymentResult, partenaireData]);
+
+    setPartenaireData(data);
+  };
+
+  const checkRemboursementsStatus = async (
+    partenaireId: string
+  ): Promise<RemboursementStatus> => {
+    const { data, error } = await supabase
+      .from("remboursements")
+      .select("statut")
+      .eq("partenaire_id", partenaireId);
+
+    if (error) {
+      throw error;
+    }
+
+    const totalRemboursements = data?.length || 0;
+    const remboursementsPayes =
+      data?.filter((r) => r.statut === "PAYE").length || 0;
+    const pourcentagePaye =
+      totalRemboursements > 0
+        ? (remboursementsPayes / totalRemboursements) * 100
+        : 0;
+
+    let statut: "PAYE" | "EN_ATTENTE" | "PARTIEL" = "EN_ATTENTE";
+    if (pourcentagePaye === 100) {
+      statut = "PAYE";
+    } else if (pourcentagePaye > 0) {
+      statut = "PARTIEL";
+    }
+
+    return {
+      totalRemboursements,
+      remboursementsPayes,
+      pourcentagePaye,
+      statut,
+    };
+  };
+
+  const startStatusChecking = (partenaireId: string) => {
+    setIsCheckingStatus(true);
+    setIsLoading(false);
+
+    const checkStatus = async () => {
+      try {
+        const status = await checkRemboursementsStatus(partenaireId);
+        setRemboursementStatus(status);
+
+        if (status.statut === "PAYE") {
+          // Tous les remboursements sont payés -> Succès
+          setPaymentResult((prev) =>
+            prev ? { ...prev, status: "success" } : null
+          );
+          setIsCheckingStatus(false);
+          setShowSuccessModal(true);
+          return;
+        }
+
+        // Continue à vérifier pendant 30 secondes max
+        const currentTime = Date.now();
+        const startTime = paymentResult?.timestamp
+          ? new Date(paymentResult.timestamp).getTime()
+          : currentTime;
+
+        if (currentTime - startTime > 30000) {
+          // 30 secondes
+          // Timeout -> Échec
+          setPaymentResult((prev) =>
+            prev ? { ...prev, status: "failed" } : null
+          );
+          setIsCheckingStatus(false);
+          setShowFailureModal(true);
+          return;
+        }
+
+        // Continuer à vérifier
+        const newTimeoutId = setTimeout(checkStatus, 3000); // Vérifier toutes les 3 secondes
+        setTimeoutId(newTimeoutId);
+      } catch (error) {
+        console.error("Erreur lors de la vérification:", error);
+        setPaymentResult((prev) =>
+          prev ? { ...prev, status: "failed" } : null
+        );
+        setIsCheckingStatus(false);
+        setShowFailureModal(true);
+      }
+    };
+
+    checkStatus();
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [timeoutId]);
 
   const handleDownloadPDF = async () => {
     if (!paymentResult || !partenaireData) return;
@@ -180,11 +258,8 @@ function PaymentResultContent() {
     setIsDownloadingPDF(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
       const receiptDate = new Date(paymentResult.timestamp);
       const formattedDate = receiptDate.toLocaleDateString("fr-FR", {
-        weekday: "long",
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -200,93 +275,65 @@ function PaymentResultContent() {
         }).format(amount);
       };
 
-      let receipt = `
-╔══════════════════════════════════════════════════════════════════════════════════╗
-║                        🏛️  REÇU OFFICIEL ZALAMA                                  ║
-║                      Système de Remboursement d'Avances                         ║
-╚══════════════════════════════════════════════════════════════════════════════════╝
+      const receipt = `
+═══════════════════════════════════════════════════════════════
+                        🏛️ ZALAMA FINANCIAL
+                     REÇU OFFICIEL DE PAIEMENT
+═══════════════════════════════════════════════════════════════
 
-📅 INFORMATIONS GÉNÉRALES DU PAIEMENT
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📍 Date et heure: ${formattedDate} à ${formattedTime}
-🏷️  Statut: ✅ PAIEMENT RÉUSSI
-💰 Montant total: ${gnfFormatter(paymentResult.montantTotal)}
-📦 Type de paiement: ${
+📅 INFORMATIONS DE TRANSACTION
+Date: ${formattedDate}
+Heure: ${formattedTime}
+Référence: ${paymentResult.referenceTransaction}
+Statut: ${paymentResult.status === "success" ? "✅ SUCCÈS" : "❌ ÉCHEC"}
+
+🏢 DÉTAILS DU PARTENAIRE
+Entreprise: ${partenaireData.company_name}
+ID Partenaire: ${paymentResult.partenaireId}
+Type de paiement: ${
         paymentResult.type === "lot" ? "Paiement en lot" : "Paiement individuel"
       }
-🔢 Nombre de remboursements: ${nombreRemboursements}
 
-🏢 INFORMATIONS PARTENAIRE
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 Entreprise: ${partenaireData.company_name}
-🆔 ID Partenaire: ${paymentResult.partenaireId}
-📧 Méthode: Orange Money via Lengopay
-🔒 Sécurité: Transaction SSL/TLS sécurisée
+💰 MONTANT TOTAL: ${gnfFormatter(paymentResult.montantTotal)}
 
-📊 DÉTAILS DES REMBOURSEMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+📊 STATUT DES REMBOURSEMENTS
+Total des remboursements: ${remboursementStatus?.totalRemboursements || 0}
+Remboursements payés: ${remboursementStatus?.remboursementsPayes || 0}
+Pourcentage complété: ${remboursementStatus?.pourcentagePaye.toFixed(1) || 0}%
 
-      if (remboursementsData.length > 0) {
-        remboursementsData.forEach((remb, index) => {
-          receipt += `
-📋 Remboursement #${index + 1}
-   👨‍💼 Employé: ${remb.employee?.nom || "N/A"} ${remb.employee?.prenom || "N/A"}
-   💰 Montant: ${gnfFormatter(Number(remb.montant_total_remboursement || 0))}
-   📅 Date création: ${new Date(remb.date_creation).toLocaleDateString("fr-FR")}
-   🏷️  Statut: ${remb.statut === "EN_ATTENTE" ? "En attente" : remb.statut}`;
-        });
-      }
+🔒 SÉCURITÉ & TRAÇABILITÉ
+- Transaction sécurisée SSL/TLS 256-bit
+- Conformité PCI DSS Level 1
+- Traçabilité complète activée
 
-      receipt += `
+═══════════════════════════════════════════════════════════════
+                      ZALAMA FINANCIAL SOLUTIONS
+                   Conakry, République de Guinée
+                      support@zalama.com
+                 📱 Application disponible iOS & Android
 
-🔢 INFORMATIONS TECHNIQUES
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🆔 Référence paiement: ZLM-${Date.now()}
-🔗 URL de retour: ${window.location.href}
-⏱️  Horodatage: ${paymentResult.timestamp}
-🌐 Plateforme: ZaLaMa Partner Dashboard
-
-🔒 SÉCURITÉ & CONFORMITÉ
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🛡️  Protocole de sécurité: SSL/TLS 256-bit
-🔐 Chiffrement des données: AES-256  
-📋 Conformité réglementaire: PCI DSS Level 1
-🌐 Traçabilité complète: Activée
-📊 Audit trail: Disponible
-🏆 Certification ISO: 27001:2013
-
-🏛️ ZALAMA FINANCIAL SOLUTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🏢 ZaLaMa Financial Solutions
-📍 Siège social: Conakry, République de Guinée  
-📞 Support client: +224 XXX XXX XXX
-📧 Email support: support@zalama.com
-🌐 Site web: https://zalama.com
-📱 Application mobile: iOS & Android
-
-════════════════════════════════════════════════════════════════════════════════════
-                      📄 Reçu officiel généré le ${formattedDate}
-                        🎯 Transaction traitée avec succès
-                  🔒 Conservez ce reçu pour vos dossiers comptables
-                   ⭐ Merci de faire confiance à ZaLaMa
-════════════════════════════════════════════════════════════════════════════════════
-`;
+Ce reçu a été généré automatiquement le ${formattedDate}
+Conservez ce document pour vos dossiers comptables
+═══════════════════════════════════════════════════════════════
+      `;
 
       const blob = new Blob([receipt], { type: "text/plain; charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `zalama-recu-paiement-${
-        paymentResult.partenaireId
-      }-${Date.now()}.txt`;
+      a.download = `zalama-recu-${paymentResult.referenceTransaction}.txt`;
       a.style.display = "none";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+
+      toast.success("📄 Reçu téléchargé avec succès", {
+        description: "Votre reçu officiel ZaLaMa a été sauvegardé.",
+      });
     } catch (error) {
       console.error("Erreur lors du téléchargement:", error);
-      toast.error("Erreur lors du téléchargement du reçu");
+      toast.error("❌ Erreur lors du téléchargement du reçu");
     } finally {
       setIsDownloadingPDF(false);
     }
@@ -300,42 +347,25 @@ function PaymentResultContent() {
     router.push("/dashboard");
   };
 
-  const handleReturnToRemboursements = () => {
-    router.push("/dashboard/remboursements");
-  };
-
   if (isLoading) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center"
-        style={{
-          background: "var(--zalama-bg-dark)",
-          color: "var(--zalama-text)",
-        }}
+        className={`min-h-screen ${getBgClass()} flex items-center justify-center p-4`}
       >
-        <Card className="w-full max-w-md bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-          <CardContent className="p-8">
-            <div className="text-center space-y-4">
-              <div className="flex justify-center">
-                <RefreshCw
-                  className="h-16 w-16 animate-spin"
-                  style={{ color: "var(--zalama-blue)" }}
-                />
-              </div>
-              <div className="space-y-2">
-                <h3
-                  className="text-lg font-semibold"
-                  style={{ color: "var(--zalama-text)" }}
-                >
-                  Vérification du paiement
-                </h3>
-                <p style={{ color: "var(--zalama-text-secondary)" }}>
-                  Récupération des informations...
-                </p>
-              </div>
+        <div className="text-center">
+          <div className="relative mb-6">
+            <Loader2 className="h-12 w-12 animate-spin mx-auto text-[#3b82f6]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="h-6 w-6 rounded-full bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] opacity-20"></div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <h2 className={`text-xl font-semibold ${getTextClass()} mb-2`}>
+            Initialisation du paiement
+          </h2>
+          <p className={getSecondaryTextClass()}>
+            Chargement des informations sécurisées...
+          </p>
+        </div>
       </div>
     );
   }
@@ -343,29 +373,24 @@ function PaymentResultContent() {
   if (!paymentResult) {
     return (
       <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{
-          background: "var(--zalama-bg-dark)",
-          color: "var(--zalama-text)",
-        }}
+        className={`min-h-screen ${getBgClass()} flex items-center justify-center p-4`}
       >
-        <Card className="w-full max-w-lg bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <AlertCircle
-                className="h-16 w-16"
-                style={{ color: "var(--zalama-danger)" }}
-              />
-            </div>
-            <CardTitle style={{ color: "var(--zalama-danger)" }}>
-              Paramètres manquants
+        <Card className={`w-full max-w-md ${getCardClass()}`}>
+          <CardHeader className="text-center pb-4">
+            <AlertTriangle className="h-16 w-16 text-[#ef4444] mx-auto mb-4" />
+            <CardTitle className="text-[#ef4444] text-xl">
+              Erreur de Transaction
             </CardTitle>
-            <CardDescription>
-              Impossible de traiter le résultat du paiement.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Button onClick={handleReturnToDashboard} className="w-full">
+          <CardContent className="text-center space-y-6">
+            <p className={`${getSecondaryTextClass()} leading-relaxed`}>
+              Impossible de récupérer les informations de paiement. Veuillez
+              vérifier votre lien ou contacter le support.
+            </p>
+            <Button
+              onClick={handleReturnToDashboard}
+              className={`w-full ${getAccentClass()} text-white hover:opacity-90 transition-all duration-200`}
+            >
               <Home className="h-4 w-4 mr-2" />
               Retour au tableau de bord
             </Button>
@@ -376,409 +401,425 @@ function PaymentResultContent() {
   }
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: "var(--zalama-bg-dark)",
-        color: "var(--zalama-text)",
-      }}
-    >
-      <Card className="w-full max-w-4xl shadow-2xl bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-        {/* En-tête avec statut */}
-        <CardHeader
-          className="text-center py-8"
-          style={{
-            background:
+    <div className={`min-h-screen ${getBgClass()} py-8 px-4`}>
+      <div className="max-w-4xl mx-auto space-y-8">
+        {/* Header avec gradient */}
+        <div className="flex items-center justify-between mb-8">
+          <Button
+            variant="ghost"
+            onClick={handleReturnToDashboard}
+            className={`${getSecondaryTextClass()} hover:${getTextClass()} hover:bg-[#3b82f6]/10 transition-all duration-200`}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Retour
+          </Button>
+          <div className="text-center">
+            <div className="flex items-center justify-center mb-2">
+              <Sparkles className="h-6 w-6 text-[#3b82f6] mr-2" />
+              <h1 className={`text-3xl font-bold ${getTextClass()}`}>
+                Résultat du Paiement
+              </h1>
+              <Sparkles className="h-6 w-6 text-[#3b82f6] ml-2" />
+            </div>
+            <div className="flex items-center justify-center">
+              <ShieldCheck className="h-4 w-4 text-[#10b981] mr-2" />
+              <p className={`text-sm ${getSecondaryTextClass()}`}>
+                Réf: {paymentResult.referenceTransaction}
+              </p>
+            </div>
+          </div>
+          <div className="w-24"></div> {/* Spacer */}
+        </div>
+
+        {/* Status Card Principal */}
+        <Card className={`${getCardClass()} overflow-hidden`}>
+          <div className={`h-2 ${getAccentClass()}`}></div>
+          <CardContent className="p-10">
+            <div className="text-center space-y-6">
+              {isCheckingStatus ? (
+                <>
+                  <div className="relative">
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] opacity-20 animate-pulse"></div>
+                    <Loader2 className="h-20 w-20 animate-spin mx-auto text-[#3b82f6] relative z-10" />
+                  </div>
+                  <div className="space-y-4">
+                    <h2 className={`text-2xl font-bold ${getTextClass()}`}>
+                      Vérification en cours...
+                    </h2>
+                    <p className={`${getSecondaryTextClass()} text-lg`}>
+                      Nous vérifions le statut de vos remboursements en temps
+                      réel
+                    </p>
+
+                    {/* Barre de progression stylée */}
+                    <div className="max-w-md mx-auto">
+                      <div
+                        className={`bg-gray-200 dark:bg-[#1e3a70] rounded-full h-3 overflow-hidden`}
+                      >
+                        <div
+                          className={`h-full ${getAccentClass()} transition-all duration-500 ease-out relative`}
+                          style={{
+                            width: `${
+                              remboursementStatus?.pourcentagePaye || 0
+                            }%`,
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                        </div>
+                      </div>
+                      <div className="flex justify-between mt-2 text-sm">
+                        <span className={getSecondaryTextClass()}>
+                          Progression
+                        </span>
+                        <span className={`font-medium ${getTextClass()}`}>
+                          {remboursementStatus?.pourcentagePaye.toFixed(0) || 0}
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="relative">
+                    {paymentResult.status === "success" ? (
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-[#10b981]/20 animate-pulse"></div>
+                        <CheckCircle2 className="h-24 w-24 text-[#10b981] mx-auto relative z-10" />
+                      </div>
+                    ) : (
+                      <div className="relative">
+                        <div className="absolute inset-0 rounded-full bg-[#ef4444]/20 animate-pulse"></div>
+                        <XCircle className="h-24 w-24 text-[#ef4444] mx-auto relative z-10" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-4">
+                    <h2 className={`text-3xl font-bold ${getTextClass()}`}>
+                      {paymentResult.status === "success"
+                        ? "🎉 Paiement Réussi !"
+                        : "❌ Paiement Échoué"}
+                    </h2>
+                    <Badge
+                      variant={
+                        paymentResult.status === "success"
+                          ? "default"
+                          : "destructive"
+                      }
+                      className={`px-6 py-2 text-lg font-semibold ${
+                        paymentResult.status === "success"
+                          ? "bg-[#10b981] hover:bg-[#0d9570]"
+                          : "bg-[#ef4444] hover:bg-[#dc2626]"
+                      }`}
+                    >
+                      {paymentResult.status === "success"
+                        ? "✅ SUCCÈS"
+                        : "❌ ÉCHEC"}
+                    </Badge>
+                  </div>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Payment Details */}
+        <Card className={getCardClass()}>
+          <CardHeader className="pb-4">
+            <CardTitle
+              className={`flex items-center text-xl ${getTextClass()}`}
+            >
+              <Receipt className="h-6 w-6 mr-3 text-[#3b82f6]" />
+              Détails de la Transaction
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className={`p-2 rounded-lg bg-[#3b82f6]/10`}>
+                    <Building2 className="h-5 w-5 text-[#3b82f6]" />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${getSecondaryTextClass()} mb-1`}>
+                      Partenaire
+                    </p>
+                    <p className={`font-semibold text-lg ${getTextClass()}`}>
+                      {partenaireData?.company_name || "Chargement..."}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className={`p-2 rounded-lg bg-[#10b981]/10`}>
+                    <DollarSign className="h-5 w-5 text-[#10b981]" />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${getSecondaryTextClass()} mb-1`}>
+                      Montant Total
+                    </p>
+                    <p className={`font-bold text-2xl ${getTextClass()}`}>
+                      {new Intl.NumberFormat("fr-FR", {
+                        style: "currency",
+                        currency: "GNF",
+                        minimumFractionDigits: 0,
+                      }).format(paymentResult.montantTotal)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="flex items-start space-x-4">
+                  <div className={`p-2 rounded-lg bg-[#f59e0b]/10`}>
+                    <Hash className="h-5 w-5 text-[#f59e0b]" />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${getSecondaryTextClass()} mb-1`}>
+                      Référence Transaction
+                    </p>
+                    <p
+                      className={`font-mono text-sm font-medium ${getTextClass()} bg-gray-100 dark:bg-[#1e3a70] px-3 py-1 rounded`}
+                    >
+                      {paymentResult.referenceTransaction}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className={`p-2 rounded-lg bg-[#8b5cf6]/10`}>
+                    <Calendar className="h-5 w-5 text-[#8b5cf6]" />
+                  </div>
+                  <div>
+                    <p className={`text-sm ${getSecondaryTextClass()} mb-1`}>
+                      Date et Heure
+                    </p>
+                    <p className={`font-medium ${getTextClass()}`}>
+                      {new Date(paymentResult.timestamp).toLocaleString(
+                        "fr-FR",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {remboursementStatus && (
+              <>
+                <Separator className="my-6" />
+                <div
+                  className={`${
+                    theme === "dark" ? "bg-[#0e1e36]" : "bg-blue-50"
+                  } rounded-xl p-6`}
+                >
+                  <h4
+                    className={`font-semibold text-lg mb-4 flex items-center ${getTextClass()}`}
+                  >
+                    <FileCheck className="h-5 w-5 mr-2 text-[#3b82f6]" />
+                    Statut des Remboursements
+                  </h4>
+                  <div className="grid grid-cols-3 gap-6">
+                    <div className="text-center">
+                      <div
+                        className={`text-3xl font-bold ${getTextClass()} mb-1`}
+                      >
+                        {remboursementStatus.totalRemboursements}
+                      </div>
+                      <p className={`text-sm ${getSecondaryTextClass()}`}>
+                        Total
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-[#10b981] mb-1">
+                        {remboursementStatus.remboursementsPayes}
+                      </div>
+                      <p className={`text-sm ${getSecondaryTextClass()}`}>
+                        Payés
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-[#3b82f6] mb-1">
+                        {remboursementStatus.pourcentagePaye.toFixed(0)}%
+                      </div>
+                      <p className={`text-sm ${getSecondaryTextClass()}`}>
+                        Complété
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Actions Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Button
+            onClick={handleDownloadPDF}
+            disabled={isDownloadingPDF}
+            className="flex-1 h-12 text-base font-medium bg-gradient-to-r from-[#3b82f6] to-[#60a5fa] hover:from-[#2563eb] hover:to-[#3b82f6] text-white transition-all duration-200"
+            size="lg"
+          >
+            {isDownloadingPDF ? (
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-5 w-5 mr-2" />
+            )}
+            Télécharger le Reçu PDF
+          </Button>
+
+          {paymentResult.status === "failed" && (
+            <Button
+              onClick={handleRetryPayment}
+              className="flex-1 h-12 text-base font-medium bg-gradient-to-r from-[#f59e0b] to-[#f97316] hover:from-[#d97706] hover:to-[#ea580c] text-white"
+              size="lg"
+            >
+              <RotateCcw className="h-5 w-5 mr-2" />
+              Réessayer le Paiement
+            </Button>
+          )}
+
+          <Button
+            onClick={handleReturnToDashboard}
+            variant={paymentResult.status === "success" ? "default" : "outline"}
+            className={`flex-1 h-12 text-base font-medium ${
               paymentResult.status === "success"
-                ? "var(--zalama-success)"
-                : "var(--zalama-danger)",
-            color: "white",
+                ? "bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white"
+                : `border-2 ${
+                    theme === "dark"
+                      ? "border-[#1e3a70] hover:bg-[#0e1e36]"
+                      : "border-gray-300 hover:bg-gray-50"
+                  }`
+            } transition-all duration-200`}
+            size="lg"
+          >
+            <Home className="h-5 w-5 mr-2" />
+            Tableau de Bord
+          </Button>
+        </div>
+      </div>
+
+      {/* Success Modal avec fond fixe */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent
+          className={`max-w-md ${getCardClass()} border-2 border-[#10b981]/20`}
+          style={{
+            backgroundColor: theme === "dark" ? "#0c1a2e" : "#ffffff",
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 9999,
           }}
         >
-          <div className="flex justify-center mb-6">
-            {paymentResult.status === "success" ? (
-              <CheckCircle className="h-20 w-20 text-white" />
-            ) : (
-              <XCircle className="h-20 w-20 text-white" />
-            )}
-          </div>
-          <CardTitle className="text-4xl font-bold text-white mb-2">
-            {paymentResult.status === "success"
-              ? "Paiement Réussi !"
-              : "Paiement Échoué"}
-          </CardTitle>
-          <CardDescription className="text-xl text-white/90">
-            {paymentResult.status === "success"
-              ? "Vos remboursements ont été traités avec succès"
-              : "Une erreur s'est produite lors du traitement"}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="p-8 space-y-8">
-          {/* Section Informations du paiement */}
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-              <Receipt
-                className="w-6 h-6"
-                style={{ color: "var(--zalama-blue)" }}
-              />
-              <h3
-                className="text-2xl font-semibold"
-                style={{ color: "var(--zalama-text)" }}
-              >
-                Informations du paiement
-              </h3>
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: -1 }}
+          />
+          <DialogHeader>
+            <div className="text-center space-y-4">
+              <div className="relative mx-auto w-16 h-16">
+                <div className="absolute inset-0 rounded-full bg-[#10b981]/20 animate-ping"></div>
+                <CheckCircle2 className="h-16 w-16 text-[#10b981] mx-auto relative z-10" />
+              </div>
+              <DialogTitle className="text-[#10b981] text-2xl font-bold">
+                🎉 Paiement Réussi !
+              </DialogTitle>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Entreprise */}
-              <div className="rounded-lg p-6 border bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{ background: "var(--zalama-blue)" }}
-                  >
-                    <Building className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      Entreprise
-                    </div>
-                    <div
-                      className="text-lg font-bold"
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      {partenaireData?.company_name || "Chargement..."}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Montant */}
-              <div className="rounded-lg p-6 border bg-[var(--zalama-bg-light)] border-[var(--zalama-border)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{ background: "var(--zalama-success)" }}
-                  >
-                    <DollarSign className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      Montant total
-                    </div>
-                    <div
-                      className="text-2xl font-bold"
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      {paymentResult.montantTotal.toLocaleString()} GNF
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nombre de remboursements */}
-              <div className="rounded-lg p-6 border bg-[var(--zalama-bg-light)] border-[var(--zalama-border)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{ background: "var(--zalama-warning)" }}
-                  >
-                    <Hash className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      Remboursements
-                    </div>
-                    <div
-                      className="text-lg font-bold"
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      {nombreRemboursements} employé
-                      {nombreRemboursements > 1 ? "s" : ""}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Date */}
-              <div className="rounded-lg p-6 border bg-[var(--zalama-bg-light)] border-[var(--zalama-border)]">
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className="p-2 rounded-lg"
-                    style={{ background: "var(--zalama-blue)" }}
-                  >
-                    <Calendar className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      Date de traitement
-                    </div>
-                    <div
-                      className="text-lg font-bold"
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      {new Date(paymentResult.timestamp).toLocaleDateString(
-                        "fr-FR"
-                      )}
-                    </div>
-                    <div
-                      className="text-sm"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      {new Date(paymentResult.timestamp).toLocaleTimeString(
-                        "fr-FR"
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          </DialogHeader>
+          <div className="text-center space-y-6 pt-4">
+            <p className={`${getSecondaryTextClass()} text-lg leading-relaxed`}>
+              Félicitations ! Tous vos remboursements ont été traités avec
+              succès par ZaLaMa Financial.
+            </p>
+            <div className="bg-gradient-to-r from-[#10b981]/10 to-[#059669]/10 rounded-xl p-4 border border-[#10b981]/20">
+              <p className="text-[#10b981] font-semibold">
+                ✅ <strong>{remboursementStatus?.remboursementsPayes}</strong>{" "}
+                remboursement(s) effectué(s)
+              </p>
+              <p className={`text-sm ${getSecondaryTextClass()} mt-1`}>
+                Transaction sécurisée et tracée
+              </p>
             </div>
-          </div>
-
-          {/* Section Actions */}
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-              <FileText
-                className="w-6 h-6"
-                style={{ color: "var(--zalama-blue)" }}
-              />
-              <h3
-                className="text-2xl font-semibold"
-                style={{ color: "var(--zalama-text)" }}
-              >
-                Actions disponibles
-              </h3>
-            </div>
-
-            {paymentResult.status === "success" ? (
-              <>
-                {/* Section de téléchargement pour succès */}
-                <div className="rounded-xl p-6 border-2 mb-6 bg-[var(--zalama-bg-light)] border-[var(--zalama-success)]">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div
-                      className="p-3 rounded-full"
-                      style={{ background: "var(--zalama-success)" }}
-                    >
-                      <Receipt className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h4
-                        className="text-lg font-bold"
-                        style={{ color: "var(--zalama-text)" }}
-                      >
-                        🎉 Reçu officiel généré
-                      </h4>
-                      <p
-                        className="text-sm"
-                        style={{ color: "var(--zalama-text-secondary)" }}
-                      >
-                        Reçu détaillé avec toutes les informations du paiement
-                      </p>
-                    </div>
-                  </div>
-
-                  <Button
-                    onClick={handleDownloadPDF}
-                    disabled={isDownloadingPDF}
-                    className="w-full h-14 text-lg font-semibold text-white"
-                    style={{
-                      background: "var(--zalama-success)",
-                      border: "none",
-                    }}
-                  >
-                    {isDownloadingPDF ? (
-                      <>
-                        <RefreshCw className="h-6 w-6 mr-3 animate-spin" />
-                        Génération en cours...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-6 w-6 mr-3" />
-                        Télécharger le reçu
-                      </>
-                    )}
-                  </Button>
-                </div>
-
-                {/* Boutons de navigation pour succès */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    onClick={handleReturnToRemboursements}
-                    variant="outline"
-                    className="h-12 border-[var(--zalama-border)] text-[var(--zalama-text)]"
-                  >
-                    <ArrowLeft className="h-5 w-5 mr-2" />
-                    Retour aux remboursements
-                  </Button>
-
-                  <Button
-                    onClick={handleReturnToDashboard}
-                    variant="outline"
-                    className="h-12 border-[var(--zalama-border)] text-[var(--zalama-text)]"
-                  >
-                    <Home className="h-5 w-5 mr-2" />
-                    Tableau de bord
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Section d'erreur pour échec */}
-                <div className="rounded-xl p-6 border-2 mb-6 bg-[var(--zalama-bg-light)] border-[var(--zalama-danger)]">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div
-                      className="p-3 rounded-full"
-                      style={{ background: "var(--zalama-danger)" }}
-                    >
-                      <AlertCircle className="w-8 h-8 text-white" />
-                    </div>
-                    <div>
-                      <h4
-                        className="text-lg font-bold"
-                        style={{ color: "var(--zalama-text)" }}
-                      >
-                        ⚠️ Paiement non traité
-                      </h4>
-                      <p
-                        className="text-sm"
-                        style={{ color: "var(--zalama-text-secondary)" }}
-                      >
-                        Une erreur s'est produite. Veuillez réessayer.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div
-                    className="rounded-lg p-4 mb-4"
-                    style={{
-                      background: "var(--zalama-bg-dark)",
-                      border: `1px solid var(--zalama-danger)`,
-                    }}
-                  >
-                    <h5
-                      className="font-semibold mb-2"
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      Que faire maintenant ?
-                    </h5>
-                    <ul
-                      className="text-sm space-y-1"
-                      style={{ color: "var(--zalama-text-secondary)" }}
-                    >
-                      <li>• Vérifiez votre solde Orange Money</li>
-                      <li>• Assurez-vous d'avoir saisi le bon PIN</li>
-                      <li>• Contactez le support si le problème persiste</li>
-                    </ul>
-                  </div>
-
-                  <Button
-                    onClick={handleRetryPayment}
-                    className="w-full h-14 text-lg font-semibold text-white"
-                    style={{
-                      background: "var(--zalama-danger)",
-                      border: "none",
-                    }}
-                  >
-                    <RotateCcw className="h-6 w-6 mr-3" />
-                    Réessayer le paiement
-                  </Button>
-                </div>
-
-                {/* Boutons de navigation pour échec */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    onClick={handleReturnToRemboursements}
-                    variant="outline"
-                    className="h-12 border-[var(--zalama-border)] text-[var(--zalama-text)]"
-                  >
-                    <ArrowLeft className="h-5 w-5 mr-2" />
-                    Retour aux remboursements
-                  </Button>
-
-                  <Button
-                    onClick={handleReturnToDashboard}
-                    variant="outline"
-                    className="h-12 border-[var(--zalama-border)] text-[var(--zalama-text)]"
-                  >
-                    <Home className="h-5 w-5 mr-2" />
-                    Tableau de bord
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Section Informations importantes */}
-          <div className="rounded-lg p-6 border bg-[var(--zalama-bg-light)] border-[var(--zalama-border)]">
-            <h4
-              className="font-semibold mb-3"
-              style={{ color: "var(--zalama-text)" }}
+            <Button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full h-12 bg-gradient-to-r from-[#10b981] to-[#059669] hover:from-[#059669] hover:to-[#047857] text-white font-semibold text-base"
             >
-              🔒 Sécurité & Confidentialité
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h5
-                  className="font-semibold mb-2"
-                  style={{ color: "var(--zalama-text)" }}
-                >
-                  {paymentResult.status === "success"
-                    ? "✅ Transaction sécurisée"
-                    : "⚠️ Transaction non aboutie"}
-                </h5>
-                <ul
-                  className="text-sm space-y-1"
-                  style={{ color: "var(--zalama-text-secondary)" }}
-                >
-                  {paymentResult.status === "success" ? (
-                    <>
-                      <li>• Paiement traité avec succès</li>
-                      <li>• Reçu électronique généré</li>
-                      <li>• Mise à jour automatique du système</li>
-                    </>
-                  ) : (
-                    <>
-                      <li>• Aucun montant n'a été débité</li>
-                      <li>• Vos données sont sécurisées</li>
-                      <li>• Vous pouvez réessayer en toute sécurité</li>
-                    </>
-                  )}
-                </ul>
+              Parfait ! Continuer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Failure Modal avec fond fixe */}
+      <Dialog open={showFailureModal} onOpenChange={setShowFailureModal}>
+        <DialogContent
+          className={`max-w-md ${getCardClass()} border-2 border-[#ef4444]/20`}
+          style={{
+            backgroundColor: theme === "dark" ? "#0c1a2e" : "#ffffff",
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 9999,
+          }}
+        >
+          <div
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            style={{ zIndex: -1 }}
+          />
+          <DialogHeader>
+            <div className="text-center space-y-4">
+              <div className="relative mx-auto w-16 h-16">
+                <div className="absolute inset-0 rounded-full bg-[#ef4444]/20 animate-pulse"></div>
+                <XCircle className="h-16 w-16 text-[#ef4444] mx-auto relative z-10" />
               </div>
-              <div>
-                <h5
-                  className="font-semibold mb-2"
-                  style={{ color: "var(--zalama-text)" }}
-                >
-                  🛡️ Protection des données
-                </h5>
-                <ul
-                  className="text-sm space-y-1"
-                  style={{ color: "var(--zalama-text-secondary)" }}
-                >
-                  <li>• Chiffrement SSL/TLS 256-bit</li>
-                  <li>• Conformité PCI DSS</li>
-                  <li>• Traçabilité complète</li>
-                  <li>• Audit trail disponible</li>
-                </ul>
-              </div>
+              <DialogTitle className="text-[#ef4444] text-2xl font-bold">
+                ❌ Paiement Échoué
+              </DialogTitle>
+            </div>
+          </DialogHeader>
+          <div className="text-center space-y-6 pt-4">
+            <p className={`${getSecondaryTextClass()} text-lg leading-relaxed`}>
+              Le traitement de vos remboursements a échoué ou a pris trop de
+              temps. Notre équipe technique a été notifiée.
+            </p>
+            <div className="bg-gradient-to-r from-[#ef4444]/10 to-[#dc2626]/10 rounded-xl p-4 border border-[#ef4444]/20">
+              <p className="text-[#ef4444] font-semibold text-sm">
+                💡 Suggestions: Vérifiez votre connexion ou contactez le support
+                ZaLaMa
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                onClick={handleRetryPayment}
+                className="flex-1 h-12 bg-gradient-to-r from-[#f59e0b] to-[#f97316] hover:from-[#d97706] hover:to-[#ea580c] text-white font-semibold"
+              >
+                🔄 Réessayer
+              </Button>
+              <Button
+                onClick={() => setShowFailureModal(false)}
+                variant="outline"
+                className={`flex-1 h-12 border-2 font-semibold ${
+                  theme === "dark"
+                    ? "border-[#1e3a70] hover:bg-[#0e1e36]"
+                    : "border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Fermer
+              </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -787,17 +828,11 @@ export default function PaymentResultPage() {
   return (
     <Suspense
       fallback={
-        <div
-          className="min-h-screen flex items-center justify-center"
-          style={{ background: "var(--zalama-bg-dark)" }}
-        >
+        <div className="min-h-screen bg-gradient-to-br from-[#0a1525] via-[#061020] to-[#0e1e36] flex items-center justify-center">
           <div className="text-center">
-            <div
-              className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto mb-4"
-              style={{ borderColor: "var(--zalama-blue)" }}
-            ></div>
-            <p style={{ color: "var(--zalama-text-secondary)" }}>
-              Chargement...
+            <Loader2 className="h-12 w-12 animate-spin text-[#3b82f6] mx-auto mb-4" />
+            <p className="text-[#a0aec0] text-lg">
+              Chargement sécurisé ZaLaMa...
             </p>
           </div>
         </div>
