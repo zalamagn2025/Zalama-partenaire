@@ -34,6 +34,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, Suspense } from "react";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
 
 type PaymentStatus = "pending" | "success" | "failed";
 
@@ -258,12 +259,15 @@ function PaymentResultContent() {
     setIsDownloadingPDF(true);
 
     try {
-      const receiptDate = new Date(paymentResult.timestamp);
-      const formattedDate = receiptDate.toLocaleDateString("fr-FR", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
+      // Créer une nouvelle instance jsPDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
+
+      const receiptDate = new Date(paymentResult.timestamp);
+      const formattedDate = receiptDate.toLocaleDateString("fr-FR");
       const formattedTime = receiptDate.toLocaleTimeString("fr-FR");
 
       const gnfFormatter = (amount: number) => {
@@ -275,65 +279,98 @@ function PaymentResultContent() {
         }).format(amount);
       };
 
-      const receipt = `
-═══════════════════════════════════════════════════════════════
-                        🏛️ ZALAMA FINANCIAL
-                     REÇU OFFICIEL DE PAIEMENT
-═══════════════════════════════════════════════════════════════
+      // Couleurs simples
+      const zalamaBlue: [number, number, number] = [59, 130, 246];
+      const statusColor: [number, number, number] =
+        paymentResult.status === "success" ? [16, 185, 129] : [239, 68, 68];
+      const textColor: [number, number, number] = [31, 41, 55];
 
-📅 INFORMATIONS DE TRANSACTION
-Date: ${formattedDate}
-Heure: ${formattedTime}
-Référence: ${paymentResult.referenceTransaction}
-Statut: ${paymentResult.status === "success" ? "✅ SUCCÈS" : "❌ ÉCHEC"}
+      // === HEADER SIMPLE ===
+      pdf.setFillColor(...zalamaBlue);
+      pdf.rect(0, 0, 210, 25, "F");
 
-🏢 DÉTAILS DU PARTENAIRE
-Entreprise: ${partenaireData.company_name}
-ID Partenaire: ${paymentResult.partenaireId}
-Type de paiement: ${
-        paymentResult.type === "lot" ? "Paiement en lot" : "Paiement individuel"
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(18);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("ZALAMA", 105, 16, { align: "center" });
+
+      // === TITRE ===
+      pdf.setTextColor(...textColor);
+      pdf.setFontSize(16);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("REÇU DE PAIEMENT", 105, 40, { align: "center" });
+
+      // === STATUT ===
+      let currentY = 55;
+      pdf.setFillColor(...statusColor);
+      pdf.rect(50, currentY - 5, 110, 12, "F");
+
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont("helvetica", "bold");
+      const statusText =
+        paymentResult.status === "success" ? "SUCCÈS" : "ÉCHEC";
+      pdf.text(statusText, 105, currentY + 2, { align: "center" });
+
+      // === INFORMATIONS ESSENTIELLES ===
+      currentY = 80;
+      pdf.setTextColor(...textColor);
+      pdf.setFontSize(11);
+      pdf.setFont("helvetica", "normal");
+
+      const essentialInfo = [
+        [`Référence:`, paymentResult.referenceTransaction || "N/A"],
+        [`Date:`, `${formattedDate} ${formattedTime}`],
+        [`Entreprise:`, partenaireData.company_name],
+        [`Montant:`, gnfFormatter(paymentResult.montantTotal)],
+      ];
+
+      essentialInfo.forEach(([label, value]) => {
+        pdf.setFont("helvetica", "bold");
+        pdf.text(label, 20, currentY);
+        pdf.setFont("helvetica", "normal");
+        pdf.text(value, 70, currentY);
+        currentY += 10;
+      });
+
+      // === REMBOURSEMENTS (seulement si disponible) ===
+      if (remboursementStatus && remboursementStatus.totalRemboursements > 0) {
+        currentY += 15;
+        pdf.setFont("helvetica", "bold");
+        pdf.text("REMBOURSEMENTS:", 20, currentY);
+
+        currentY += 8;
+        pdf.setFont("helvetica", "normal");
+        pdf.text(
+          `${remboursementStatus.remboursementsPayes}/${
+            remboursementStatus.totalRemboursements
+          } payés (${remboursementStatus.pourcentagePaye.toFixed(0)}%)`,
+          20,
+          currentY
+        );
       }
 
-💰 MONTANT TOTAL: ${gnfFormatter(paymentResult.montantTotal)}
+      // === FOOTER MINIMAL ===
+      currentY = 250;
+      pdf.setTextColor(100, 100, 100);
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "normal");
+      pdf.text("ZaLaMa Financial Solutions", 105, currentY, {
+        align: "center",
+      });
+      pdf.text("support@zalama.com", 105, currentY + 6, { align: "center" });
 
-📊 STATUT DES REMBOURSEMENTS
-Total des remboursements: ${remboursementStatus?.totalRemboursements || 0}
-Remboursements payés: ${remboursementStatus?.remboursementsPayes || 0}
-Pourcentage complété: ${remboursementStatus?.pourcentagePaye.toFixed(1) || 0}%
+      // === TÉLÉCHARGEMENT ===
+      const fileName = `zalama-recu-${paymentResult.referenceTransaction}.pdf`;
+      pdf.save(fileName);
 
-🔒 SÉCURITÉ & TRAÇABILITÉ
-- Transaction sécurisée SSL/TLS 256-bit
-- Conformité PCI DSS Level 1
-- Traçabilité complète activée
-
-═══════════════════════════════════════════════════════════════
-                      ZALAMA FINANCIAL SOLUTIONS
-                   Conakry, République de Guinée
-                      support@zalama.com
-                 📱 Application disponible iOS & Android
-
-Ce reçu a été généré automatiquement le ${formattedDate}
-Conservez ce document pour vos dossiers comptables
-═══════════════════════════════════════════════════════════════
-      `;
-
-      const blob = new Blob([receipt], { type: "text/plain; charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `zalama-recu-${paymentResult.referenceTransaction}.txt`;
-      a.style.display = "none";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success("📄 Reçu téléchargé avec succès", {
-        description: "Votre reçu officiel ZaLaMa a été sauvegardé.",
+      toast.success("📄 Reçu PDF téléchargé !", {
+        description: "Reçu simple et épuré généré.",
+        duration: 3000,
       });
     } catch (error) {
-      console.error("Erreur lors du téléchargement:", error);
-      toast.error("❌ Erreur lors du téléchargement du reçu");
+      console.error("Erreur lors de la génération PDF:", error);
+      toast.error("❌ Erreur de génération PDF");
     } finally {
       setIsDownloadingPDF(false);
     }
