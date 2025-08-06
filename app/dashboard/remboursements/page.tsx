@@ -91,7 +91,6 @@ export default function RemboursementsPage() {
   const [selectedRemboursement, setSelectedRemboursement] =
     useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -223,38 +222,6 @@ export default function RemboursementsPage() {
       fetchRemboursements();
     }
   }, [loading, session?.partner]);
-
-  // Action "Payer" un remboursement via l'API simplifiée
-  const handlePayer = async (id: string) => {
-    setPaying(true);
-    try {
-      const response = await fetch(
-        "https://admin.zalamasas.com/api/remboursements/simple-paiement",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ remboursement_id: id }),
-        }
-      );
-
-      const data = await response.json();
-
-      if (data.success) {
-        console.log("Paiement initié:", data);
-        // Rediriger vers la page de paiement ou afficher un message de succès
-        window.open(data.payment_url, "_blank");
-        await fetchRemboursements();
-      } else {
-        console.error("Erreur lors du paiement:", data.error);
-        alert(`Erreur: ${data.error}`);
-      }
-    } catch (error) {
-      console.error("Erreur lors du paiement:", error);
-      alert("Erreur lors du paiement");
-    } finally {
-      setPaying(false);
-    }
-  };
 
   // Action "Payer tous" via l'API simplifiée
   const handlePayerTous = async () => {
@@ -390,7 +357,7 @@ export default function RemboursementsPage() {
     <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* En-tête professionnel */}
       <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-      <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               Gestion des remboursements
@@ -399,9 +366,9 @@ export default function RemboursementsPage() {
               Suivi et traitement des remboursements d'avances salariales
             </p>
           </div>
-        <Button
-          onClick={() => handlePayerTous()}
-          disabled={paying || totalAttente === 0}
+          <Button
+            onClick={() => handlePayerTous()}
+            disabled={paying || totalAttente === 0}
             size="sm"
             className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
           >
@@ -416,7 +383,7 @@ export default function RemboursementsPage() {
                 Payer tous les remboursements
               </>
             )}
-        </Button>
+          </Button>
         </div>
       </div>
 
@@ -426,13 +393,13 @@ export default function RemboursementsPage() {
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
               <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-        </div>
+            </div>
             <div className="ml-3">
               <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
                 Total en attente
               </div>
               <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
-          {gnfFormatter(totalRemboursements)}
+                {gnfFormatter(totalRemboursements)}
               </div>
             </div>
           </div>
@@ -499,87 +466,87 @@ export default function RemboursementsPage() {
             <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Employé
-              </th>
+                  Employé
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Montant demandé
-              </th>
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Frais service (6,5%)
-              </th>
+                  Frais service (6,5%)
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Montant reçu
-              </th>
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Remboursement dû
-              </th>
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Salaire restant
-              </th>
+                  Salaire restant
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Date avance
-              </th>
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Statut
-              </th>
+                  Statut
+                </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Actions
-              </th>
-            </tr>
-          </thead>
+                </th>
+              </tr>
+            </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-            {paginatedRemboursements.length === 0 && (
-              <tr>
+              {paginatedRemboursements.length === 0 && (
+                <tr>
                   <td
                     colSpan={9}
                     className="text-center py-6 text-gray-400 text-sm"
                   >
-                  Aucun remboursement trouvé.
-                </td>
-              </tr>
-            )}
-            {paginatedRemboursements.map((r, idx) => (
-              <tr
-                key={r.id}
+                    Aucun remboursement trouvé.
+                  </td>
+                </tr>
+              )}
+              {paginatedRemboursements.map((r, idx) => (
+                <tr
+                  key={r.id}
                   className="dark:bg-[var(--zalama-card)]  transition-colors"
                 >
                   <td className="px-3 py-2 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
-                  {r.employee?.nom} {r.employee?.prenom}
+                      {r.employee?.nom} {r.employee?.prenom}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {gnfFormatter(Number(r.employee?.salaire_net || 0))}
+                      {gnfFormatter(Number(r.employee?.salaire_net || 0))}
                     </div>
-                </td>
+                  </td>
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
-                  {gnfFormatter(getMontantDemande(r))}
-                </td>
+                    {gnfFormatter(getMontantDemande(r))}
+                  </td>
                   <td className="px-3 py-2 text-sm text-gray-500">
-                  {gnfFormatter(calculateFraisService(getMontantDemande(r)))}
-                </td>
+                    {gnfFormatter(calculateFraisService(getMontantDemande(r)))}
+                  </td>
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
-                  {gnfFormatter(
-                    calculateMontantRecu(
-                      getMontantDemande(r),
-                      calculateFraisService(getMontantDemande(r))
-                    )
-                  )}
-                </td>
+                    {gnfFormatter(
+                      calculateMontantRecu(
+                        getMontantDemande(r),
+                        calculateFraisService(getMontantDemande(r))
+                      )
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400">
                     {gnfFormatter(
                       calculateRemboursementDu(getMontantDemande(r))
                     )}
-                </td>
+                  </td>
                   <td className="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                  {gnfFormatter(calculateSalaireRestant(r))}
-                </td>
+                    {gnfFormatter(calculateSalaireRestant(r))}
+                  </td>
                   <td className="px-3 py-2 text-xs text-gray-500">
-                  {r.demande_avance?.date_validation
-                    ? new Date(
-                        r.demande_avance.date_validation
-                      ).toLocaleDateString("fr-FR")
-                    : "-"}
-                </td>
+                    {r.demande_avance?.date_validation
+                      ? new Date(
+                          r.demande_avance.date_validation
+                        ).toLocaleDateString("fr-FR")
+                      : "-"}
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
@@ -600,20 +567,6 @@ export default function RemboursementsPage() {
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
-                    {r.statut === "EN_ATTENTE" && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          setSelectedRemboursement(r);
-                          setShowPaymentModal(true);
-                        }}
-                        disabled={paying}
-                          className="bg-orange-600 hover:bg-orange-700 text-white text-xs px-3 py-1 h-7 flex items-center gap-1"
-                      >
-                          <CreditCard className="w-3 h-3" />
-                          Payer
-                      </Button>
-                    )}
                       <Button
                         size="sm"
                         variant="outline"
@@ -623,12 +576,12 @@ export default function RemboursementsPage() {
                         <Eye className="w-3 h-3" />
                         Voir
                       </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -646,22 +599,22 @@ export default function RemboursementsPage() {
             <Button
               size="sm"
               variant="outline"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
               className="h-8 w-8 p-0"
-          >
+            >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-          <span className="text-sm font-medium">
+            <span className="text-sm font-medium">
               {currentPage} / {totalPages}
-          </span>
+            </span>
             <Button
               size="sm"
               variant="outline"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
               className="h-8 w-8 p-0"
-          >
+            >
               <ArrowRight className="w-4 h-4" />
             </Button>
           </div>
@@ -675,12 +628,12 @@ export default function RemboursementsPage() {
             Répartition par statut
           </h3>
           <div className="h-48">
-          <Pie
-            data={{
-              labels: Object.keys(stats),
-              datasets: [
-                {
-                  data: Object.values(stats),
+            <Pie
+              data={{
+                labels: Object.keys(stats),
+                datasets: [
+                  {
+                    data: Object.values(stats),
                     backgroundColor: [
                       "#f59e0b",
                       "#10b981",
@@ -688,9 +641,9 @@ export default function RemboursementsPage() {
                       "#ef4444",
                     ],
                     borderWidth: 0,
-                },
-              ],
-            }}
+                  },
+                ],
+              }}
               options={{
                 plugins: {
                   legend: {
@@ -703,31 +656,31 @@ export default function RemboursementsPage() {
                   },
                 },
                 maintainAspectRatio: false,
-            }}
-          />
-        </div>
+              }}
+            />
+          </div>
         </div>
         <div className="bg-[var(--zalama-card)] border rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Par employé
           </h3>
           <div className="h-48">
-          <Bar
-            data={{
+            <Bar
+              data={{
                 labels: Object.keys(employeStats).map(
                   (name) => name.split(" ")[0]
                 ), // Prenom uniquement
-              datasets: [
-                {
-                  data: Object.values(employeStats),
-                  backgroundColor: "#6366f1",
+                datasets: [
+                  {
+                    data: Object.values(employeStats),
+                    backgroundColor: "#6366f1",
                     borderRadius: 4,
                     barThickness: 20,
-                },
-              ],
-            }}
-            options={{
-              indexAxis: "y" as const,
+                  },
+                ],
+              }}
+              options={{
+                indexAxis: "y" as const,
                 plugins: {
                   legend: { display: false },
                   tooltip: {
@@ -786,20 +739,20 @@ export default function RemboursementsPage() {
                       Nom complet
                     </span>
                     <span className="font-medium">
-                  {selectedRemboursement.employee?.nom}{" "}
-                  {selectedRemboursement.employee?.prenom}
-                </span>
-              </div>
+                      {selectedRemboursement.employee?.nom}{" "}
+                      {selectedRemboursement.employee?.prenom}
+                    </span>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
                       Salaire net mensuel
                     </span>
                     <span className="font-medium">
-                  {gnfFormatter(
-                    Number(selectedRemboursement.employee?.salaire_net || 0)
-                  )}
-                </span>
-              </div>
+                      {gnfFormatter(
+                        Number(selectedRemboursement.employee?.salaire_net || 0)
+                      )}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -819,48 +772,48 @@ export default function RemboursementsPage() {
                       Montant demandé
                     </div>
                     <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                  {gnfFormatter(getMontantDemande(selectedRemboursement))}
-              </div>
+                      {gnfFormatter(getMontantDemande(selectedRemboursement))}
+                    </div>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
                     <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                       Frais de service (6,5%)
                     </div>
                     <div className="text-lg font-bold text-gray-800 dark:text-gray-300">
-                  {gnfFormatter(
-                    calculateFraisService(
-                      getMontantDemande(selectedRemboursement)
-                    )
-                  )}
-              </div>
+                      {gnfFormatter(
+                        calculateFraisService(
+                          getMontantDemande(selectedRemboursement)
+                        )
+                      )}
+                    </div>
                   </div>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
                     <div className="text-sm text-green-600 dark:text-green-400 mb-1">
                       Montant reçu par l'employé
                     </div>
                     <div className="text-lg font-bold text-green-800 dark:text-green-300">
-                  {gnfFormatter(
-                    calculateMontantRecu(
-                      getMontantDemande(selectedRemboursement),
-                      calculateFraisService(
-                        getMontantDemande(selectedRemboursement)
-                      )
-                    )
-                  )}
-              </div>
+                      {gnfFormatter(
+                        calculateMontantRecu(
+                          getMontantDemande(selectedRemboursement),
+                          calculateFraisService(
+                            getMontantDemande(selectedRemboursement)
+                          )
+                        )
+                      )}
+                    </div>
                   </div>
                   <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
                     <div className="text-sm text-red-600 dark:text-red-400 mb-1">
                       Dû à ZaLaMa
                     </div>
                     <div className="text-lg font-bold text-red-800 dark:text-red-300">
-                  {gnfFormatter(
-                    calculateRemboursementDu(
-                      getMontantDemande(selectedRemboursement)
-                    )
-                  )}
-              </div>
-              </div>
+                      {gnfFormatter(
+                        calculateRemboursementDu(
+                          getMontantDemande(selectedRemboursement)
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
                 <div className="mt-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
                   <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">
@@ -883,7 +836,7 @@ export default function RemboursementsPage() {
                   <h3 className="font-semibold text-gray-900 dark:text-white">
                     Informations temporelles
                   </h3>
-              </div>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
                     <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
@@ -955,8 +908,8 @@ export default function RemboursementsPage() {
                       </>
                     ) : (
                       selectedRemboursement.statut
-                  )}
-                </span>
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -978,51 +931,51 @@ export default function RemboursementsPage() {
                       </div>
                       <div className="space-y-3 max-h-48 overflow-y-auto">
                         {selectedRemboursement.tous_remboursements.map(
-                    (remb, index) => {
-                      // Calculer le salaire restant après ce remboursement
-                      let salaireRestantApres = Number(
-                        selectedRemboursement.employee?.salaire_net || 0
-                      );
-                      for (let i = 0; i <= index; i++) {
-                        const rembCourant =
-                          selectedRemboursement.tous_remboursements![i];
-                        const montantRemboursement = Number(
-                          rembCourant.montant_total_remboursement || 0
-                        );
-                        salaireRestantApres = Math.max(
-                          0,
-                          salaireRestantApres - montantRemboursement
-                        );
-                      }
+                          (remb, index) => {
+                            // Calculer le salaire restant après ce remboursement
+                            let salaireRestantApres = Number(
+                              selectedRemboursement.employee?.salaire_net || 0
+                            );
+                            for (let i = 0; i <= index; i++) {
+                              const rembCourant =
+                                selectedRemboursement.tous_remboursements![i];
+                              const montantRemboursement = Number(
+                                rembCourant.montant_total_remboursement || 0
+                              );
+                              salaireRestantApres = Math.max(
+                                0,
+                                salaireRestantApres - montantRemboursement
+                              );
+                            }
 
-                      return (
-                        <div
-                          key={index}
+                            return (
+                              <div
+                                key={index}
                                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-800 dark:text-indigo-400">
                                       {index + 1}
-                          </div>
+                                    </div>
                                     <span className="font-medium">
                                       Remboursement #{index + 1}
-                            </span>
-                          </div>
+                                    </span>
+                                  </div>
                                   <span className="font-bold text-lg">
                                     {gnfFormatter(
                                       Number(
                                         remb.montant_total_remboursement || 0
                                       )
                                     )}
-                </span>
-              </div>
+                                  </span>
+                                </div>
                                 <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
+                                  <div>
                                     <span className="text-gray-500 dark:text-gray-400">
                                       Statut:{" "}
-                </span>
-                <span
+                                    </span>
+                                    <span
                                       className={`font-medium ${
                                         remb.statut === "PAYE"
                                           ? "text-green-600"
@@ -1030,21 +983,21 @@ export default function RemboursementsPage() {
                                       }`}
                                     >
                                       {remb.statut}
-                </span>
-              </div>
-              <div>
+                                    </span>
+                                  </div>
+                                  <div>
                                     <span className="text-gray-500 dark:text-gray-400">
                                       Date:{" "}
                                     </span>
                                     <span className="font-medium">
                                       {remb.date_creation
-                    ? new Date(
+                                        ? new Date(
                                             remb.date_creation
-                      ).toLocaleDateString("fr-FR")
-                    : "-"}
-                </span>
-              </div>
-            </div>
+                                          ).toLocaleDateString("fr-FR")
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
                                 <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                                   <div className="text-xs text-emerald-600 dark:text-emerald-400">
                                     <span className="font-medium">
@@ -1074,89 +1027,6 @@ export default function RemboursementsPage() {
             >
               <ArrowLeft className="w-4 h-4" />
               Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de paiement */}
-      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Paiement via Orange Money (Lengopay)</DialogTitle>
-            <DialogDescription>
-              Confirmez le paiement via Lengopay. Les champs sont préremplis et
-              non modifiables.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedRemboursement && (
-            <div className="space-y-4">
-              <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2">Détails du paiement</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Employé :</span>{" "}
-                    {selectedRemboursement.employee?.nom}{" "}
-                    {selectedRemboursement.employee?.prenom}
-                  </div>
-                  <div>
-                    <span className="font-medium">Montant à rembourser :</span>{" "}
-                    <span className="font-semibold text-red-600">
-                      {gnfFormatter(
-                        calculateRemboursementDu(
-                          getMontantDemande(selectedRemboursement)
-                        )
-                      )}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Date limite :</span>{" "}
-                    {new Date(
-                      selectedRemboursement.date_limite_remboursement
-                    ).toLocaleDateString("fr-FR")}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                <h3 className="font-semibold mb-2 text-blue-800 dark:text-blue-200">
-                  Informations de paiement
-                </h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">Mode de paiement :</span>{" "}
-                    Orange Money via Lengopay
-                  </div>
-                  <div>
-                    <span className="font-medium">Sécurité :</span> Transaction
-                    sécurisée SSL
-                  </div>
-                  <div>
-                    <span className="font-medium">Confirmation :</span> Reçu
-                    électronique automatique
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setShowPaymentModal(false)}
-            >
-              Annuler
-            </Button>
-            <Button
-              onClick={() => {
-                if (selectedRemboursement) {
-                  handlePayer(selectedRemboursement.id);
-                  setShowPaymentModal(false);
-                }
-              }}
-              disabled={paying}
-              className="bg-orange-600 hover:bg-orange-700"
-            >
-              {paying ? "Traitement..." : "Confirmer le paiement"}
             </Button>
           </DialogFooter>
         </DialogContent>
