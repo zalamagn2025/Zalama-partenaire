@@ -224,7 +224,7 @@ export default function DocumentsRapports({
               </Button>
             )}
 
-            {rapports.length > 0 && (
+            {/*  {rapports.length > 0 && (
               <Button
                 onClick={downloadAllRapports}
                 size="sm"
@@ -233,7 +233,7 @@ export default function DocumentsRapports({
                 <Download className="w-4 h-4 mr-1" />
                 Tout télécharger
               </Button>
-            )}
+            )} */}
           </div>
         </div>
 
