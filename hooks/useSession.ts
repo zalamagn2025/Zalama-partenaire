@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -64,7 +64,17 @@ interface UseSessionReturn {
   refreshSession: () => Promise<void>;
   clearCache: () => void;
   forceRefresh: () => Promise<void>;
+  cacheStats: { size: number; hits: number; misses: number };
 }
+
+// Cache global pour partager entre les instances
+const globalSessionCache = new Map<string, { data: AuthSession; timestamp: number; ttl: number }>();
+const cacheStats = { hits: 0, misses: 0 };
+
+// Configuration du cache
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 100; // Nombre maximum d'entrées en cache
 
 export function useSession(): UseSessionReturn {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -72,18 +82,78 @@ export function useSession(): UseSessionReturn {
   const [error, setError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   
-  // Cache pour éviter les requêtes répétées
-  const sessionCache = new Map<string, AuthSession>();
+  // Références pour les timers et subscriptions
+  const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const realtimeSubscriptionsRef = useRef<any[]>([]);
+  const lastRefreshRef = useRef<number>(0);
+  
+  // Fonction de nettoyage du cache expiré
+  const cleanupExpiredCache = useCallback(() => {
+    const now = Date.now();
+    for (const [key, entry] of globalSessionCache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        globalSessionCache.delete(key);
+        console.log(`Cache expiré supprimé pour: ${key}`);
+      }
+    }
+    
+    // Limiter la taille du cache si nécessaire
+    if (globalSessionCache.size > MAX_CACHE_SIZE) {
+      const entries = Array.from(globalSessionCache.entries());
+      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
+      
+      const toDelete = entries.slice(0, globalSessionCache.size - MAX_CACHE_SIZE);
+      toDelete.forEach(([key]) => {
+        globalSessionCache.delete(key);
+        console.log(`Cache supprimé pour limiter la taille: ${key}`);
+      });
+    }
+  }, []);
+
+  // Fonction de gestion intelligente du cache
+  const getCachedSession = useCallback((userId: string): AuthSession | null => {
+    const entry = globalSessionCache.get(userId);
+    if (!entry) {
+      cacheStats.misses++;
+      return null;
+    }
+    
+    const now = Date.now();
+    if (now - entry.timestamp > entry.ttl) {
+      globalSessionCache.delete(userId);
+      cacheStats.misses++;
+      console.log(`Cache expiré pour: ${userId}`);
+      return null;
+    }
+    
+    cacheStats.hits++;
+    console.log(`Session récupérée depuis le cache pour: ${userId}`);
+    return entry.data;
+  }, []);
+
+  // Fonction de mise en cache intelligente
+  const setCachedSession = useCallback((userId: string, sessionData: AuthSession) => {
+    globalSessionCache.set(userId, {
+      data: sessionData,
+      timestamp: Date.now(),
+      ttl: CACHE_TTL
+    });
+    console.log(`Session mise en cache pour: ${userId}`);
+    
+    // Nettoyer le cache si nécessaire
+    if (globalSessionCache.size > MAX_CACHE_SIZE) {
+      cleanupExpiredCache();
+    }
+  }, [cleanupExpiredCache]);
 
   const loadUserSession = async (authUser: User): Promise<AuthSession | null> => {
     try {
       console.log('Chargement session pour:', authUser.email);
       
       // Vérifier le cache d'abord
-      const cacheKey = authUser.id;
-      if (sessionCache.has(cacheKey)) {
-        console.log('Session récupérée depuis le cache');
-        return sessionCache.get(cacheKey)!;
+      const cachedSession = getCachedSession(authUser.id);
+      if (cachedSession) {
+        return cachedSession;
       }
       
       // Récupérer les vraies données depuis admin_users
@@ -157,7 +227,7 @@ export function useSession(): UseSessionReturn {
         };
         
         // Mettre en cache
-        sessionCache.set(cacheKey, fallbackSession);
+        setCachedSession(authUser.id, fallbackSession);
         return fallbackSession;
       }
 
@@ -189,7 +259,7 @@ export function useSession(): UseSessionReturn {
       };
       
       // Mettre en cache
-      sessionCache.set(cacheKey, fullSession);
+      setCachedSession(authUser.id, fullSession);
       console.log('Session récupérée avec succès depuis admin_users et partners');
       return fullSession;
     } catch (error) {
@@ -204,13 +274,14 @@ export function useSession(): UseSessionReturn {
       setError(null);
       
       // Vider le cache pour forcer la récupération des nouvelles données
-      sessionCache.clear();
+      clearCache();
       
       const { data: { session: supabaseSession } } = await supabase.auth.getSession();
       
       if (supabaseSession?.user) {
         const fullSession = await loadUserSession(supabaseSession.user);
         setSession(fullSession);
+        lastRefreshRef.current = Date.now();
       } else {
         setSession(null);
       }
@@ -235,10 +306,14 @@ export function useSession(): UseSessionReturn {
         if (supabaseSession?.user && mounted) {
           const fullSession = await loadUserSession(supabaseSession.user);
           setSession(fullSession);
+          lastRefreshRef.current = Date.now();
+          
+          // Activer les listeners en temps réel IMMÉDIATEMENT
+          setupRealtimeListeners(supabaseSession.user);
         }
       } catch (error: any) {
         if (mounted) {
-          console.error('Erreur initialisation session:', error);
+          console.error('Erreur lors de l\'initialisation de la session:', error);
           setError(error.message);
           setSession(null);
         }
@@ -263,7 +338,12 @@ export function useSession(): UseSessionReturn {
           const fullSession = await loadUserSession(supabaseSession.user);
           setSession(fullSession);
           setError(null);
+          lastRefreshRef.current = Date.now();
+          
+          // Activer les listeners en temps réel APRÈS CONNEXION
+          setupRealtimeListeners(supabaseSession.user);
         } catch (error: any) {
+          console.error('Erreur lors de la création de session après connexion:', error);
           setError(error.message);
           setSession(null);
           await supabase.auth.signOut();
@@ -271,12 +351,34 @@ export function useSession(): UseSessionReturn {
       } else if (event === 'SIGNED_OUT') {
         setSession(null);
         setError(null);
+        
+        // Nettoyer les listeners en temps réel
+        cleanupRealtimeListeners();
+        
+        // Nettoyer l'interval automatique
+        if (autoRefreshIntervalRef.current) {
+          clearInterval(autoRefreshIntervalRef.current);
+          autoRefreshIntervalRef.current = null;
+        }
       } else if (event === 'TOKEN_REFRESHED' && supabaseSession?.user) {
         try {
           const fullSession = await loadUserSession(supabaseSession.user);
           setSession(fullSession);
           setError(null);
+          lastRefreshRef.current = Date.now();
         } catch (error: any) {
+          console.error('Erreur lors de la mise à jour après refresh du token:', error);
+          setError(error.message);
+          setSession(null);
+        }
+      } else if (event === 'USER_UPDATED' && supabaseSession?.user) {
+        try {
+          const fullSession = await loadUserSession(supabaseSession.user);
+          setSession(fullSession);
+          setError(null);
+          lastRefreshRef.current = Date.now();
+        } catch (error: any) {
+          console.error('Erreur lors de la mise à jour après modification utilisateur:', error);
           setError(error.message);
           setSession(null);
         }
@@ -286,6 +388,14 @@ export function useSession(): UseSessionReturn {
     return () => {
       mounted = false;
       subscription.unsubscribe();
+      
+      // Nettoyer les listeners en temps réel
+      cleanupRealtimeListeners();
+      
+      // Nettoyer l'interval automatique
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
+      }
     };
   }, []);
 
@@ -312,6 +422,7 @@ export function useSession(): UseSessionReturn {
 
       const fullSession = await loadUserSession(authData.user);
       setSession(fullSession);
+      lastRefreshRef.current = Date.now();
       
       return { error: null, session: fullSession };
     } catch (error: any) {
@@ -326,7 +437,7 @@ export function useSession(): UseSessionReturn {
   const signOut = async () => {
     try {
       setLoading(true);
-      sessionCache.clear(); // Vider le cache à la déconnexion
+      clearCache(); // Vider le cache à la déconnexion
       await supabase.auth.signOut();
       setSession(null);
       setError(null);
@@ -338,20 +449,22 @@ export function useSession(): UseSessionReturn {
   };
 
   const clearCache = () => {
-    sessionCache.clear();
-    console.log('Cache vidé');
+    globalSessionCache.clear();
+    cacheStats.hits = 0;
+    cacheStats.misses = 0;
   };
 
   const forceRefresh = async () => {
     try {
       setLoading(true);
-      sessionCache.clear(); // Vider le cache
+      clearCache(); // Vider le cache
       
       const { data: { session: supabaseSession } } = await supabase.auth.getSession();
       
       if (supabaseSession?.user) {
         const fullSession = await loadUserSession(supabaseSession.user);
         setSession(fullSession);
+        lastRefreshRef.current = Date.now();
         console.log('Session forcée mise à jour depuis la BD');
       }
     } catch (error: any) {
@@ -361,6 +474,168 @@ export function useSession(): UseSessionReturn {
     }
   };
 
+  // Fonction de nettoyage des listeners en temps réel
+  const cleanupRealtimeListeners = useCallback(() => {
+    realtimeSubscriptionsRef.current.forEach(sub => {
+      try {
+        sub.unsubscribe();
+      } catch (error) {
+        console.error('Erreur lors de la désinscription:', error);
+      }
+    });
+    
+    realtimeSubscriptionsRef.current = [];
+  }, []);
+
+  // Écouter les changements en temps réel avec gestion d'erreurs améliorée
+  const setupRealtimeListeners = useCallback((authUser: User) => {
+    // Nettoyer les anciens listeners
+    cleanupRealtimeListeners();
+    
+    const subscriptions: any[] = [];
+    
+    try {
+      // Écouter les changements dans admin_users
+      const adminSubscription = supabase
+        .channel(`admin_users_changes_${authUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*', // INSERT, UPDATE, DELETE
+            schema: 'public',
+            table: 'admin_users',
+            filter: `id=eq.${authUser.id}`
+          },
+          async (payload) => {
+            try {
+              // Vider le cache et recharger
+              clearCache();
+              const fullSession = await loadUserSession(authUser);
+              if (fullSession) {
+                setSession(fullSession);
+                lastRefreshRef.current = Date.now();
+              }
+            } catch (error) {
+              console.error('Erreur lors de la mise à jour automatique (admin_users):', error);
+            }
+          }
+        )
+        .subscribe();
+      
+      subscriptions.push(adminSubscription);
+      
+      // Écouter les changements dans partners
+      const partnerSubscription = supabase
+        .channel(`partners_changes_${authUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'partners',
+            filter: `id=eq.${authUser.id}`
+          },
+          async (payload) => {
+            try {
+              clearCache();
+              const fullSession = await loadUserSession(authUser);
+              if (fullSession) {
+                setSession(fullSession);
+                lastRefreshRef.current = Date.now();
+              }
+            } catch (error) {
+              console.error('Erreur lors de la mise à jour automatique (partners):', error);
+            }
+          }
+        )
+        .subscribe();
+      
+      subscriptions.push(partnerSubscription);
+      
+      // Écouter les changements dans avis
+      const avisSubscription = supabase
+        .channel(`avis_changes_${authUser.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'avis',
+            filter: `partenaire_id=eq.${authUser.id}`
+          },
+          async (payload) => {
+            try {
+              clearCache();
+              const fullSession = await loadUserSession(authUser);
+              if (fullSession) {
+                setSession(fullSession);
+                lastRefreshRef.current = Date.now();
+              }
+            } catch (error) {
+              console.error('Erreur lors de la mise à jour automatique (avis):', error);
+            }
+          }
+        )
+        .subscribe();
+      
+      subscriptions.push(avisSubscription);
+      
+      realtimeSubscriptionsRef.current = subscriptions;
+      
+      // Démarrer le refresh automatique intelligent
+      startAutoRefresh(authUser);
+      
+    } catch (error) {
+      console.error('Erreur lors de la configuration des listeners temps réel:', error);
+    }
+  }, [cleanupRealtimeListeners]);
+
+  // Refresh automatique intelligent avec gestion d'erreurs
+  const startAutoRefresh = useCallback((authUser: User) => {
+    // Nettoyer l'interval précédent
+    if (autoRefreshIntervalRef.current) {
+      clearInterval(autoRefreshIntervalRef.current);
+    }
+    
+    const interval = setInterval(async () => {
+      try {
+        const now = Date.now();
+        const timeSinceLastRefresh = now - lastRefreshRef.current;
+        
+        // Ne rafraîchir que si plus de 5 minutes se sont écoulées
+        if (timeSinceLastRefresh >= REFRESH_INTERVAL) {
+          // Vérifier si l'utilisateur est toujours connecté
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (!currentSession?.user) {
+            clearInterval(interval);
+            return;
+          }
+          
+          clearCache();
+          const fullSession = await loadUserSession(authUser);
+          if (fullSession) {
+            setSession(fullSession);
+            lastRefreshRef.current = now;
+          }
+        }
+      } catch (error) {
+        console.error('Erreur lors du refresh automatique:', error);
+      }
+    }, REFRESH_INTERVAL);
+    
+    autoRefreshIntervalRef.current = interval;
+    
+  }, []);
+
+  // Nettoyage du cache expiré toutes les minutes
+  useEffect(() => {
+    const cleanupInterval = setInterval(cleanupExpiredCache, 60 * 1000);
+    
+    return () => {
+      clearInterval(cleanupInterval);
+    };
+  }, [cleanupExpiredCache]);
+
   return {
     session,
     loading,
@@ -369,6 +644,11 @@ export function useSession(): UseSessionReturn {
     signOut,
     refreshSession,
     clearCache,
-    forceRefresh
+    forceRefresh,
+    cacheStats: { 
+      size: globalSessionCache.size, 
+      hits: cacheStats.hits, 
+      misses: cacheStats.misses 
+    }
   };
 }

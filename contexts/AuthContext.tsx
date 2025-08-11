@@ -66,12 +66,23 @@ interface AuthContextType {
   refreshSession: () => Promise<void>;
   clearCache: () => void;
   forceRefresh: () => Promise<void>;
+  cacheStats: { size: number; hits: number; misses: number };
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { session, loading, error, signIn, signOut, refreshSession, clearCache, forceRefresh } = useSession();
+  const { 
+    session, 
+    loading, 
+    error, 
+    signIn, 
+    signOut, 
+    refreshSession, 
+    clearCache, 
+    forceRefresh,
+    cacheStats 
+  } = useSession();
 
   // Log des erreurs pour le debugging
   useEffect(() => {
@@ -79,6 +90,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Erreur d\'authentification:', error);
     }
   }, [error]);
+
+  // Log des statistiques du cache pour le monitoring
+  useEffect(() => {
+    if (cacheStats.size > 0) {
+      console.log('📊 Statistiques du cache:', {
+        taille: cacheStats.size,
+        hits: cacheStats.hits,
+        misses: cacheStats.misses,
+        ratio: cacheStats.hits / (cacheStats.hits + cacheStats.misses) * 100
+      });
+    }
+  }, [cacheStats]);
 
   const value = {
     session,
@@ -88,7 +111,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
     refreshSession,
     clearCache,
-    forceRefresh
+    forceRefresh,
+    cacheStats
   };
 
   return (
