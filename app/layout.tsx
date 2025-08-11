@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
+import { SessionDebugger } from "@/components/auth/SessionDebugger";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -32,6 +33,7 @@ export default function RootLayout({
           <AuthProvider>
             <Toaster position="top-right" />
             {children}
+            <SessionDebugger />
           </AuthProvider>
         </ThemeProvider>
       </body>
