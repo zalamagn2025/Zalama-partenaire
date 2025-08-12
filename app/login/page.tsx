@@ -27,17 +27,18 @@ export default function LoginPage() {
   const [showOTPModal, setShowOTPModal] = useState(false);
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
-  const { signIn, session, loading } = useAuth();
+  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+  const { verifyCredentials, signInWithOTP, session, loading } = useAuth();
   const router = useRouter();
 
-  // Redirection automatique si déjà connecté
+  // Redirection automatique si déjà connecté (seulement si pas en train de vérifier OTP)
   React.useEffect(() => {
-    if (!loading && session?.admin && session?.partner) {
+    if (!loading && session?.admin && session?.partner && !isVerifyingOTP) {
       console.log("User already authenticated, redirecting to dashboard");
       toast.success("Redirection vers le dashboard...");
       router.push("/dashboard");
     }
-  }, [session, loading, router]);
+  }, [session, loading, router, isVerifyingOTP]);
 
   // Afficher un loader si on vérifie la session
   if (loading) {
@@ -64,20 +65,23 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const { error, session: newSession } = await signIn(email, password);
+      // Vérifier les identifiants sans se connecter
+      const { error, user } = await verifyCredentials(email, password);
 
       if (error) {
-        console.error("Erreur de connexion:", error);
-        toast.error(error.message || "Erreur de connexion");
-      } else if (newSession) {
-        // Au lieu de rediriger directement, afficher la modal OTP
+        console.error("Erreur de vérification:", error);
+        toast.error(error.message || "Erreur de vérification");
+      } else if (user) {
+        // Les identifiants sont corrects, afficher la modal OTP
         setPendingEmail(email);
         setPendingPassword(password);
         setShowOTPModal(true);
+        setIsVerifyingOTP(true); // Empêcher la redirection automatique
+        // Pas de toast ici, la modal s'en chargera
       }
     } catch (error) {
-      console.error("Erreur de connexion:", error);
-      toast.error("Une erreur est survenue lors de la connexion");
+      console.error("Erreur de vérification:", error);
+      toast.error("Une erreur est survenue lors de la vérification");
     } finally {
       setIsLoading(false);
     }
@@ -88,7 +92,7 @@ export default function LoginPage() {
       setIsLoading(true);
 
       // Maintenant que l'OTP est vérifié, procéder à la connexion finale
-      const { error, session: newSession } = await signIn(
+      const { error, session: newSession } = await signInWithOTP(
         pendingEmail,
         pendingPassword
       );
@@ -96,6 +100,7 @@ export default function LoginPage() {
       if (error) {
         console.error("Erreur de connexion finale:", error);
         toast.error(error.message || "Erreur de connexion");
+        setIsVerifyingOTP(false); // Réactiver la redirection automatique
       } else if (newSession) {
         toast.success(
           `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
@@ -104,15 +109,22 @@ export default function LoginPage() {
         // Attendre un court délai pour s'assurer que la session est bien stockée
         setTimeout(() => {
           console.log("Redirecting to dashboard...");
+          setIsVerifyingOTP(false); // Réactiver la redirection automatique
           router.push("/dashboard");
         }, 500);
       }
     } catch (error) {
       console.error("Erreur de connexion finale:", error);
       toast.error("Une erreur est survenue lors de la connexion");
+      setIsVerifyingOTP(false); // Réactiver la redirection automatique
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleOTPModalClose = () => {
+    setShowOTPModal(false);
+    setIsVerifyingOTP(false); // Réactiver la redirection automatique
   };
 
   const createTestUsers = async () => {
@@ -219,7 +231,7 @@ export default function LoginPage() {
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Connexion...
+                    Vérification...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -236,7 +248,7 @@ export default function LoginPage() {
       {/* Modal OTP */}
       <OTPModal
         isOpen={showOTPModal}
-        onClose={() => setShowOTPModal(false)}
+        onClose={handleOTPModalClose}
         email={pendingEmail}
         onOTPVerified={handleOTPVerified}
       />

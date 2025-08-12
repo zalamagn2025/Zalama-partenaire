@@ -1,9 +1,8 @@
 "use client";
 
-import { supabase } from '@/lib/supabase';
-import { User } from '@supabase/supabase-js';
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useSession } from '@/hooks/useSession';
+import { User } from "@supabase/supabase-js";
+import React, { createContext, useContext, useEffect } from "react";
+import { useSession } from "@/hooks/useSession";
 
 // Types pour le nouveau système d'authentification
 export interface AdminUser {
@@ -42,7 +41,7 @@ export interface Partner {
   hr_email: string;
   hr_phone: string;
   agreement: boolean;
-  status: 'pending' | 'approved' | 'rejected' | 'in_review';
+  status: "pending" | "approved" | "rejected" | "in_review";
   motivation_letter_url?: string;
   motivation_letter_text?: string;
   payment_day?: number;
@@ -52,16 +51,27 @@ export interface Partner {
 }
 
 export interface AuthSession {
-  user: User;           // Utilisateur Supabase auth.users
-  admin: AdminUser;     // Profil admin_users
-  partner: Partner;     // Données du partenaire
+  user: User; // Utilisateur Supabase auth.users
+  admin: AdminUser; // Profil admin_users
+  partner: Partner; // Données du partenaire
 }
 
 interface AuthContextType {
   session: AuthSession | null;
   loading: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: any; session?: AuthSession | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: any; session?: AuthSession | null }>;
+  verifyCredentials: (
+    email: string,
+    password: string
+  ) => Promise<{ error: any; user?: any }>;
+  signInWithOTP: (
+    email: string,
+    password: string
+  ) => Promise<{ error: any; session?: AuthSession | null }>;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<void>;
   clearCache: () => void;
@@ -72,33 +82,35 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { 
-    session, 
-    loading, 
-    error, 
-    signIn, 
-    signOut, 
-    refreshSession, 
-    clearCache, 
+  const {
+    session,
+    loading,
+    error,
+    signIn,
+    verifyCredentials,
+    signInWithOTP,
+    signOut,
+    refreshSession,
+    clearCache,
     forceRefresh,
-    cacheStats 
+    cacheStats,
   } = useSession();
 
   // Log des erreurs pour le debugging
   useEffect(() => {
     if (error) {
-      console.error('Erreur d\'authentification:', error);
+      console.error("Erreur d'authentification:", error);
     }
   }, [error]);
 
   // Log des statistiques du cache pour le monitoring
   useEffect(() => {
     if (cacheStats.size > 0) {
-      console.log('📊 Statistiques du cache:', {
+      console.log("📊 Statistiques du cache:", {
         taille: cacheStats.size,
         hits: cacheStats.hits,
         misses: cacheStats.misses,
-        ratio: cacheStats.hits / (cacheStats.hits + cacheStats.misses) * 100
+        ratio: (cacheStats.hits / (cacheStats.hits + cacheStats.misses)) * 100,
       });
     }
   }, [cacheStats]);
@@ -108,24 +120,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     error,
     signIn,
+    verifyCredentials,
+    signInWithOTP,
     signOut,
     refreshSession,
     clearCache,
     forceRefresh,
-    cacheStats
+    cacheStats,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

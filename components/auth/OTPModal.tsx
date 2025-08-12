@@ -36,6 +36,9 @@ export default function OTPModal({
   const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
   const [canResend, setCanResend] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [otpInitialized, setOtpInitialized] = useState(false);
+  const [lastToastTime, setLastToastTime] = useState(0); // Pour éviter les toasts trop fréquents
+  const [isGettingOTP, setIsGettingOTP] = useState(false); // Pour éviter les appels multiples de getLatestOTP
 
   // Timer pour le compte à rebours
   useEffect(() => {
@@ -58,15 +61,91 @@ export default function OTPModal({
     };
   }, [isOpen, timeLeft]);
 
-  // Envoyer l'OTP initial
+  // Envoyer l'OTP initial seulement une fois
   useEffect(() => {
-    if (isOpen && email) {
-      sendOTP();
+    if (isOpen && email && !otpInitialized) {
+      setOtpInitialized(true);
+      // Attendre un peu avant d'envoyer pour éviter les conflits
+      setTimeout(() => {
+        sendOTP();
+      }, 500);
     }
-  }, [isOpen, email]);
+  }, [isOpen, email, otpInitialized]);
+
+  // Réinitialiser l'état quand la modal se ferme
+  useEffect(() => {
+    if (!isOpen) {
+      setOtpInitialized(false);
+      setOtp("");
+      setError(null);
+      setTimeLeft(120);
+      setCanResend(false);
+      setIsSendingOTP(false);
+      setLastToastTime(0);
+      setIsGettingOTP(false);
+    }
+  }, [isOpen]);
+
+  // Fonction pour récupérer l'OTP depuis la base de données
+  const getLatestOTP = async () => {
+    if (isGettingOTP) {
+      console.log("⚠️ getLatestOTP déjà en cours, ignoré");
+      return;
+    }
+    try {
+      setIsGettingOTP(true);
+      const response = await fetch("/api/otp/get-latest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.otp) {
+          console.log("🔐 OTP pour le débogage:", data.otp);
+          console.log("📧 Email:", email);
+          console.log("⏰ Expire à:", data.expiresAt);
+        }
+      } else if (response.status === 410) {
+        console.log("⚠️ OTP expiré, un nouveau sera généré");
+      } else {
+        console.log("❌ Erreur récupération OTP:", response.status);
+      }
+    } catch (error) {
+      console.error("Erreur récupération OTP:", error);
+    } finally {
+      setIsGettingOTP(false);
+    }
+  };
+
+  // Fonction pour afficher un toast avec intervalle
+  const showToast = (
+    message: string,
+    type: "success" | "error" = "success"
+  ) => {
+    const now = Date.now();
+    if (now - lastToastTime > 3000) {
+      // 3 secondes entre les toasts
+      setLastToastTime(now);
+      if (type === "success") {
+        toast.success(message);
+      } else {
+        toast.error(message);
+      }
+    }
+  };
 
   const sendOTP = async () => {
+    if (isSendingOTP) {
+      console.log("⚠️ Envoi OTP déjà en cours, ignoré");
+      return;
+    }
+
     try {
+      console.log("📧 Début envoi OTP...");
       setIsSendingOTP(true);
       setError(null);
 
@@ -84,16 +163,20 @@ export default function OTPModal({
         throw new Error(data.error || "Erreur lors de l'envoi du code");
       }
 
-      toast.success(
+      console.log("✅ OTP envoyé avec succès");
+      showToast(
         "Code de vérification envoyé par email" + (phone ? " et SMS" : "")
       );
       setTimeLeft(120);
       setCanResend(false);
       setOtp("");
+
+      // Récupérer et afficher l'OTP dans la console immédiatement
+      getLatestOTP();
     } catch (error: any) {
-      console.error("Erreur envoi OTP:", error);
+      console.error("❌ Erreur envoi OTP:", error);
       setError(error.message);
-      toast.error(error.message);
+      showToast(error.message, "error");
     } finally {
       setIsSendingOTP(false);
     }
@@ -123,13 +206,13 @@ export default function OTPModal({
         throw new Error(data.error || "Erreur lors de la vérification");
       }
 
-      toast.success("Code de vérification validé !");
+      showToast("Code de vérification validé !");
       onOTPVerified(email);
       onClose();
     } catch (error: any) {
       console.error("Erreur vérification OTP:", error);
       setError(error.message);
-      toast.error(error.message);
+      showToast(error.message, "error");
     } finally {
       setIsLoading(false);
     }
