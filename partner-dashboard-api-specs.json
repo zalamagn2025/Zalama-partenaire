@@ -2,7 +2,7 @@
   "project": "Dashboard Partner API Specifications",
   "version": "1.0.0",
   "description": "Spécifications complètes des APIs nécessaires pour le Dashboard Partner",
-  "baseUrl": "https://dashboard-admin-api.com/api",
+  "baseUrl": "https://admin.zalamagn.com/api",
   "authentication": {
     "type": "Bearer Token",
     "endpoints": {
