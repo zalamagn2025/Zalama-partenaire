@@ -303,11 +303,11 @@ export function useSession(): UseSessionReturn {
       clearCache();
 
       const {
-        data: { session: supabaseSession },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (supabaseSession?.user) {
-        const fullSession = await loadUserSession(supabaseSession.user);
+      if (user) {
+        const fullSession = await loadUserSession(user);
         setSession(fullSession);
         lastRefreshRef.current = Date.now();
       } else {
@@ -330,16 +330,16 @@ export function useSession(): UseSessionReturn {
         setError(null);
 
         const {
-          data: { session: supabaseSession },
-        } = await supabase.auth.getSession();
+          data: { user },
+        } = await supabase.auth.getUser();
 
-        if (supabaseSession?.user && mounted) {
-          const fullSession = await loadUserSession(supabaseSession.user);
+        if (user && mounted) {
+          const fullSession = await loadUserSession(user);
           setSession(fullSession);
           lastRefreshRef.current = Date.now();
 
           // Activer les listeners en temps réel IMMÉDIATEMENT
-          setupRealtimeListeners(supabaseSession.user);
+          setupRealtimeListeners(user);
         }
       } catch (error: any) {
         if (mounted) {
@@ -365,18 +365,22 @@ export function useSession(): UseSessionReturn {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, supabaseSession) => {
+    } = supabase.auth.onAuthStateChange(async (event) => {
       if (!mounted) return;
 
-      if (event === "SIGNED_IN" && supabaseSession?.user) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (event === "SIGNED_IN" && user) {
         try {
-          const fullSession = await loadUserSession(supabaseSession.user);
+          const fullSession = await loadUserSession(user);
           setSession(fullSession);
           setError(null);
           lastRefreshRef.current = Date.now();
 
           // Activer les listeners en temps réel APRÈS CONNEXION
-          setupRealtimeListeners(supabaseSession.user);
+          setupRealtimeListeners(user);
         } catch (error: any) {
           console.error(
             "Erreur lors de la création de session après connexion:",
@@ -398,9 +402,9 @@ export function useSession(): UseSessionReturn {
           clearInterval(autoRefreshIntervalRef.current);
           autoRefreshIntervalRef.current = null;
         }
-      } else if (event === "TOKEN_REFRESHED" && supabaseSession?.user) {
+      } else if (event === "TOKEN_REFRESHED" && user) {
         try {
-          const fullSession = await loadUserSession(supabaseSession.user);
+          const fullSession = await loadUserSession(user);
           setSession(fullSession);
           setError(null);
           lastRefreshRef.current = Date.now();
@@ -412,9 +416,9 @@ export function useSession(): UseSessionReturn {
           setError(error.message);
           setSession(null);
         }
-      } else if (event === "USER_UPDATED" && supabaseSession?.user) {
+      } else if (event === "USER_UPDATED" && user) {
         try {
-          const fullSession = await loadUserSession(supabaseSession.user);
+          const fullSession = await loadUserSession(user);
           setSession(fullSession);
           setError(null);
           lastRefreshRef.current = Date.now();
@@ -544,11 +548,11 @@ export function useSession(): UseSessionReturn {
       clearCache(); // Vider le cache
 
       const {
-        data: { session: supabaseSession },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (supabaseSession?.user) {
-        const fullSession = await loadUserSession(supabaseSession.user);
+      if (user) {
+        const fullSession = await loadUserSession(user);
         setSession(fullSession);
         lastRefreshRef.current = Date.now();
         console.log("Session forcée mise à jour depuis la BD");
@@ -706,9 +710,9 @@ export function useSession(): UseSessionReturn {
         if (timeSinceLastRefresh >= REFRESH_INTERVAL) {
           // Vérifier si l'utilisateur est toujours connecté
           const {
-            data: { session: currentSession },
-          } = await supabase.auth.getSession();
-          if (!currentSession?.user) {
+            data: { user: currentUser },
+          } = await supabase.auth.getUser();
+          if (!currentUser) {
             clearInterval(interval);
             return;
           }
