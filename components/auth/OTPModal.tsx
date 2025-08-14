@@ -8,6 +8,7 @@ import {
   Clock,
   AlertCircle,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,7 @@ export default function OTPModal({
   phone,
   onOTPVerified,
 }: OTPModalProps) {
-  const [otp, setOtp] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSendingOTP, setIsSendingOTP] = useState(false);
   const [timeLeft, setTimeLeft] = useState(120); // 2 minutes
@@ -49,8 +50,8 @@ export default function OTPModal({
   >("idle");
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const initialOTPSentRef = useRef(false); // Pour éviter le double envoi
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const initialOTPSentRef = useRef(false);
 
   // Timer pour le compte à rebours
   useEffect(() => {
@@ -77,7 +78,7 @@ export default function OTPModal({
   // Envoyer l'OTP initial seulement une fois quand la modal s'ouvre
   useEffect(() => {
     if (isOpen && email && !otpSent && !initialOTPSentRef.current) {
-      initialOTPSentRef.current = true; // Marquer comme envoyé
+      initialOTPSentRef.current = true;
       sendOTP();
     }
   }, [isOpen, email]);
@@ -85,14 +86,14 @@ export default function OTPModal({
   // Réinitialiser l'état quand la modal se ferme
   useEffect(() => {
     if (!isOpen) {
-      setOtp("");
+      setOtp(["", "", "", "", "", ""]);
       setError(null);
       setTimeLeft(120);
       setCanResend(false);
       setIsSendingOTP(false);
       setOtpSent(false);
       setVerificationStatus("idle");
-      initialOTPSentRef.current = false; // Réinitialiser la référence
+      initialOTPSentRef.current = false;
 
       if (timerRef.current) {
         clearInterval(timerRef.current);
@@ -101,11 +102,11 @@ export default function OTPModal({
     }
   }, [isOpen]);
 
-  // Focus sur l'input quand la modal s'ouvre
+  // Focus sur le premier input quand la modal s'ouvre
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputRefs.current[0]) {
       setTimeout(() => {
-        inputRef.current?.focus();
+        inputRefs.current[0]?.focus();
       }, 100);
     }
   }, [isOpen]);
@@ -143,7 +144,7 @@ export default function OTPModal({
       setOtpSent(true);
       setTimeLeft(120);
       setCanResend(false);
-      setOtp("");
+      setOtp(["", "", "", "", "", ""]);
 
       // Récupérer et afficher l'OTP dans la console pour le débogage
       getLatestOTP();
@@ -151,7 +152,6 @@ export default function OTPModal({
       console.error("❌ Erreur envoi OTP:", error);
       setError(error.message);
       toast.error(error.message);
-      // En cas d'erreur, réinitialiser la référence pour permettre un nouvel essai
       initialOTPSentRef.current = false;
     } finally {
       setIsSendingOTP(false);
@@ -183,7 +183,8 @@ export default function OTPModal({
   };
 
   const verifyOTP = async () => {
-    if (!otp || otp.length !== 6) {
+    const otpString = otp.join("");
+    if (otpString.length !== 6) {
       setError("Veuillez entrer un code à 6 chiffres");
       return;
     }
@@ -198,7 +199,7 @@ export default function OTPModal({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email, otp: otpString }),
       });
 
       const data = await response.json();
@@ -231,18 +232,46 @@ export default function OTPModal({
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleInputChange = (value: string) => {
+  const handleInputChange = (index: number, value: string) => {
     // Ne permettre que les chiffres
     const numericValue = value.replace(/\D/g, "");
-    if (numericValue.length <= 6) {
-      setOtp(numericValue);
-      setError(null); // Effacer l'erreur quand l'utilisateur tape
+
+    if (numericValue.length <= 1) {
+      const newOtp = [...otp];
+      newOtp[index] = numericValue;
+      setOtp(newOtp);
+      setError(null);
+
+      // Passer au champ suivant si un chiffre est entré
+      if (numericValue && index < 5) {
+        inputRefs.current[index + 1]?.focus();
+      }
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && otp.length === 6 && !isLoading) {
+  const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+    // Retour en arrière
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus();
+    }
+
+    // Entrée pour vérifier
+    if (e.key === "Enter" && otp.join("").length === 6 && !isLoading) {
       verifyOTP();
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text/plain").replace(/\D/g, "");
+
+    if (pastedData.length === 6) {
+      const newOtp = pastedData.split("").slice(0, 6);
+      setOtp(newOtp);
+      setError(null);
+
+      // Focus sur le dernier champ
+      inputRefs.current[5]?.focus();
     }
   };
 
@@ -252,26 +281,28 @@ export default function OTPModal({
     }
   };
 
+  const isOtpComplete = otp.join("").length === 6;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
-            <Mail className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+        <DialogHeader className="text-center pb-6">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
+            <Mail className="h-8 w-8 text-white" />
           </div>
-          <DialogTitle className="text-xl font-semibold">
+          <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">
             Vérification en deux étapes
           </DialogTitle>
-          <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+          <DialogDescription className="text-base text-gray-600 dark:text-gray-400 mt-2">
             Nous avons envoyé un code de vérification à{" "}
-            <span className="font-medium text-gray-900 dark:text-gray-100">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {email}
             </span>
             {phone && (
               <>
                 {" "}
                 et{" "}
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="font-semibold text-gray-900 dark:text-white">
                   {phone}
                 </span>
               </>
@@ -299,22 +330,42 @@ export default function OTPModal({
             </Alert>
           )}
 
-          <div className="space-y-3">
-            <Label htmlFor="otp" className="text-sm font-medium">
+          <div className="space-y-4">
+            <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Code de vérification
             </Label>
-            <Input
-              ref={inputRef}
-              id="otp"
-              type="text"
-              placeholder="000000"
-              value={otp}
-              onChange={(e) => handleInputChange(e.target.value)}
-              onKeyPress={handleKeyPress}
-              maxLength={6}
-              className="text-center text-2xl font-mono tracking-widest h-12 border-2 focus:border-blue-500 focus:ring-blue-500"
-              disabled={isLoading || verificationStatus === "success"}
-            />
+
+            {/* Champs OTP */}
+            <div className="flex justify-center gap-3">
+              {otp.map((digit, index) => (
+                <div key={index} className="relative">
+                  <Input
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleInputChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(index, e)}
+                    onPaste={handlePaste}
+                    className={`w-12 h-12 text-center text-xl font-bold border-2 rounded-lg transition-all duration-200 ${
+                      digit
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                        : "border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    } ${
+                      verificationStatus === "success"
+                        ? "border-green-500 bg-green-50 dark:bg-green-900/20"
+                        : ""
+                    }`}
+                    disabled={isLoading || verificationStatus === "success"}
+                  />
+                  {index < 5 && (
+                    <div className="absolute -right-2 top-1/2 transform -translate-y-1/2 w-1 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
+                  )}
+                </div>
+              ))}
+            </div>
+
             <p className="text-xs text-gray-500 text-center">
               Entrez le code à 6 chiffres reçu
             </p>
@@ -322,14 +373,14 @@ export default function OTPModal({
 
           <div className="space-y-4">
             {otpSent && (
-              <div className="text-center space-y-2">
+              <div className="text-center space-y-3">
                 <div className="flex items-center justify-center gap-2 text-sm">
                   <Clock className="h-4 w-4 text-gray-500" />
                   <span className="text-gray-600 dark:text-gray-400">
                     Code valide pendant :{" "}
                   </span>
                   <span
-                    className={`font-mono font-medium ${
+                    className={`font-mono font-bold text-lg ${
                       timeLeft < 30 ? "text-red-500" : "text-blue-500"
                     }`}
                   >
@@ -368,16 +419,17 @@ export default function OTPModal({
                 className="flex-1"
                 disabled={isLoading || verificationStatus === "success"}
               >
+                <ArrowLeft className="h-4 w-4 mr-2" />
                 Annuler
               </Button>
               <Button
                 onClick={verifyOTP}
                 disabled={
-                  otp.length !== 6 ||
+                  !isOtpComplete ||
                   isLoading ||
                   verificationStatus === "success"
                 }
-                className="flex-1"
+                className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
               >
                 {isLoading ? (
                   <>
