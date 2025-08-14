@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Toaster } from "sonner";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${dmSans.variable} antialiased font-sans`}>
+      <body className={`${inter.variable} antialiased font-sans`}>
         <ThemeProvider>
           <AuthProvider>
             <Toaster position="top-right" />
