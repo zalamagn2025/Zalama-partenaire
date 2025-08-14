@@ -27,6 +27,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Vérifier s'il existe déjà un OTP valide récent (moins de 30 secondes)
+    const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+    const { data: existingOTP } = await supabase
+      .from("otp_sessions")
+      .select("*")
+      .eq("email", email)
+      .gt("created_at", thirtySecondsAgo.toISOString())
+      .eq("used", false)
+      .single();
+
+    if (existingOTP) {
+      console.log("⚠️ OTP déjà envoyé récemment pour:", email);
+      return NextResponse.json({
+        success: true,
+        message: "Code de vérification déjà envoyé récemment",
+        warning: "Un code a déjà été envoyé dans les 30 dernières secondes",
+      });
+    }
+
     // Générer un OTP à 6 chiffres
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
@@ -101,7 +120,7 @@ export async function POST(request: NextRequest) {
       expiresAt: expiresAt.toISOString(),
     });
   } catch (error) {
-    console.error("Erreur API OTP:", error);
+    console.error("Erreur lors de l'envoi de l'OTP:", error);
     return NextResponse.json(
       { error: "Erreur interne du serveur" },
       { status: 500 }

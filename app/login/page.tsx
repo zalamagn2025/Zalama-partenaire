@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
+import { Eye, EyeOff, LogIn, Shield, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,17 +28,24 @@ export default function LoginPage() {
   const [pendingEmail, setPendingEmail] = useState("");
   const [pendingPassword, setPendingPassword] = useState("");
   const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const { verifyCredentials, signInWithOTP, session, loading } = useAuth();
   const router = useRouter();
 
   // Redirection automatique si déjà connecté (seulement si pas en train de vérifier OTP)
   React.useEffect(() => {
-    if (!loading && session?.admin && session?.partner && !isVerifyingOTP) {
+    if (
+      !loading &&
+      session?.admin &&
+      session?.partner &&
+      !isVerifyingOTP &&
+      !isRedirecting
+    ) {
       console.log("User already authenticated, redirecting to dashboard");
       toast.success("Redirection vers le dashboard...");
       router.push("/dashboard");
     }
-  }, [session, loading, router, isVerifyingOTP]);
+  }, [session, loading, router, isVerifyingOTP, isRedirecting]);
 
   // Afficher un loader si on vérifie la session
   if (loading) {
@@ -48,6 +55,20 @@ export default function LoginPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
             Vérification de la session...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Afficher un loader si on redirige après vérification OTP
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Connexion réussie ! Redirection vers le dashboard...
           </p>
         </div>
       </div>
@@ -77,7 +98,9 @@ export default function LoginPage() {
         setPendingPassword(password);
         setShowOTPModal(true);
         setIsVerifyingOTP(true); // Empêcher la redirection automatique
-        // Pas de toast ici, la modal s'en chargera
+        toast.success(
+          "Identifiants vérifiés. Veuillez entrer le code de vérification."
+        );
       }
     } catch (error) {
       console.error("Erreur de vérification:", error);
@@ -90,6 +113,7 @@ export default function LoginPage() {
   const handleOTPVerified = async (verifiedEmail: string) => {
     try {
       setIsLoading(true);
+      setIsRedirecting(true);
 
       // Maintenant que l'OTP est vérifié, procéder à la connexion finale
       const { error, session: newSession } = await signInWithOTP(
@@ -100,7 +124,8 @@ export default function LoginPage() {
       if (error) {
         console.error("Erreur de connexion finale:", error);
         toast.error(error.message || "Erreur de connexion");
-        setIsVerifyingOTP(false); // Réactiver la redirection automatique
+        setIsVerifyingOTP(false);
+        setIsRedirecting(false);
       } else if (newSession) {
         toast.success(
           `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
@@ -109,14 +134,15 @@ export default function LoginPage() {
         // Attendre un court délai pour s'assurer que la session est bien stockée
         setTimeout(() => {
           console.log("Redirecting to dashboard...");
-          setIsVerifyingOTP(false); // Réactiver la redirection automatique
+          setIsVerifyingOTP(false);
           router.push("/dashboard");
-        }, 500);
+        }, 1000);
       }
     } catch (error) {
       console.error("Erreur de connexion finale:", error);
       toast.error("Une erreur est survenue lors de la connexion");
-      setIsVerifyingOTP(false); // Réactiver la redirection automatique
+      setIsVerifyingOTP(false);
+      setIsRedirecting(false);
     } finally {
       setIsLoading(false);
     }
@@ -178,7 +204,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={isLoading}
+                  disabled={isLoading || isVerifyingOTP}
                 />
               </div>
 
@@ -192,7 +218,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    disabled={isLoading}
+                    disabled={isLoading || isVerifyingOTP}
                   />
                   <Button
                     type="button"
@@ -200,7 +226,7 @@ export default function LoginPage() {
                     size="sm"
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading}
+                    disabled={isLoading || isVerifyingOTP}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -227,10 +253,14 @@ export default function LoginPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4 mt-4">
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={isLoading || isVerifyingOTP}
+              >
                 {isLoading ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     Vérification...
                   </div>
                 ) : (
