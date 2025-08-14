@@ -244,8 +244,8 @@ export default function RemboursementsPage() {
       const results = await Promise.allSettled(
         remboursementsEnAttente.map(async (remboursement) => {
           const response = await fetch("/api/remboursements/djomy-payment", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               remboursementId: remboursement.id,
               paymentMethod: "OM", // Par défaut Orange Money
@@ -473,24 +473,24 @@ export default function RemboursementsPage() {
                 </>
               )}
             </Button>
-            <Button
-              onClick={() => handlePayerTous()}
-              disabled={paying || totalAttente === 0}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
-            >
-              {paying ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2 animate-spin" />
-                  Traitement...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Payer tous les remboursements
-                </>
-              )}
-            </Button>
+          <Button
+            onClick={() => handlePayerTous()}
+            disabled={paying || totalAttente === 0}
+            size="sm"
+            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
+          >
+            {paying ? (
+              <>
+                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                Traitement...
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-4 h-4 mr-2" />
+                Payer tous les remboursements
+              </>
+            )}
+          </Button>
           </div>
         </div>
       </div>

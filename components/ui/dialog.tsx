@@ -13,7 +13,12 @@ export const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={clsx(
-      "fixed inset-0 z-50 bg-black/40 backdrop-blur-sm transition-all",
+      // Overlay vitreux (glassmorphism) uniquement à l’extérieur du contenu
+      "fixed inset-0 z-50 transition-all",
+      // Couche translucide et floutée, avec saturation accrue
+      "bg-black/30 dark:bg-black/50 backdrop-blur-xl backdrop-saturate-150",
+      // Améliorer le rendu si le navigateur supporte backdrop-filter
+      "supports-[backdrop-filter]:bg-white/10 dark:supports-[backdrop-filter]:bg-white/5",
       className
     )}
     {...props}
@@ -51,8 +56,17 @@ export const DialogContent = React.forwardRef<
 ));
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-export const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={clsx("flex flex-col space-y-1.5 text-center sm:text-left mb-4 text-gray-900 dark:text-gray-100", className)} {...props} />
+export const DialogHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={clsx(
+      "flex flex-col space-y-1.5 text-center sm:text-left mb-4 text-gray-900 dark:text-gray-100",
+      className
+    )}
+    {...props}
+  />
 );
 export const DialogTitle = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Title>,
@@ -60,7 +74,10 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={clsx("text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-gray-100", className)}
+    className={clsx(
+      "text-lg font-semibold leading-none tracking-tight text-gray-900 dark:text-gray-100",
+      className
+    )}
     {...props}
   />
 ));
@@ -78,6 +95,15 @@ export const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
-export const DialogFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={clsx("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6 gap-2", className)} {...props} />
-); 
+export const DialogFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={clsx(
+      "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6 gap-2",
+      className
+    )}
+    {...props}
+  />
+);

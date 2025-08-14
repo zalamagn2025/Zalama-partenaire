@@ -285,7 +285,7 @@ export default function OTPModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl rounded-2xl">
         <DialogHeader className="text-center pb-6">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
             <Mail className="h-8 w-8 text-white" />
@@ -340,7 +340,9 @@ export default function OTPModal({
               {otp.map((digit, index) => (
                 <div key={index} className="relative">
                   <Input
-                    ref={(el) => (inputRefs.current[index] = el)}
+                    ref={(el: HTMLInputElement | null) => {
+                      inputRefs.current[index] = el;
+                    }}
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
@@ -351,7 +353,7 @@ export default function OTPModal({
                     className={`w-12 h-12 text-center text-xl font-bold border-2 rounded-lg transition-all duration-200 ${
                       digit
                         ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
-                        : "border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                        : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                     } ${
                       verificationStatus === "success"
                         ? "border-green-500 bg-green-50 dark:bg-green-900/20"
