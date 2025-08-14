@@ -223,31 +223,61 @@ export default function RemboursementsPage() {
     }
   }, [loading, session?.partner]);
 
-  // Action "Payer tous" via l'API simplifiée
+  // Action "Payer tous" via l'API Djomy
   const handlePayerTous = async () => {
     if (!session?.partner?.id) return;
 
     setPaying(true);
     try {
-      const response = await fetch(
-        "https://admin.zalamasas.com/api/remboursements/simple-paiement-lot",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ partenaire_id: session.partner.id }),
-        }
+      // Récupérer tous les remboursements en attente
+      const remboursementsEnAttente = remboursements.filter(
+        (r) => r.statut === "EN_ATTENTE"
       );
 
-      const data = await response.json();
+      if (remboursementsEnAttente.length === 0) {
+        alert("Aucun remboursement en attente à payer");
+        setPaying(false);
+        return;
+      }
 
-      if (data.success) {
-        console.log("Paiement en lot initié:", data);
-        // Rediriger vers la page de paiement ou afficher un message de succès
-        window.open(data.payment_url, "_blank");
-        await fetchRemboursements();
-      } else {
-        console.error("Erreur lors du paiement en lot:", data.error);
-        alert(`Erreur: ${data.error}`);
+      // Utiliser notre API route Djomy pour chaque remboursement
+      const results = await Promise.allSettled(
+        remboursementsEnAttente.map(async (remboursement) => {
+          const response = await fetch("/api/remboursements/djomy-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              remboursementId: remboursement.id,
+              paymentMethod: "OM", // Par défaut Orange Money
+            }),
+          });
+
+          return response.json();
+        })
+      );
+
+      // Analyser les résultats
+      const successful = results.filter(
+        (result) => result.status === "fulfilled" && result.value.success
+      );
+      const failed = results.filter(
+        (result) => result.status === "rejected" || !result.value?.success
+      );
+
+      console.log(
+        `Paiements réussis: ${successful.length}, Échecs: ${failed.length}`
+      );
+
+      if (successful.length > 0) {
+        alert(
+          `Paiements initiés avec succès pour ${successful.length} remboursement(s). Vérifiez les statuts.`
+        );
+        await fetchRemboursements(); // Rafraîchir la liste
+      }
+
+      if (failed.length > 0) {
+        console.error("Échecs de paiement:", failed);
+        alert(`Erreur lors du paiement de ${failed.length} remboursement(s)`);
       }
     } catch (error) {
       console.error("Erreur lors du paiement en lot:", error);
@@ -267,6 +297,63 @@ export default function RemboursementsPage() {
   const handleCloseModal = () => {
     setShowDetailModal(false);
     setSelectedRemboursement(null);
+  };
+
+  // Handler pour payer un remboursement individuel via Djomy
+  const handlePayerIndividuel = async (remboursement: Remboursement) => {
+    if (remboursement.statut !== "EN_ATTENTE") {
+      alert(
+        "Ce remboursement ne peut pas être payé (statut: " +
+          remboursement.statut +
+          ")"
+      );
+      return;
+    }
+
+    setPaying(true);
+    try {
+      const response = await fetch("/api/remboursements/djomy-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          remboursementId: remboursement.id,
+          paymentMethod: "OM", // Par défaut Orange Money
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("Paiement initié:", data);
+        alert(
+          `Paiement initié pour ${remboursement.employee.nom} ${remboursement.employee.prenom}. Transaction ID: ${data.data?.transactionId}`
+        );
+        await fetchRemboursements(); // Rafraîchir la liste
+      } else {
+        console.error("Erreur lors du paiement:", data.error);
+        alert(`Erreur: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Erreur lors du paiement individuel:", error);
+      alert("Erreur lors du paiement");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Handler pour rafraîchir les statuts des paiements
+  const handleRefreshStatus = async () => {
+    setIsLoading(true);
+    try {
+      // Rafraîchir la liste des remboursements
+      await fetchRemboursements();
+      alert("Statuts mis à jour");
+    } catch (error) {
+      console.error("Erreur lors du rafraîchissement:", error);
+      alert("Erreur lors du rafraîchissement");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Données pour les graphiques
@@ -366,24 +453,45 @@ export default function RemboursementsPage() {
               Suivi et traitement des remboursements d'avances salariales
             </p>
           </div>
-          <Button
-            onClick={() => handlePayerTous()}
-            disabled={paying || totalAttente === 0}
-            size="sm"
-            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
-          >
-            {paying ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Traitement...
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Payer tous les remboursements
-              </>
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => handleRefreshStatus()}
+              disabled={isLoading}
+              size="sm"
+              variant="outline"
+              className="text-gray-600 hover:text-gray-800 border-gray-300 hover:border-gray-400"
+            >
+              {isLoading ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Mise à jour...
+                </>
+              ) : (
+                <>
+                  <History className="w-4 h-4 mr-2" />
+                  Rafraîchir
+                </>
+              )}
+            </Button>
+            <Button
+              onClick={() => handlePayerTous()}
+              disabled={paying || totalAttente === 0}
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
+            >
+              {paying ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Payer tous les remboursements
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -576,6 +684,18 @@ export default function RemboursementsPage() {
                         <Eye className="w-3 h-3" />
                         Voir
                       </Button>
+                      {r.statut === "EN_ATTENTE" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => handlePayerIndividuel(r)}
+                          disabled={paying}
+                          className="text-xs px-2 py-1 h-7 flex items-center gap-1 bg-green-600 hover:bg-green-700"
+                        >
+                          <CreditCard className="w-3 h-3" />
+                          Payer
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
