@@ -202,8 +202,8 @@ export default function DemandesAdhesionPage() {
       </div>
 
       {/* Filtres et recherche */}
-      <Card>
-        <CardContent className="p-6">
+      <Card className="dark:bg-[var(--zalama-card)]">
+        <CardContent className="p-6 ">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Recherche */}
             <div className="relative">
@@ -264,7 +264,7 @@ export default function DemandesAdhesionPage() {
           {filteredEmployees.map((employee) => (
             <Card
               key={employee.id}
-              className="hover:shadow-lg transition-shadow"
+              className="hover:shadow-lg transition-shadow dark:bg-[var(--zalama-card)]"
             >
               <CardHeader className="pb-4">
                 <div className="flex items-start justify-between">
