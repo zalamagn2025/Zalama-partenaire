@@ -2,13 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { toast } from "sonner";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Lock, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 // Fonction utilitaire pour calculer la force du mot de passe
 function getPasswordStrength(password: string) {
@@ -19,12 +25,13 @@ function getPasswordStrength(password: string) {
   if (/[^A-Za-z0-9]/.test(password)) score++;
   if (password.length >= 12) score++;
   if (score <= 1) return { label: "Faible", color: "bg-red-500", value: 1 };
-  if (score === 2 || score === 3) return { label: "Moyen", color: "bg-yellow-500", value: 2 };
+  if (score === 2 || score === 3)
+    return { label: "Moyen", color: "bg-yellow-500", value: 2 };
   return { label: "Élevé", color: "bg-green-600", value: 3 };
 }
 
 export default function FirstLoginChangePasswordPage() {
-  const { session, signOut } = useAuth();
+  const { session, logout } = useEdgeAuthContext();
   const router = useRouter();
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -58,19 +65,23 @@ export default function FirstLoginChangePasswordPage() {
     }
     setIsSubmitting(true);
     try {
-      // 1. Mettre à jour le mot de passe dans Supabase Auth
-      const { error: authError } = await supabase.auth.updateUser({ password: newPassword });
-      if (authError) throw authError;
-      // 2. Mettre à jour require_password_change à false dans admin_users
-      const { error: dbError } = await supabase
-        .from("admin_users")
-        .update({ require_password_change: false, updated_at: new Date().toISOString() })
-        .eq("id", session.admin.id);
-      if (dbError) throw dbError;
-      toast.success("Mot de passe modifié avec succès. Veuillez vous reconnecter.");
-      await signOut();
-      router.replace("/login");
-      return;
+      // Utiliser le service Edge Function pour changer le mot de passe
+      const response = await edgeFunctionService.changeAdminPassword(
+        session.access_token,
+        { new_password: newPassword }
+      );
+
+      if (response.success) {
+        toast.success(
+          "Mot de passe modifié avec succès. Veuillez vous reconnecter."
+        );
+        await logout();
+        router.replace("/login");
+      } else {
+        throw new Error(
+          response.message || "Erreur lors du changement de mot de passe"
+        );
+      }
     } catch (error: any) {
       toast.error(error.message || "Erreur lors du changement de mot de passe");
     } finally {
@@ -89,54 +100,84 @@ export default function FirstLoginChangePasswordPage() {
         <form onSubmit={handleChangePassword}>
           <CardContent className="space-y-4 mb-4">
             <p className="text-gray-700 dark:text-gray-300 text-sm mb-2">
-              Pour des raisons de sécurité, vous devez définir un nouveau mot de passe avant d'accéder au dashboard.
+              Pour des raisons de sécurité, vous devez définir un nouveau mot de
+              passe avant d'accéder au dashboard.
             </p>
             <div>
-              <label className="block text-sm font-medium mb-1">Nouveau mot de passe</label>
+              <label className="block text-sm font-medium mb-1">
+                Nouveau mot de passe
+              </label>
               <div className="relative">
                 <Input
                   type={showNewPassword ? "text" : "password"}
                   value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
+                  onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Nouveau mot de passe"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   className="absolute right-2 top-2 text-gray-400"
-                  onClick={() => setShowNewPassword(v => !v)}
+                  onClick={() => setShowNewPassword((v) => !v)}
                   tabIndex={-1}
                 >
-                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showNewPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               {/* Indicateur de force du mot de passe */}
               {newPassword && (
                 <div className="mt-2 flex items-center gap-2">
                   <div className="w-28 h-2 rounded bg-gray-200 overflow-hidden">
-                    <div className={`h-2 rounded ${strength.color}`} style={{ width: strength.value === 1 ? '33%' : strength.value === 2 ? '66%' : '100%' }} />
+                    <div
+                      className={`h-2 rounded ${strength.color}`}
+                      style={{
+                        width:
+                          strength.value === 1
+                            ? "33%"
+                            : strength.value === 2
+                            ? "66%"
+                            : "100%",
+                      }}
+                    />
                   </div>
-                  <span className={`text-xs font-semibold ${strength.color.replace('bg-', 'text-')}`}>Sécurité: {strength.label}</span>
+                  <span
+                    className={`text-xs font-semibold ${strength.color.replace(
+                      "bg-",
+                      "text-"
+                    )}`}
+                  >
+                    Sécurité: {strength.label}
+                  </span>
                 </div>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Confirmer le mot de passe</label>
+              <label className="block text-sm font-medium mb-1">
+                Confirmer le mot de passe
+              </label>
               <div className="relative">
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
                   value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirmer le mot de passe"
                   disabled={isSubmitting}
                 />
                 <button
                   type="button"
                   className="absolute right-2 top-2 text-gray-400"
-                  onClick={() => setShowConfirmPassword(v => !v)}
+                  onClick={() => setShowConfirmPassword((v) => !v)}
                   tabIndex={-1}
                 >
-                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
             </div>
@@ -145,7 +186,13 @@ export default function FirstLoginChangePasswordPage() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? "Changement..." : "Changer le mot de passe"}
             </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={signOut} disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="ghost"
+              className="w-full"
+              onClick={logout}
+              disabled={isSubmitting}
+            >
               Se déconnecter
             </Button>
           </CardFooter>
@@ -153,4 +200,4 @@ export default function FirstLoginChangePasswordPage() {
       </Card>
     </div>
   );
-} 
+}

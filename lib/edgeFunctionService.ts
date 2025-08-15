@@ -226,6 +226,20 @@ class EdgeFunctionService {
       },
     });
   }
+
+  // 🔐 Changement de mot de passe admin
+  async changeAdminPassword(
+    accessToken: string,
+    request: { new_password: string }
+  ): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/change-admin-password", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(request),
+    });
+  }
 }
 
 // Instance singleton
