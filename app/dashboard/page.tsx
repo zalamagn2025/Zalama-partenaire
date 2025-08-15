@@ -501,9 +501,9 @@ export default function EntrepriseDashboardPage() {
         <div className="flex flex-col items-end">
           <span className="text-blue-400 text-sm">
             Partenaire depuis{" "}
-            {session?.partner?.created_at
-              ? new Date(session.partner.created_at).getFullYear()
-              : ""}
+            {(session?.partner as any)?.created_at
+              ? new Date((session.partner as any).created_at).getFullYear()
+              : "2024"}
           </span>
           <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">
             Compte actif
