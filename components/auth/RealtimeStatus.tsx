@@ -1,32 +1,42 @@
 "use client";
 
-import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function RealtimeStatus() {
-  const { session } = useAuth();
+  const { session } = useEdgeAuthContext();
 
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === "production") {
     return null;
   }
 
   return (
-    <Card className="fixed bottom-32 right-4 w-80 bg-green-50 border-green-200">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-green-700">
-          🚀 Realtime Actif
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle className="text-sm text-gray-500">
+          Debug - Status Temps Réel
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="text-xs text-green-600 space-y-1">
-          <div>✅ Écoute admin_users</div>
-          <div>✅ Écoute partners</div>
-          <div>⏰ Refresh auto: 5min</div>
+      <CardContent>
+        <div className="text-xs space-y-1">
+          <p>
+            <strong>Session:</strong> {session ? "Connecté" : "Non connecté"}
+          </p>
           {session && (
-            <div className="mt-2 pt-2 border-t border-green-200">
-              <div>🔄 Cache: {session.partner.company_name}</div>
-              <div>📊 Dernière MAJ: {new Date().toLocaleTimeString()}</div>
-            </div>
+            <>
+              <p>
+                <strong>User ID:</strong> {session.user.id}
+              </p>
+              <p>
+                <strong>Email:</strong> {session.user.email}
+              </p>
+              <p>
+                <strong>Partner:</strong> {session.partner.company_name}
+              </p>
+              <p>
+                <strong>Role:</strong> {session.admin.role}
+              </p>
+            </>
           )}
         </div>
       </CardContent>

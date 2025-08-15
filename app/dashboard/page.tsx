@@ -2,7 +2,7 @@
 
 import StatCard from "@/components/dashboard/StatCard";
 import DocumentsRapports from "@/components/dashboard/DocumentsRapports";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { PartnerDataService } from "@/lib/services";
 import type { Alert, Employee, SalaryAdvanceRequest } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
@@ -47,7 +47,7 @@ const formatDate = (dateString: string) => {
 };
 
 export default function EntrepriseDashboardPage() {
-  const { session, loading } = useAuth();
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
   // États pour les données dynamiques

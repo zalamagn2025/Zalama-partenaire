@@ -1,26 +1,36 @@
 "use client";
 
-import StatCard from '@/components/dashboard/StatCard';
-import { useAuth } from '@/contexts/AuthContext';
-import type { Employee } from '@/lib/supabase';
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import StatCard from "@/components/dashboard/StatCard";
+import type { Employee } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import {
+  Users,
+  Calendar,
+  TrendingUp,
+  AlertTriangle,
+  RefreshCw,
+  FileDown,
+  Search,
+  Filter,
+  ChevronDown,
+  Eye,
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Type étendu pour inclure le salaire restant
 type EmployeeWithRemainingSalary = Employee & {
   salaire_restant?: number;
 };
 
-import { supabase } from '@/lib/supabase';
-import { Building2, Calendar, ChevronDown, Clock, Download, Eye, Filter, Search, Users } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-
 // Fonction pour formatter les dates
 const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
+  return new Date(dateString).toLocaleDateString("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
 };
 
@@ -30,18 +40,23 @@ const formatSalary = (salary: number) => {
 };
 
 export default function EmployesPage() {
-  const { session, loading } = useAuth();
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
-  
+
   // États pour la gestion des employés
   const [employees, setEmployees] = useState<EmployeeWithRemainingSalary[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWithRemainingSalary[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<
+    EmployeeWithRemainingSalary[]
+  >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
-  const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
+  const [selectedContractType, setSelectedContractType] = useState<
+    string | null
+  >(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithRemainingSalary | null>(null);
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<EmployeeWithRemainingSalary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
@@ -55,18 +70,18 @@ export default function EmployesPage() {
 
   const loadEmployees = async () => {
     if (!session?.partner) return;
-    
+
     setIsLoading(true);
     try {
       const { data: employeesData, error } = await supabase
-        .from('employees')
-        .select('*')
-        .eq('partner_id', session.partner.id)
-        .order('created_at', { ascending: false });
+        .from("employees")
+        .select("*")
+        .eq("partner_id", session.partner.id)
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Erreur lors du chargement des employés:', error);
-        toast.error('Erreur lors du chargement des employés');
+        console.error("Erreur lors du chargement des employés:", error);
+        toast.error("Erreur lors du chargement des employés");
         return;
       }
 
@@ -76,35 +91,41 @@ export default function EmployesPage() {
           try {
             // Récupérer tous les remboursements payés de cet employé
             const { data: remboursements, error: rembError } = await supabase
-              .from('remboursements')
-              .select('montant_total_remboursement')
-              .eq('employe_id', employee.id)
-              .eq('statut', 'PAYE');
+              .from("remboursements")
+              .select("montant_total_remboursement")
+              .eq("employe_id", employee.id)
+              .eq("statut", "PAYE");
 
             if (rembError) {
-              console.error('Erreur récupération remboursements:', rembError);
+              console.error("Erreur récupération remboursements:", rembError);
               return {
                 ...employee,
-                salaire_restant: employee.salaire_net || 0
+                salaire_restant: employee.salaire_net || 0,
               };
             }
 
             // Calculer le salaire restant
-            const totalRemboursements = (remboursements || []).reduce((sum, remb) => {
-              return sum + Number(remb.montant_total_remboursement || 0);
-            }, 0);
+            const totalRemboursements = (remboursements || []).reduce(
+              (sum, remb) => {
+                return sum + Number(remb.montant_total_remboursement || 0);
+              },
+              0
+            );
 
-            const salaireRestant = Math.max(0, (employee.salaire_net || 0) - totalRemboursements);
+            const salaireRestant = Math.max(
+              0,
+              (employee.salaire_net || 0) - totalRemboursements
+            );
 
             return {
               ...employee,
-              salaire_restant: salaireRestant
+              salaire_restant: salaireRestant,
             };
           } catch (error) {
-            console.error('Erreur calcul salaire restant:', error);
+            console.error("Erreur calcul salaire restant:", error);
             return {
               ...employee,
-              salaire_restant: employee.salaire_net || 0
+              salaire_restant: employee.salaire_net || 0,
             };
           }
         })
@@ -112,10 +133,9 @@ export default function EmployesPage() {
 
       setEmployees(employeesWithRemainingSalary);
       setFilteredEmployees(employeesWithRemainingSalary);
-
     } catch (error) {
-      console.error('Erreur lors du chargement des employés:', error);
-      toast.error('Erreur lors du chargement des employés');
+      console.error("Erreur lors du chargement des employés:", error);
+      toast.error("Erreur lors du chargement des employés");
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +144,7 @@ export default function EmployesPage() {
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
     if (!loading && !session) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [loading, session, router]);
 
@@ -134,22 +154,27 @@ export default function EmployesPage() {
 
     // Filtre par recherche
     if (searchTerm) {
-      filtered = filtered.filter(employee => 
-        employee.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.poste.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (employee) =>
+          employee.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          employee.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          employee.poste.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
     // Filtre par genre
     if (selectedGender) {
-      filtered = filtered.filter(employee => employee.genre === selectedGender);
+      filtered = filtered.filter(
+        (employee) => employee.genre === selectedGender
+      );
     }
 
     // Filtre par type de contrat
     if (selectedContractType) {
-      filtered = filtered.filter(employee => employee.type_contrat === selectedContractType);
+      filtered = filtered.filter(
+        (employee) => employee.type_contrat === selectedContractType
+      );
     }
 
     setFilteredEmployees(filtered);
@@ -161,17 +186,26 @@ export default function EmployesPage() {
   const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
   const indexOfLastEmployee = currentPage * employeesPerPage;
   const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
-  const currentEmployees = filteredEmployees.slice(indexOfFirstEmployee, indexOfLastEmployee);
+  const currentEmployees = filteredEmployees.slice(
+    indexOfFirstEmployee,
+    indexOfLastEmployee
+  );
 
   // Calculer les statistiques
   const totalEmployees = employees.length;
-  const activeEmployees = employees.filter(emp => emp.actif).length;
-  const newThisMonth = employees.filter(emp => {
-    const hireDate = new Date(emp.date_embauche || '');
+  const activeEmployees = employees.filter((emp) => emp.actif).length;
+  const newThisMonth = employees.filter((emp) => {
+    const hireDate = new Date(emp.date_embauche || "");
     const now = new Date();
-    return hireDate.getMonth() === now.getMonth() && hireDate.getFullYear() === now.getFullYear();
+    return (
+      hireDate.getMonth() === now.getMonth() &&
+      hireDate.getFullYear() === now.getFullYear()
+    );
   }).length;
-  const retentionRate = totalEmployees > 0 ? ((activeEmployees / totalEmployees) * 100).toFixed(1) : '0';
+  const retentionRate =
+    totalEmployees > 0
+      ? ((activeEmployees / totalEmployees) * 100).toFixed(1)
+      : "0";
 
   // Ouvrir le modal de visualisation des détails
   const openViewModal = (employee: EmployeeWithRemainingSalary) => {
@@ -185,54 +219,54 @@ export default function EmployesPage() {
     setSelectedEmployee(null);
   };
 
-    // Exporter les données au format CSV
+  // Exporter les données au format CSV
   const handleExportCSV = () => {
     if (!session?.partner) return;
-    
+
     // Fonction pour nettoyer les données
     const cleanData = (data: any) => {
-      if (data === null || data === undefined) return '';
+      if (data === null || data === undefined) return "";
       return String(data).replace(/"/g, '""').trim();
     };
 
     // Fonction pour formater les montants
     const formatAmount = (amount: number | null | undefined) => {
-      if (!amount) return '0';
-      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+      if (!amount) return "0";
+      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
     };
 
     // Fonction pour formater les dates
     const formatDate = (dateString: string | null | undefined) => {
-      if (!dateString) return '';
+      if (!dateString) return "";
       try {
         const date = new Date(dateString);
-        return date.toLocaleDateString('fr-FR');
+        return date.toLocaleDateString("fr-FR");
       } catch {
-        return '';
+        return "";
       }
     };
 
     // En-têtes
     const headers = [
-      'ID Employe',
-      'Nom',
-      'Prenom',
-      'Genre',
-      'Email',
-      'Telephone',
-      'Poste',
-      'Role',
-      'Type de contrat',
-      'Salaire net (GNF)',
-      'Salaire restant (GNF)',
-      'Date embauche',
-      'Statut',
-      'Adresse',
-      'Date creation'
+      "ID Employe",
+      "Nom",
+      "Prenom",
+      "Genre",
+      "Email",
+      "Telephone",
+      "Poste",
+      "Role",
+      "Type de contrat",
+      "Salaire net (GNF)",
+      "Salaire restant (GNF)",
+      "Date embauche",
+      "Statut",
+      "Adresse",
+      "Date creation",
     ];
 
     // Données
-    const rows = employees.map(employee => [
+    const rows = employees.map((employee) => [
       cleanData(employee.id),
       cleanData(employee.nom),
       cleanData(employee.prenom),
@@ -245,33 +279,35 @@ export default function EmployesPage() {
       formatAmount(employee.salaire_net),
       formatAmount(employee.salaire_restant),
       formatDate(employee.date_embauche),
-      employee.actif ? 'Actif' : 'Inactif',
+      employee.actif ? "Actif" : "Inactif",
       cleanData(employee.adresse),
-      formatDate(employee.created_at)
+      formatDate(employee.created_at),
     ]);
 
     // Créer le contenu CSV
     const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
+      headers.join(";"),
+      ...rows.map((row) => row.join(";")),
+    ].join("\n");
 
     // Créer le blob avec l'encodage UTF-8 BOM pour Excel
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { 
-      type: 'text/csv;charset=utf-8' 
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8",
     });
 
     // Télécharger le fichier
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.href = url;
-    link.download = `employes_${session.partner.company_name}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `employes_${session.partner.company_name}_${
+      new Date().toISOString().split("T")[0]
+    }.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
+
     toast.success(`Export CSV réussi - ${employees.length} employés exportés`);
   };
 
@@ -298,7 +334,8 @@ export default function EmployesPage() {
             Accès non autorisé
           </h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+            Vous n'avez pas les permissions nécessaires pour accéder à cette
+            page.
           </p>
         </div>
       </div>
@@ -313,23 +350,23 @@ export default function EmployesPage() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Gestion des employés
           </h1>
-                      <p className="text-gray-600 dark:text-gray-400 mt-1">
-              {session?.partner?.company_name} - {totalEmployees} employés
-            </p>  
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            {session?.partner?.company_name} - {totalEmployees} employés
+          </p>
         </div>
         <div className="flex items-center space-x-4">
           <button
             onClick={loadEmployees}
             className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <RefreshCw className="w-4 h-4 mr-2" />
             Actualiser
           </button>
           <button
             onClick={handleExportCSV}
             className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <FileDown className="w-4 h-4 mr-2" />
             Exporter CSV
           </button>
         </div>
@@ -353,13 +390,13 @@ export default function EmployesPage() {
         <StatCard
           title="Nouveaux ce mois"
           value={newThisMonth}
-          icon={Clock}
+          icon={TrendingUp}
           color="yellow"
         />
         <StatCard
           title="Taux de rétention"
           value={`${retentionRate}%`}
-          icon={Building2}
+          icon={AlertTriangle}
           color="purple"
         />
       </div>
@@ -404,7 +441,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedGender('Homme');
+                    setSelectedGender("Homme");
                     setIsGenderDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -413,7 +450,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedGender('Femme');
+                    setSelectedGender("Femme");
                     setIsGenderDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -422,7 +459,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedGender('Autre');
+                    setSelectedGender("Autre");
                     setIsGenderDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -456,7 +493,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedContractType('CDI');
+                    setSelectedContractType("CDI");
                     setIsContractDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -465,7 +502,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedContractType('CDD');
+                    setSelectedContractType("CDD");
                     setIsContractDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -474,7 +511,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedContractType('Consultant');
+                    setSelectedContractType("Consultant");
                     setIsContractDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -483,7 +520,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedContractType('Stage');
+                    setSelectedContractType("Stage");
                     setIsContractDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -530,13 +567,17 @@ export default function EmployesPage() {
             </thead>
             <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
               {currentEmployees.map((employee) => (
-                <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                <tr
+                  key={employee.id}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10">
                         <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            {employee.prenom.charAt(0)}{employee.nom.charAt(0)}
+                            {employee.prenom.charAt(0)}
+                            {employee.nom.charAt(0)}
                           </span>
                         </div>
                       </div>
@@ -551,9 +592,13 @@ export default function EmployesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">{employee.poste}</div>
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {employee.poste}
+                    </div>
                     {employee.role && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{employee.role}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {employee.role}
+                      </div>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -562,21 +607,29 @@ export default function EmployesPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.salaire_net ? formatSalary(employee.salaire_net) : 'Non défini'}
+                    {employee.salaire_net
+                      ? formatSalary(employee.salaire_net)
+                      : "Non défini"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {employee.salaire_restant ? formatSalary(employee.salaire_restant) : 'Non défini'}
+                    {employee.salaire_restant
+                      ? formatSalary(employee.salaire_restant)
+                      : "Non défini"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.date_embauche ? formatDate(employee.date_embauche) : 'Non définie'}
+                    {employee.date_embauche
+                      ? formatDate(employee.date_embauche)
+                      : "Non définie"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      employee.actif 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                    }`}>
-                      {employee.actif ? 'Actif' : 'Inactif'}
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        employee.actif
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                      }`}
+                    >
+                      {employee.actif ? "Actif" : "Inactif"}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -615,26 +668,38 @@ export default function EmployesPage() {
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Affichage de <span className="font-medium">{indexOfFirstEmployee + 1}</span> à{' '}
-                  <span className="font-medium">{Math.min(indexOfLastEmployee, filteredEmployees.length)}</span> sur{' '}
-                  <span className="font-medium">{filteredEmployees.length}</span> résultats
+                  Affichage de{" "}
+                  <span className="font-medium">
+                    {indexOfFirstEmployee + 1}
+                  </span>{" "}
+                  à{" "}
+                  <span className="font-medium">
+                    {Math.min(indexOfLastEmployee, filteredEmployees.length)}
+                  </span>{" "}
+                  sur{" "}
+                  <span className="font-medium">
+                    {filteredEmployees.length}
+                  </span>{" "}
+                  résultats
                 </p>
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => handlePageChange(page)}
-                      className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                        currentPage === page
-                          ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                          : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  ))}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                    (page) => (
+                      <button
+                        key={page}
+                        onClick={() => handlePageChange(page)}
+                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                          currentPage === page
+                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
                 </nav>
               </div>
             </div>
@@ -660,57 +725,95 @@ export default function EmployesPage() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nom complet</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Nom complet
+                  </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
                     {selectedEmployee.prenom} {selectedEmployee.nom}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Genre</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedEmployee.genre}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedEmployee.email || 'Non défini'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Téléphone</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedEmployee.telephone || 'Non défini'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Poste</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedEmployee.poste}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Type de contrat</label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">{selectedEmployee.type_contrat}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire net</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Genre
+                  </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.salaire_net ? formatSalary(selectedEmployee.salaire_net) : 'Non défini'}
+                    {selectedEmployee.genre}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Salaire restant</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedEmployee.email || "Non défini"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Téléphone
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedEmployee.telephone || "Non défini"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Poste
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedEmployee.poste}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Type de contrat
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedEmployee.type_contrat}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Salaire net
+                  </label>
+                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
+                    {selectedEmployee.salaire_net
+                      ? formatSalary(selectedEmployee.salaire_net)
+                      : "Non défini"}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Salaire restant
+                  </label>
                   <p className="mt-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {selectedEmployee.salaire_restant ? formatSalary(selectedEmployee.salaire_restant) : 'Non défini'}
+                    {selectedEmployee.salaire_restant
+                      ? formatSalary(selectedEmployee.salaire_restant)
+                      : "Non défini"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date d'embauche</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Date d'embauche
+                  </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.date_embauche ? formatDate(selectedEmployee.date_embauche) : 'Non définie'}
+                    {selectedEmployee.date_embauche
+                      ? formatDate(selectedEmployee.date_embauche)
+                      : "Non définie"}
                   </p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Statut</label>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                    selectedEmployee.actif 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                      : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                  }`}>
-                    {selectedEmployee.actif ? 'Actif' : 'Inactif'}
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Statut
+                  </label>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedEmployee.actif
+                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                    }`}
+                  >
+                    {selectedEmployee.actif ? "Actif" : "Inactif"}
                   </span>
                 </div>
               </div>

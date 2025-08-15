@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Calendar } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
@@ -77,7 +77,7 @@ interface TransactionWithEmployee {
 }
 
 export default function FinancesPage() {
-  const { session, loading } = useAuth();
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
   // États pour les données financières
