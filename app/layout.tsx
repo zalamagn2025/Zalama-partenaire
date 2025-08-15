@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { EdgeAuthProvider } from "@/contexts/EdgeAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import SessionErrorHandler from "@/components/auth/SessionErrorHandler";
 import { Toaster } from "sonner";
 
 const inter = Inter({
@@ -31,8 +32,10 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased font-sans`}>
         <ThemeProvider>
           <EdgeAuthProvider>
-            <Toaster position="top-right" />
-            {children}
+            <SessionErrorHandler>
+              <Toaster position="top-right" />
+              {children}
+            </SessionErrorHandler>
           </EdgeAuthProvider>
         </ThemeProvider>
       </body>

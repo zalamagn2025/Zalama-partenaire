@@ -76,13 +76,43 @@ class EdgeFunctionService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `Erreur ${response.status}`);
+        // Gestion spécifique des erreurs 401 (non autorisé)
+        if (response.status === 401) {
+          throw new Error("Session expirée. Veuillez vous reconnecter.");
+        }
+
+        // Gestion spécifique des erreurs 403 (accès interdit)
+        if (response.status === 403) {
+          throw new Error("Accès non autorisé. Vérifiez vos permissions.");
+        }
+
+        // Gestion spécifique des erreurs 404 (non trouvé)
+        if (response.status === 404) {
+          throw new Error("Ressource non trouvée.");
+        }
+
+        // Gestion spécifique des erreurs 500 (erreur serveur)
+        if (response.status === 500) {
+          throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+        }
+
+        // Erreur générique avec le message du serveur
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
       }
 
       return data;
     } catch (error) {
       console.error(`Erreur Edge Function ${endpoint}:`, error);
-      throw error;
+
+      // Si c'est déjà une erreur formatée, la relancer
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      // Sinon, créer une erreur générique
+      throw new Error(`Erreur de connexion au serveur: ${error}`);
     }
   }
 

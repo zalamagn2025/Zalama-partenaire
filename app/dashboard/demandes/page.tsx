@@ -1,13 +1,30 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { FileText, CheckCircle, Clock, AlertCircle, Search, Filter, Calendar, Download, Plus, MoreHorizontal, User, Tag, MessageSquare, PlusSquare, MailWarning, DollarSign, PieChart as PieChartIcon } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import StatCard from '@/components/dashboard/StatCard';
-import { toast } from 'sonner';
-import { demandeAvanceService, PartnerDataService } from '@/lib/services';
-import type { SalaryAdvanceRequest, Employee } from '@/lib/supabase';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Search,
+  Filter,
+  Calendar,
+  Download,
+  Plus,
+  MoreHorizontal,
+  User,
+  MessageSquare,
+  PlusSquare,
+  MailWarning,
+  DollarSign,
+  PieChart as PieChartIcon,
+} from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import StatCard from "@/components/dashboard/StatCard";
+import { toast } from "sonner";
+import { PartnerDataService } from "@/lib/services";
+import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 // Type étendu pour inclure les données des employés
 interface SalaryAdvanceRequestWithEmployee extends SalaryAdvanceRequest {
@@ -17,18 +34,24 @@ interface SalaryAdvanceRequestWithEmployee extends SalaryAdvanceRequest {
 // Types de services disponibles
 const serviceTypes = [
   { id: "avance-salaire", label: "Avance sur Salaire", icon: PlusSquare },
-  { id: "conseil-financier", label: "Gestion et Conseil Financier", icon: MailWarning },
+  {
+    id: "conseil-financier",
+    label: "Gestion et Conseil Financier",
+    icon: MailWarning,
+  },
   { id: "paiement-salaire", label: "Paiement de Salaire", icon: DollarSign },
 ];
 
 export default function DemandesPage() {
   const { session } = useAuth();
   const router = useRouter();
-  const [demandesAvance, setDemandesAvance] = useState<SalaryAdvanceRequestWithEmployee[]>([]);
+  const [demandesAvance, setDemandesAvance] = useState<
+    SalaryAdvanceRequestWithEmployee[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedService, setSelectedService] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedService, setSelectedService] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -38,7 +61,7 @@ export default function DemandesPage() {
   useEffect(() => {
     const loadDemandes = async () => {
       if (!session?.partner) return;
-      
+
       setLoading(true);
       try {
         // Utiliser le service pour récupérer les vraies données
@@ -46,10 +69,9 @@ export default function DemandesPage() {
         const demandes = await partnerService.getSalaryAdvanceRequests();
 
         setDemandesAvance(demandes);
-
       } catch (error) {
-        console.error('Erreur lors du chargement des demandes:', error);
-        toast.error('Erreur lors du chargement des demandes');
+        console.error("Erreur lors du chargement des demandes:", error);
+        toast.error("Erreur lors du chargement des demandes");
       } finally {
         setLoading(false);
       }
@@ -59,57 +81,93 @@ export default function DemandesPage() {
   }, [session?.partner]);
 
   // Formater les demandes
-  const allDemandes = demandesAvance.map(d => ({
+  const allDemandes = demandesAvance.map((d) => ({
     ...d,
-    type_demande: 'Avance sur Salaire',
-    demandeur: d.employees ? `${d.employees.prenom} ${d.employees.nom}` : `Employé ${d.employe_id}`,
-    date: new Date(d.date_creation).toLocaleDateString('fr-FR'),
+    type_demande: "Avance sur Salaire",
+    demandeur: d.employees
+      ? `${d.employees.prenom} ${d.employees.nom}`
+      : `Employé ${d.employe_id}`,
+    date: new Date(d.date_creation).toLocaleDateString("fr-FR"),
     montant: d.montant_demande,
     commentaires: 0,
-    poste: d.employees?.poste || 'Non spécifié'
+    poste: d.employees?.poste || "Non spécifié",
   }));
 
   // Filtrer les demandes
-  const filteredDemandes = allDemandes.filter(demande => {
-    const matchesSearch = !searchTerm || 
+  const filteredDemandes = allDemandes.filter((demande) => {
+    const matchesSearch =
+      !searchTerm ||
       demande.type_demande?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       demande.demandeur?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesService = !selectedService || demande.type_demande === selectedService;
+
+    const matchesService =
+      !selectedService || demande.type_demande === selectedService;
     const matchesStatus = !statusFilter || demande.statut === statusFilter;
-    
+
     return matchesSearch && matchesService && matchesStatus;
   });
 
   // Pagination
   const totalPages = Math.ceil(filteredDemandes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentItems = filteredDemandes.slice(startIndex, startIndex + itemsPerPage);
+  const currentItems = filteredDemandes.slice(
+    startIndex,
+    startIndex + itemsPerPage
+  );
 
   // Calculer les statistiques
   const totalDemandes = allDemandes.length;
-  const approvedDemandes = allDemandes.filter(d => d.statut === 'Validé').length;
-  const pendingDemandes = allDemandes.filter(d => d.statut === 'En attente').length;
-  const rejectedDemandes = allDemandes.filter(d => d.statut === 'Rejeté').length;
+  const approvedDemandes = allDemandes.filter(
+    (d) => d.statut === "Validé"
+  ).length;
+  const pendingDemandes = allDemandes.filter(
+    (d) => d.statut === "En attente"
+  ).length;
+  const rejectedDemandes = allDemandes.filter(
+    (d) => d.statut === "Rejeté"
+  ).length;
 
   const stats = [
-    { title: "Total demandes", value: totalDemandes, icon: FileText, color: "blue" as const },
-    { title: "Approuvées", value: approvedDemandes, icon: CheckCircle, color: "green" as const },
-    { title: "En attente", value: pendingDemandes, icon: Clock, color: "yellow" as const },
-    { title: "Refusées", value: rejectedDemandes, icon: AlertCircle, color: "red" as const },
+    {
+      title: "Total demandes",
+      value: totalDemandes,
+      icon: FileText,
+      color: "blue" as const,
+    },
+    {
+      title: "Approuvées",
+      value: approvedDemandes,
+      icon: CheckCircle,
+      color: "green" as const,
+    },
+    {
+      title: "En attente",
+      value: pendingDemandes,
+      icon: Clock,
+      color: "yellow" as const,
+    },
+    {
+      title: "Refusées",
+      value: rejectedDemandes,
+      icon: AlertCircle,
+      color: "red" as const,
+    },
   ];
 
   // Gérer le clic en dehors du menu des filtres
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (filterMenuRef.current && !filterMenuRef.current.contains(event.target as Node)) {
+      if (
+        filterMenuRef.current &&
+        !filterMenuRef.current.contains(event.target as Node)
+      ) {
         setShowFilterMenu(false);
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -134,16 +192,19 @@ export default function DemandesPage() {
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">Demandes de Services</h1>
+          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
+            Demandes de Services
+          </h1>
           <p className="text-[var(--zalama-text)]/60 mt-1">
-            Gérez les demandes d'avance sur salaire et de prêts P2P de vos employés
+            Gérez les demandes d'avance sur salaire et de prêts P2P de vos
+            employés
           </p>
         </div>
         <div className="flex gap-3">
           <button
             onClick={() => {
               // TODO: Implémenter l'export CSV
-              toast.info('Export CSV à implémenter');
+              toast.info("Export CSV à implémenter");
             }}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
@@ -153,7 +214,7 @@ export default function DemandesPage() {
           <button
             onClick={() => {
               // TODO: Implémenter la création de demande
-              toast.info('Création de demande à implémenter');
+              toast.info("Création de demande à implémenter");
             }}
             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--zalama-primary)] rounded-lg hover:bg-[var(--zalama-primary-hover)]"
           >
@@ -185,19 +246,28 @@ export default function DemandesPage() {
           {(() => {
             // Calculer la répartition par motifs à partir des vraies données
             const motifCounts = allDemandes.reduce((acc, demande) => {
-              const motif = demande.type_motif || 'Non spécifié';
+              const motif = demande.type_motif || "Non spécifié";
               acc[motif] = (acc[motif] || 0) + 1;
               return acc;
             }, {} as Record<string, number>);
 
-            const repartitionMotifsData = Object.entries(motifCounts).map(([motif, count], index) => {
-              const colors = ['#8884d8', '#82ca9d', '#ffc658', '#ff7300', '#00C49F', '#FF8042'];
-              return {
-                motif,
-                valeur: count,
-                color: colors[index % colors.length]
-              };
-            });
+            const repartitionMotifsData = Object.entries(motifCounts).map(
+              ([motif, count], index) => {
+                const colors = [
+                  "#8884d8",
+                  "#82ca9d",
+                  "#ffc658",
+                  "#ff7300",
+                  "#00C49F",
+                  "#FF8042",
+                ];
+                return {
+                  motif,
+                  valeur: count,
+                  color: colors[index % colors.length],
+                };
+              }
+            );
 
             const hasMotifsData = repartitionMotifsData.length > 0;
 
@@ -209,7 +279,9 @@ export default function DemandesPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ motif, percent }) => `${motif} ${(percent * 100).toFixed(0)}%`}
+                    label={({ motif, percent }) =>
+                      `${motif} ${(percent * 100).toFixed(0)}%`
+                    }
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="valeur"
@@ -239,19 +311,21 @@ export default function DemandesPage() {
           </h3>
           {(() => {
             const statutCounts = allDemandes.reduce((acc, demande) => {
-              const statut = demande.statut || 'Non défini';
+              const statut = demande.statut || "Non défini";
               acc[statut] = (acc[statut] || 0) + 1;
               return acc;
             }, {} as Record<string, number>);
 
-            const repartitionStatutData = Object.entries(statutCounts).map(([statut, count], index) => {
-              const colors = ['#10B981', '#F59E0B', '#EF4444', '#6366F1'];
-              return {
-                statut,
-                valeur: count,
-                color: colors[index % colors.length]
-              };
-            });
+            const repartitionStatutData = Object.entries(statutCounts).map(
+              ([statut, count], index) => {
+                const colors = ["#10B981", "#F59E0B", "#EF4444", "#6366F1"];
+                return {
+                  statut,
+                  valeur: count,
+                  color: colors[index % colors.length],
+                };
+              }
+            );
 
             const hasStatutData = repartitionStatutData.length > 0;
 
@@ -263,7 +337,9 @@ export default function DemandesPage() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={({ statut, percent }) => `${statut} ${(percent * 100).toFixed(0)}%`}
+                    label={({ statut, percent }) =>
+                      `${statut} ${(percent * 100).toFixed(0)}%`
+                    }
                     outerRadius={80}
                     fill="#8884d8"
                     dataKey="valeur"
@@ -313,15 +389,15 @@ export default function DemandesPage() {
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
               >
                 <Filter className="h-4 w-4" />
-                {selectedService || 'Tous les services'}
+                {selectedService || "Tous les services"}
               </button>
-              
+
               {showFilterMenu && (
                 <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-lg z-10">
                   <div className="p-2">
                     <button
                       onClick={() => {
-                        setSelectedService('');
+                        setSelectedService("");
                         setShowFilterMenu(false);
                       }}
                       className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
@@ -371,31 +447,35 @@ export default function DemandesPage() {
               Aucune demande trouvée
             </h3>
             <p className="text-[var(--zalama-text)]/60">
-              {searchTerm || selectedService || statusFilter 
-                ? 'Aucune demande ne correspond aux critères sélectionnés.'
-                : 'Aucune demande n\'a encore été créée.'
-              }
+              {searchTerm || selectedService || statusFilter
+                ? "Aucune demande ne correspond aux critères sélectionnés."
+                : "Aucune demande n'a encore été créée."}
             </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
             {currentItems.map((demande) => (
-              <div key={demande.id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <div
+                key={demande.id}
+                className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-[var(--zalama-text)]">
                         {demande.type_demande}
                       </h3>
-                      <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                        demande.statut === 'En attente' 
-                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' 
-                          : demande.statut === 'Approuvée' 
-                            ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' 
-                            : demande.statut === 'Refusée'
-                              ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                              : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                      }`}>
+                      <span
+                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                          demande.statut === "En attente"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            : demande.statut === "Approuvée"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : demande.statut === "Refusée"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                        }`}
+                      >
                         {demande.statut}
                       </span>
                     </div>
@@ -413,8 +493,12 @@ export default function DemandesPage() {
                       </div>
                       <div className="flex items-center">
                         {(() => {
-                          const IconComponent = serviceTypes.find(s => s.label === demande.type_demande)?.icon;
-                          return IconComponent ? <IconComponent className="h-3 w-3 mr-1" /> : null;
+                          const IconComponent = serviceTypes.find(
+                            (s) => s.label === demande.type_demande
+                          )?.icon;
+                          return IconComponent ? (
+                            <IconComponent className="h-3 w-3 mr-1" />
+                          ) : null;
                         })()}
                         <span>{demande.type_demande}</span>
                       </div>
@@ -453,23 +537,25 @@ export default function DemandesPage() {
             >
               Précédent
             </button>
-            
+
             {[...Array(totalPages)].map((_, index) => (
               <button
                 key={index + 1}
                 onClick={() => setCurrentPage(index + 1)}
                 className={`px-3 py-2 text-sm font-medium rounded-lg ${
                   currentPage === index + 1
-                    ? 'bg-[var(--zalama-primary)] text-white'
-                    : 'text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    ? "bg-[var(--zalama-primary)] text-white"
+                    : "text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                 }`}
               >
                 {index + 1}
               </button>
             ))}
-            
+
             <button
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage === totalPages}
               className="px-3 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >

@@ -17,6 +17,7 @@ interface UseEdgeAuthReturn {
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   clearError: () => void;
+  isSessionValid: () => boolean;
 }
 
 export function useEdgeAuth(): UseEdgeAuthReturn {
@@ -164,11 +165,14 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       }
     } catch (error: any) {
       console.error("Erreur lors du rafraîchissement de session:", error);
-      // Si l'erreur indique un token invalide, déconnecter
+      // Si l'erreur indique un token invalide ou session expirée, déconnecter
       if (
         error.message?.includes("token") ||
-        error.message?.includes("unauthorized")
+        error.message?.includes("unauthorized") ||
+        error.message?.includes("Session expirée") ||
+        error.message?.includes("401")
       ) {
+        console.log("Session expirée, déconnexion automatique");
         await logout();
       } else {
         setError(error.message);
@@ -177,6 +181,11 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       setLoading(false);
     }
   }, [session, saveSession, logout]);
+
+  // Fonction pour vérifier si la session est valide
+  const isSessionValid = useCallback(() => {
+    return !!(session?.access_token && session?.admin && session?.partner);
+  }, [session]);
 
   // Fonction pour effacer les erreurs
   const clearError = useCallback(() => {
@@ -191,5 +200,6 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
     logout,
     refreshSession,
     clearError,
+    isSessionValid,
   };
 }

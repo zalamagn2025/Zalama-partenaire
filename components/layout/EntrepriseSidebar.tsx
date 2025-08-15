@@ -23,6 +23,11 @@ import { useRouter } from "next/navigation";
 const getNavItems = () => [
   { label: "Tableau de bord", icon: Home, href: `/dashboard` },
   { label: "Employés", icon: Users, href: `/dashboard/employes` },
+  {
+    label: "Demandes d'Adhésion",
+    icon: Users,
+    href: `/dashboard/demandes-adhesion`,
+  },
   { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Remboursements
