@@ -406,14 +406,14 @@ export default function EmployesPage() {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Recherche */}
           <div className="flex-1">
-            <div className="relative ">
+            <div className="relative bg-[var(--zalama-card)]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
                 placeholder="Rechercher un employé..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent  dark:text-white"
               />
             </div>
           </div>
@@ -429,7 +429,7 @@ export default function EmployesPage() {
               <ChevronDown className="w-4 h-4 ml-2" />
             </button>
             {isGenderDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
                 <button
                   onClick={() => {
                     setSelectedGender(null);
@@ -457,7 +457,7 @@ export default function EmployesPage() {
                 >
                   Femme
                 </button>
-                <button
+                {/* <button
                   onClick={() => {
                     setSelectedGender("Autre");
                     setIsGenderDropdownOpen(false);
@@ -465,7 +465,7 @@ export default function EmployesPage() {
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
                 >
                   Autre
-                </button>
+                </button> */}
               </div>
             )}
           </div>
@@ -481,13 +481,13 @@ export default function EmployesPage() {
               <ChevronDown className="w-4 h-4 ml-2" />
             </button>
             {isContractDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
                 <button
                   onClick={() => {
                     setSelectedContractType(null);
                     setIsContractDropdownOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
                 >
                   Tous les contrats
                 </button>
@@ -496,7 +496,7 @@ export default function EmployesPage() {
                     setSelectedContractType("CDI");
                     setIsContractDropdownOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
                 >
                   CDI
                 </button>
@@ -505,7 +505,7 @@ export default function EmployesPage() {
                     setSelectedContractType("CDD");
                     setIsContractDropdownOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
                 >
                   CDD
                 </button>
@@ -514,7 +514,7 @@ export default function EmployesPage() {
                     setSelectedContractType("Consultant");
                     setIsContractDropdownOpen(false);
                   }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
                 >
                   Consultant
                 </button>
@@ -648,19 +648,19 @@ export default function EmployesPage() {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-white dark:bg-gray-800 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+          <div className="bg-white dark:bg-[var(--zalama-card)] px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-[var(--zalama-card)] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Précédent
               </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-[var(--zalama-card)] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Suivant
               </button>
@@ -693,7 +693,7 @@ export default function EmployesPage() {
                         className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                           currentPage === page
                             ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                            : "bg-[var(--zalama-card)] border-gray-300 text-gray-500 hover:bg-gray-50"
                         }`}
                       >
                         {page}

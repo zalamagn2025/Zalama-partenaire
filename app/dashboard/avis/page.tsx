@@ -12,7 +12,7 @@ import {
   MessageSquare,
   BarChart2,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import type { Avis, Employee } from "@/lib/supabase";
@@ -65,7 +65,7 @@ interface AvisWithEmployee extends Avis {
 }
 
 export default function AvisPage() {
-  const { session, loading } = useAuth();
+  const { session, loading } = useEdgeAuth();
   const router = useRouter();
   const [avis, setAvis] = useState<AvisWithEmployee[]>([]);
   const [filteredAvis, setFilteredAvis] = useState<AvisWithEmployee[]>([]);

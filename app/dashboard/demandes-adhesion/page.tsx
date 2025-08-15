@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
@@ -219,14 +218,17 @@ export default function DemandesAdhesionPage() {
 
             {/* Filtre par statut */}
             <div>
-              <Label htmlFor="status-filter" className="text-sm font-medium">
+              {/* <Label
+                htmlFor="status-filter"
+                className="text-sm font-medium text-gray-400"
+              >
                 Statut
-              </Label>
+              </Label> */}
               <select
                 id="status-filter"
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full mt-1 px-3 py-2 border border-gray-300 bg-[var(--zalama-card)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">Tous les employés</option>
                 <option value="active">Employés actifs</option>

@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { supabase } from "@/lib/supabase";
 
 import {
@@ -83,7 +83,7 @@ type Remboursement = {
 };
 
 export default function RemboursementsPage() {
-  const { session, loading } = useAuth();
+  const { session, loading } = useEdgeAuth();
   const [remboursements, setRemboursements] = useState<Remboursement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalAttente, setTotalAttente] = useState(0);
@@ -244,8 +244,8 @@ export default function RemboursementsPage() {
       const results = await Promise.allSettled(
         remboursementsEnAttente.map(async (remboursement) => {
           const response = await fetch("/api/remboursements/djomy-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               remboursementId: remboursement.id,
               paymentMethod: "OM", // Par défaut Orange Money
@@ -443,7 +443,7 @@ export default function RemboursementsPage() {
   return (
     <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* En-tête professionnel */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--zalama-border)] p-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
@@ -473,31 +473,31 @@ export default function RemboursementsPage() {
                 </>
               )}
             </Button>
-          <Button
-            onClick={() => handlePayerTous()}
-            disabled={paying || totalAttente === 0}
-            size="sm"
-            className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
-          >
-            {paying ? (
-              <>
-                <Clock className="w-4 h-4 mr-2 animate-spin" />
-                Traitement...
-              </>
-            ) : (
-              <>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Payer tous les remboursements
-              </>
-            )}
-          </Button>
+            <Button
+              onClick={() => handlePayerTous()}
+              disabled={paying || totalAttente === 0}
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
+            >
+              {paying ? (
+                <>
+                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="w-4 h-4 mr-2" />
+                  Payer tous les remboursements
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Statistiques détaillées */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
               <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -512,7 +512,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
               <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -527,7 +527,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
@@ -542,7 +542,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -560,7 +560,7 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Tableau des remboursements */}
-      <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Liste des remboursements
@@ -571,7 +571,7 @@ export default function RemboursementsPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border border-sgray-200 dark:border-[var(--zalama-border)]">
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Employé
@@ -602,7 +602,7 @@ export default function RemboursementsPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-[var(--zalama-border)]">
               {paginatedRemboursements.length === 0 && (
                 <tr>
                   <td
@@ -743,7 +743,7 @@ export default function RemboursementsPage() {
 
       {/* Graphiques compacts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[var(--zalama-card)] border rounded-lg p-4">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Répartition par statut
           </h3>
@@ -780,7 +780,7 @@ export default function RemboursementsPage() {
             />
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border rounded-lg p-4">
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Par employé
           </h3>

@@ -711,7 +711,7 @@ export default function FinancesPage() {
             <select
               value={selectedType || ""}
               onChange={(e) => setSelectedType(e.target.value || null)}
-              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
             >
               <option value="">Tous les types</option>
               <option value="Débloqué">Débloqué</option>
@@ -730,7 +730,7 @@ export default function FinancesPage() {
             <select
               value={selectedStatus || ""}
               onChange={(e) => setSelectedStatus(e.target.value || null)}
-              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
             >
               <option value="">Tous les statuts</option>
               <option value="Validé">Validé</option>

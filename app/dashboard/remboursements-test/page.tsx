@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import {
   CreditCard,
   Globe,
@@ -103,7 +103,7 @@ interface DjomyLinkResponse {
 }
 
 export default function RemboursementsTestPage() {
-  const { session } = useAuth();
+  const { session } = useEdgeAuth();
   const [loading, setLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<DjomyPaymentStatus | null>(
     null
@@ -169,7 +169,7 @@ export default function RemboursementsTestPage() {
         toast.success("Paiement initié avec succès !");
 
         // Vérifier le statut immédiatement
-        setTimeout(() => checkPaymentStatus(data.data.transactionId), 2000);
+        setTimeout(() => checkPaymentStatus(data.data?.transactionId), 2000);
       } else {
         toast.error(
           `Erreur: ${data.message || "Erreur lors de l'initiation du paiement"}`

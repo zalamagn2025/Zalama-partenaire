@@ -22,12 +22,12 @@ import { useRouter } from "next/navigation";
 // Les liens de navigation pour le tableau de bord
 const getNavItems = () => [
   { label: "Tableau de bord", icon: Home, href: `/dashboard` },
-  { label: "Employés", icon: Users, href: `/dashboard/employes` },
   {
     label: "Demandes d'Adhésion",
     icon: Users,
     href: `/dashboard/demandes-adhesion`,
   },
+  { label: "Employés", icon: Users, href: `/dashboard/employes` },
   { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Remboursements
@@ -37,11 +37,11 @@ const getNavItems = () => [
     href: `/dashboard/remboursements`,
   },
   // Ajout du lien Test Djomy
-  {
+  /* {
     label: "Test Djomy",
     icon: CreditCard,
     href: `/dashboard/remboursements-test`,
-  },
+  }, */
   { label: "Documents", icon: FolderOpen, href: `/dashboard/documents` },
   { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
   { label: "Paramètres", icon: Settings, href: `/dashboard/parametres` },

@@ -19,7 +19,7 @@ import {
   DollarSign,
   PieChart as PieChartIcon,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
@@ -43,7 +43,7 @@ const serviceTypes = [
 ];
 
 export default function DemandesPage() {
-  const { session } = useAuth();
+  const { session } = useEdgeAuth();
   const router = useRouter();
   const [demandesAvance, setDemandesAvance] = useState<
     SalaryAdvanceRequestWithEmployee[]
@@ -375,7 +375,7 @@ export default function DemandesPage() {
                 placeholder="Rechercher une demande..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
               />
             </div>
           </div>
@@ -400,7 +400,7 @@ export default function DemandesPage() {
                         setSelectedService("");
                         setShowFilterMenu(false);
                       }}
-                      className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     >
                       Tous les services
                     </button>
@@ -411,7 +411,7 @@ export default function DemandesPage() {
                           setSelectedService(service.label);
                           setShowFilterMenu(false);
                         }}
-                        className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-2"
+                        className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                       >
                         <service.icon className="h-4 w-4" />
                         {service.label}
@@ -426,9 +426,11 @@ export default function DemandesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-200"
             >
-              <option value="">Tous les statuts</option>
+              <option value="" className="dark:bg-[var(--zalama-card)]">
+                Tous les statuts
+              </option>
               <option value="En attente">En attente</option>
               <option value="En cours">En cours</option>
               <option value="Approuvée">Approuvée</option>
