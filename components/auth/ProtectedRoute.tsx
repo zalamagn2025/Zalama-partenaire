@@ -1,77 +1,44 @@
 "use client";
 
-import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { toast } from "sonner";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
-  redirectTo?: string;
 }
 
-export function ProtectedRoute({ 
-  children, 
-  fallback,
-  redirectTo = '/login' 
-}: ProtectedRouteProps) {
-  const { session, loading, error } = useAuth();
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
-  // Si on a une session, afficher immédiatement (pas de rechargement)
-  if (session) {
-    return <>{children}</>;
-  }
-
-  // Pendant le chargement, afficher le fallback
-  if (loading) {
-    return fallback || (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="space-y-4 w-full max-w-md">
-          <Skeleton className="h-12 w-full" />
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      </div>
-    );
-  }
-
-  // Si pas de session et pas en chargement, rediriger
   useEffect(() => {
     if (!loading && !session) {
-      router.push(redirectTo);
+      toast.error("Vous devez être connecté pour accéder à cette page");
+      router.push("/login");
     }
-  }, [session, loading, router, redirectTo]);
+  }, [session, loading, router]);
 
-  // Affichage d'erreur si problème d'authentification
-  if (error) {
+  // Afficher un loader pendant la vérification de la session
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <h2 className="text-xl font-semibold text-red-600">
-            Erreur d'authentification
-          </h2>
-          <p className="text-gray-600">{error}</p>
-          <button
-            onClick={() => router.push(redirectTo)}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Se reconnecter
-          </button>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            Vérification de l'authentification...
+          </p>
         </div>
       </div>
     );
   }
 
-  // Redirection en cours
-  return fallback || (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="space-y-4 w-full max-w-md">
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-      </div>
-    </div>
-  );
+  // Si pas de session, ne rien afficher (la redirection se fait dans le useEffect)
+  if (!session) {
+    return null;
+  }
+
+  // Si on a une session, afficher le contenu protégé
+  return <>{children}</>;
 }

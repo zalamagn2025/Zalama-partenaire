@@ -16,7 +16,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useRouter } from "next/navigation";
 
 // Les liens de navigation pour le tableau de bord
@@ -47,7 +47,7 @@ export default function EntrepriseSidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const { session, signOut } = useAuth();
+  const { session, logout } = useEdgeAuthContext();
   const router = useRouter();
 
   // Générer les liens de navigation avec le slug
@@ -68,7 +68,7 @@ export default function EntrepriseSidebar() {
 
   const handleLogout = async () => {
     try {
-      await signOut();
+      await logout();
       setMenuOpen(false);
       router.replace("/login");
     } catch (error) {

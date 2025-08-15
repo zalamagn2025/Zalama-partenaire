@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useEdgeAuthContext } from '@/contexts/EdgeAuthContext';
 import { supabase } from '@/lib/supabase';
 import { Notification } from './types';
 import NotificationHeader from './NotificationHeader';
@@ -17,7 +17,7 @@ interface NotificationDrawerProps {
 
 export default function NotificationDrawer({ isOpen, onClose }: NotificationDrawerProps) {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const { session } = useAuth();
+  const { session } = useEdgeAuthContext();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);

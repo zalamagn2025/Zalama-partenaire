@@ -3,7 +3,7 @@ import { Bell, LogOut, Moon, Sun, User, RefreshCw } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import NotificationDrawer from "../../components/dashboard/notifications/NotificationDrawer";
@@ -15,7 +15,7 @@ export default function EntrepriseHeader() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const { session, signOut, forceRefresh } = useAuth();
+  const { session, logout, refreshSession } = useEdgeAuthContext();
   const router = useRouter();
 
   // Charger le nombre de notifications non lues
@@ -83,7 +83,7 @@ export default function EntrepriseHeader() {
     try {
       setIsRefreshing(true);
       console.log("🔄 Refresh manuel demandé...");
-      await forceRefresh();
+      await refreshSession();
       await loadUnreadCount(); // Recharger aussi les notifications
       console.log("✅ Refresh manuel terminé");
     } catch (error) {
@@ -94,7 +94,7 @@ export default function EntrepriseHeader() {
   };
 
   const handleLogout = async () => {
-    await signOut();
+    await logout();
     setProfileMenuOpen(false);
     router.replace("/login");
     router.refresh();

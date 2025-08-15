@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { supabase } from "@/lib/supabase";
 import { Rapport, RapportFilters, RapportStats } from "@/types/rapport";
 import { toast } from "sonner";
 
 export function useRapports(filters?: RapportFilters) {
-  const { session } = useAuth();
+  const { session } = useEdgeAuthContext();
   const [rapports, setRapports] = useState<Rapport[]>([]);
   const [stats, setStats] = useState<RapportStats | null>(null);
   const [loading, setLoading] = useState(true);

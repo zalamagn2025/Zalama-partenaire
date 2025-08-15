@@ -15,37 +15,27 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useAuth } from "@/contexts/AuthContext";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { toast } from "sonner";
-import OTPModal from "@/components/auth/OTPModal";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showOTPModal, setShowOTPModal] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState("");
-  const [pendingPassword, setPendingPassword] = useState("");
-  const [isVerifyingOTP, setIsVerifyingOTP] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
-  const { verifyCredentials, signInWithOTP, session, loading } = useAuth();
+  const [hasRedirected, setHasRedirected] = useState(false);
+  const { login, session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
-  // Redirection automatique si déjà connecté (seulement si pas en train de vérifier OTP)
+  // Redirection automatique si déjà connecté (une seule fois)
   React.useEffect(() => {
-    if (
-      !loading &&
-      session?.admin &&
-      session?.partner &&
-      !isVerifyingOTP &&
-      !isRedirecting
-    ) {
+    if (!loading && session?.admin && session?.partner && !hasRedirected) {
       console.log("User already authenticated, redirecting to dashboard");
+      setHasRedirected(true);
       toast.success("Redirection vers le dashboard...");
       router.push("/dashboard");
     }
-  }, [session, loading, router, isVerifyingOTP, isRedirecting]);
+  }, [session, loading, router, hasRedirected]);
 
   // Afficher un loader si on vérifie la session
   if (loading) {
@@ -55,20 +45,6 @@ export default function LoginPage() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
           <p className="mt-4 text-gray-600 dark:text-gray-400">
             Vérification de la session...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Afficher un loader si on redirige après vérification OTP
-  if (isRedirecting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            Connexion réussie ! Redirection vers le dashboard...
           </p>
         </div>
       </div>
@@ -86,71 +62,26 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Vérifier les identifiants sans se connecter
-      const { error, user } = await verifyCredentials(email, password);
+      // Connexion directe avec les Edge Functions
+      const { error, session: newSession } = await login({ email, password });
 
       if (error) {
-        console.error("Erreur de vérification:", error);
-        toast.error(error.message || "Erreur de vérification");
-      } else if (user) {
-        // Les identifiants sont corrects, afficher la modal OTP
-        setPendingEmail(email);
-        setPendingPassword(password);
-        setShowOTPModal(true);
-        setIsVerifyingOTP(true); // Empêcher la redirection automatique
-        toast.success(
-          "Identifiants vérifiés. Veuillez entrer le code de vérification."
-        );
-      }
-    } catch (error) {
-      console.error("Erreur de vérification:", error);
-      toast.error("Une erreur est survenue lors de la vérification");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleOTPVerified = async (verifiedEmail: string) => {
-    try {
-      setIsLoading(true);
-      setIsRedirecting(true);
-
-      // Maintenant que l'OTP est vérifié, procéder à la connexion finale
-      const { error, session: newSession } = await signInWithOTP(
-        pendingEmail,
-        pendingPassword
-      );
-
-      if (error) {
-        console.error("Erreur de connexion finale:", error);
+        console.error("Erreur de connexion:", error);
         toast.error(error.message || "Erreur de connexion");
-        setIsVerifyingOTP(false);
-        setIsRedirecting(false);
       } else if (newSession) {
         toast.success(
           `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
         );
-
-        // Attendre un court délai pour s'assurer que la session est bien stockée
-        setTimeout(() => {
-          console.log("Redirecting to dashboard...");
-          setIsVerifyingOTP(false);
-          router.push("/dashboard");
-        }, 1000);
+        // La redirection se fera automatiquement via le useEffect
+        setHasRedirected(true);
+        router.push("/dashboard");
       }
     } catch (error) {
-      console.error("Erreur de connexion finale:", error);
+      console.error("Erreur de connexion:", error);
       toast.error("Une erreur est survenue lors de la connexion");
-      setIsVerifyingOTP(false);
-      setIsRedirecting(false);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleOTPModalClose = () => {
-    setShowOTPModal(false);
-    setIsVerifyingOTP(false); // Réactiver la redirection automatique
   };
 
   const createTestUsers = async () => {
@@ -204,7 +135,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  disabled={isLoading || isVerifyingOTP}
+                  disabled={isLoading}
                 />
               </div>
 
@@ -218,7 +149,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    disabled={isLoading || isVerifyingOTP}
+                    disabled={isLoading}
                   />
                   <Button
                     type="button"
@@ -226,7 +157,7 @@ export default function LoginPage() {
                     size="sm"
                     className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={isLoading || isVerifyingOTP}
+                    disabled={isLoading}
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -253,15 +184,11 @@ export default function LoginPage() {
             </CardContent>
 
             <CardFooter className="flex flex-col space-y-4 mt-4">
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={isLoading || isVerifyingOTP}
-              >
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (
                   <div className="flex items-center gap-2">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Vérification...
+                    Connexion...
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -274,14 +201,6 @@ export default function LoginPage() {
           </form>
         </Card>
       </div>
-
-      {/* Modal OTP */}
-      <OTPModal
-        isOpen={showOTPModal}
-        onClose={handleOTPModalClose}
-        email={pendingEmail}
-        onOTPVerified={handleOTPVerified}
-      />
     </div>
   );
 }
