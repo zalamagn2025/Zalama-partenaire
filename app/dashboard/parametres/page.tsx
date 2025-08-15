@@ -225,7 +225,7 @@ export default function ParametresPage() {
       <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
         <button
           onClick={() => setActiveTab("profil")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-4 py-2 transition-colors ${
             activeTab === "profil"
               ? "bg-blue-600 text-white"
               : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -236,7 +236,7 @@ export default function ParametresPage() {
         </button>
         <button
           onClick={() => setActiveTab("securite")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-4 py-2 transition-colors ${
             activeTab === "securite"
               ? "bg-blue-600 text-white"
               : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -247,7 +247,7 @@ export default function ParametresPage() {
         </button>
         <button
           onClick={() => setActiveTab("apparence")}
-          className={`px-4 py-2 rounded-lg transition-colors ${
+          className={`px-4 py-2 transition-colors ${
             activeTab === "apparence"
               ? "bg-blue-600 text-white"
               : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -311,7 +311,7 @@ export default function ParametresPage() {
                     setProfileData({ ...profileData, nom: e.target.value })
                   }
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
                 />
               </div>
 
@@ -329,7 +329,7 @@ export default function ParametresPage() {
                     })
                   }
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
                 />
               </div>
 
@@ -346,7 +346,7 @@ export default function ParametresPage() {
                       setProfileData({ ...profileData, email: e.target.value })
                     }
                     disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -367,7 +367,7 @@ export default function ParametresPage() {
                       })
                     }
                     disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
                   />
                 </div>
               </div>
@@ -383,7 +383,7 @@ export default function ParametresPage() {
                     setProfileData({ ...profileData, poste: e.target.value })
                   }
                   disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
                 />
               </div>
 
@@ -429,7 +429,7 @@ export default function ParametresPage() {
                         company_name: e.target.value,
                       })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -446,7 +446,7 @@ export default function ParametresPage() {
                       activity_domain: e.target.value,
                     })
                   }
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                 >
                   <option value="">Sélectionner un secteur</option>
                   <option value="Technologie">Technologie</option>
@@ -472,7 +472,7 @@ export default function ParametresPage() {
                     onChange={(e) =>
                       setPartnerData({ ...partnerData, email: e.target.value })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white  text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -489,7 +489,7 @@ export default function ParametresPage() {
                     onChange={(e) =>
                       setPartnerData({ ...partnerData, phone: e.target.value })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -509,7 +509,7 @@ export default function ParametresPage() {
                         headquarters_address: e.target.value,
                       })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                   />
                 </div>
               </div>
@@ -559,7 +559,7 @@ export default function ParametresPage() {
                           })
                         }
                         placeholder="Entrez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                       />
                       <button
                         type="button"
@@ -591,7 +591,7 @@ export default function ParametresPage() {
                           })
                         }
                         placeholder="Confirmez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
                       />
                       <button
                         type="button"
@@ -617,7 +617,7 @@ export default function ParametresPage() {
                         !passwordData.newPassword ||
                         !passwordData.confirmPassword
                       }
-                      className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white rounded-lg hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors"
                     >
                       {isChangingPassword ? (
                         <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent bg-[var(--zalama-green)]" />
@@ -673,10 +673,10 @@ export default function ParametresPage() {
                     <button
                       onClick={handleRegenerateApiKey}
                       disabled={isRegeneratingApiKey}
-                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                     >
                       {isRegeneratingApiKey ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent" />
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}

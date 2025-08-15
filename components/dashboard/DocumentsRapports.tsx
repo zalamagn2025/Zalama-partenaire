@@ -251,16 +251,16 @@ export default function DocumentsRapports({
             </div>
 
             <Select
-              value={filters.categorie || ""}
+              value={filters.categorie || "all"}
               onValueChange={(value) =>
-                updateFilter("categorie", value || undefined)
+                updateFilter("categorie", value === "all" ? undefined : value)
               }
             >
               <SelectTrigger className="border-[var(--zalama-border)]">
                 <SelectValue placeholder="Catégorie" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Toutes les catégories</SelectItem>
+                <SelectItem value="all">Toutes les catégories</SelectItem>
                 <SelectItem value="releve">Relevés</SelectItem>
                 <SelectItem value="rapport">Rapports</SelectItem>
                 <SelectItem value="statistiques">Statistiques</SelectItem>
@@ -271,16 +271,16 @@ export default function DocumentsRapports({
             </Select>
 
             <Select
-              value={filters.type || ""}
+              value={filters.type || "all"}
               onValueChange={(value) =>
-                updateFilter("type", value || undefined)
+                updateFilter("type", value === "all" ? undefined : value)
               }
             >
               <SelectTrigger className="border-[var(--zalama-border)]">
                 <SelectValue placeholder="Type de fichier" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Tous les types</SelectItem>
+                <SelectItem value="all">Tous les types</SelectItem>
                 <SelectItem value="pdf">PDF</SelectItem>
                 <SelectItem value="xlsx">Excel</SelectItem>
                 <SelectItem value="docx">Word</SelectItem>

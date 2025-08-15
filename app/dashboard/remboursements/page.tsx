@@ -369,7 +369,12 @@ export default function RemboursementsPage() {
   }, {} as Record<string, number>);
 
   // Fonction utilitaire pour formater en GNF
-  const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
+  const gnfFormatter = (value: number | null | undefined) => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return "0 GNF";
+    }
+    return `${value.toLocaleString()} GNF`;
+  };
 
   // Fonction pour calculer le salaire restant de l'employé en fonction de la position du remboursement
   const calculateSalaireRestant = (remboursement: Remboursement) => {

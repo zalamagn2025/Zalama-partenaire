@@ -22,7 +22,12 @@ import {
 import { supabase } from "@/lib/supabase";
 
 // Fonction pour formatter les montants en GNF
-const gnfFormatter = (value: number) => `${value.toLocaleString()} GNF`;
+const gnfFormatter = (value: number | null | undefined) => {
+  if (value === null || value === undefined || isNaN(value)) {
+    return "0 GNF";
+  }
+  return `${value.toLocaleString()} GNF`;
+};
 
 // Fonction pour formatter les dates
 const formatDate = (dateString: string) => {

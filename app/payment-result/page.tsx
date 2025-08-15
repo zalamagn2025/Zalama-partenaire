@@ -270,7 +270,10 @@ function PaymentResultContent() {
       const formattedDate = receiptDate.toLocaleDateString("fr-FR");
       const formattedTime = receiptDate.toLocaleTimeString("fr-FR");
 
-      const gnfFormatter = (amount: number) => {
+      const gnfFormatter = (amount: number | null | undefined) => {
+        if (amount === null || amount === undefined || isNaN(amount)) {
+          return "0 GNF";
+        }
         return new Intl.NumberFormat("fr-FR", {
           style: "currency",
           currency: "GNF",
