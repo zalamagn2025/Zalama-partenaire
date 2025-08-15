@@ -85,10 +85,10 @@ const globalSessionCache = new Map<
 >();
 const cacheStats = { hits: 0, misses: 0 };
 
-// Configuration du cache
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 100; // Nombre maximum d'entrées en cache
+// Configuration du cache - Réduire le TTL pour éviter les blocages
+const CACHE_TTL = 2 * 60 * 1000; // 2 minutes au lieu de 5
+const REFRESH_INTERVAL = 3 * 60 * 1000; // 3 minutes au lieu de 5
+const MAX_CACHE_SIZE = 50; // Réduire la taille du cache
 
 export function useSession(): UseSessionReturn {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -100,6 +100,7 @@ export function useSession(): UseSessionReturn {
   const autoRefreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const realtimeSubscriptionsRef = useRef<any[]>([]);
   const lastRefreshRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false); // Éviter les refresh multiples
 
   // Fonction de nettoyage du cache expiré
   const cleanupExpiredCache = useCallback(() => {
@@ -129,26 +130,23 @@ export function useSession(): UseSessionReturn {
 
   // Fonction de gestion intelligente du cache
   const getCachedSession = useCallback((userId: string): AuthSession | null => {
-    const entry = globalSessionCache.get(userId);
-    if (!entry) {
+    const cached = globalSessionCache.get(userId);
+    if (!cached) {
       cacheStats.misses++;
       return null;
     }
 
     const now = Date.now();
-    if (now - entry.timestamp > entry.ttl) {
+    if (now - cached.timestamp > cached.ttl) {
       globalSessionCache.delete(userId);
       cacheStats.misses++;
-      console.log(`Cache expiré pour: ${userId}`);
       return null;
     }
 
     cacheStats.hits++;
-    console.log(`Session récupérée depuis le cache pour: ${userId}`);
-    return entry.data;
+    return cached.data;
   }, []);
 
-  // Fonction de mise en cache intelligente
   const setCachedSession = useCallback(
     (userId: string, sessionData: AuthSession) => {
       globalSessionCache.set(userId, {
@@ -156,146 +154,165 @@ export function useSession(): UseSessionReturn {
         timestamp: Date.now(),
         ttl: CACHE_TTL,
       });
-      console.log(`Session mise en cache pour: ${userId}`);
-
-      // Nettoyer le cache si nécessaire
-      if (globalSessionCache.size > MAX_CACHE_SIZE) {
-        cleanupExpiredCache();
-      }
     },
-    [cleanupExpiredCache]
+    []
   );
 
-  const loadUserSession = async (
-    authUser: User
-  ): Promise<AuthSession | null> => {
-    try {
-      console.log("Chargement session pour:", authUser.email);
+  const clearCache = useCallback(() => {
+    globalSessionCache.clear();
+    cacheStats.hits = 0;
+    cacheStats.misses = 0;
+  }, []);
 
-      // Vérifier le cache d'abord
-      const cachedSession = getCachedSession(authUser.id);
-      if (cachedSession) {
-        return cachedSession;
+  // Fonction de chargement de session avec retry et timeout
+  const loadUserSession = useCallback(
+    async (authUser: User): Promise<AuthSession> => {
+      const cacheKey = authUser.id;
+      const cached = getCachedSession(cacheKey);
+
+      if (cached) {
+        console.log("Session récupérée depuis le cache");
+        return cached;
       }
 
-      // Récupérer les vraies données depuis admin_users
-      const { data: adminData, error: adminError } = await supabase
-        .from("admin_users")
-        .select("*")
-        .eq("id", authUser.id)
-        .eq("active", true)
-        .single();
+      console.log("Chargement de la session depuis la base de données...");
 
-      if (adminError || !adminData) {
-        console.log(
-          "Admin non trouvé, tentative de récupération depuis users..."
+      // Timeout pour éviter les blocages
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Timeout lors du chargement de session")),
+          10000
         );
+      });
 
-        // Fallback: essayer de récupérer depuis la table users
-        const { data: userData, error: userError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("email", authUser.email)
-          .single();
+      const loadPromise = async (): Promise<AuthSession> => {
+        try {
+          // Récupérer les données admin
+          const { data: adminData, error: adminError } = await supabase
+            .from("admin_users")
+            .select("*")
+            .eq("id", authUser.id)
+            .eq("active", true)
+            .single();
 
-        if (userError || !userData) {
-          throw new Error("Utilisateur non autorisé - profil non trouvé");
+          if (adminError || !adminData) {
+            // Fallback vers users si admin_users n'existe pas
+            const { data: userData, error: userError } = await supabase
+              .from("users")
+              .select("*")
+              .eq("id", authUser.id)
+              .single();
+
+            if (userError || !userData) {
+              throw new Error("Utilisateur non autorisé - profil non trouvé");
+            }
+
+            // Créer un profil admin basique à partir des données users
+            const adminUser: AdminUser = {
+              id: authUser.id,
+              email: authUser.email || "",
+              display_name: userData.nom + " " + userData.prenom,
+              role: "admin",
+              partenaire_id: authUser.id,
+              active: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              require_password_change: false,
+            };
+
+            // Créer un partenaire basique
+            const partnerData: Partner = {
+              id: authUser.id,
+              company_name: userData.organisation || "Entreprise",
+              legal_status: "SARL",
+              rccm: "RCCM/GN/CON/2024/001",
+              nif: "NIF123456789",
+              activity_domain: "Technologie",
+              headquarters_address: userData.adresse || "Conakry, Guinée",
+              phone: userData.telephone || "+224 123 456 789",
+              email: authUser.email || "",
+              employees_count: 10,
+              payroll: "Mensuel",
+              cdi_count: 5,
+              cdd_count: 2,
+              payment_date: new Date().toISOString().split("T")[0],
+              rep_full_name: userData.nom + " " + userData.prenom,
+              rep_position: userData.poste || "Directeur",
+              rep_email: authUser.email || "",
+              rep_phone: userData.telephone || "+224 123 456 789",
+              hr_full_name: userData.nom + " " + userData.prenom,
+              hr_email: authUser.email || "",
+              hr_phone: userData.telephone || "+224 123 456 789",
+              agreement: true,
+              status: "approved",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+
+            const fallbackSession = {
+              user: authUser,
+              admin: adminUser,
+              partner: partnerData,
+            };
+
+            // Mettre en cache
+            setCachedSession(authUser.id, fallbackSession);
+            return fallbackSession;
+          }
+
+          // Récupérer les vraies données partenaire depuis partners
+          const { data: partnerData, error: partnerError } = await supabase
+            .from("partners")
+            .select("*")
+            .eq("id", adminData.partenaire_id)
+            .eq("status", "approved")
+            .single();
+
+          if (partnerError || !partnerData) {
+            throw new Error("Partenaire introuvable ou non approuvé");
+          }
+
+          // Mettre à jour la dernière connexion
+          await supabase
+            .from("admin_users")
+            .update({
+              last_login: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", authUser.id);
+
+          const fullSession = {
+            user: authUser,
+            admin: { ...adminData, last_login: new Date().toISOString() },
+            partner: partnerData,
+          };
+
+          // Mettre en cache
+          setCachedSession(authUser.id, fullSession);
+          console.log(
+            "Session récupérée avec succès depuis admin_users et partners"
+          );
+          return fullSession;
+        } catch (error) {
+          console.error("Erreur chargement session:", error);
+          throw error;
         }
-
-        // Créer un profil admin basique à partir des données users
-        const adminUser: AdminUser = {
-          id: authUser.id,
-          email: authUser.email || "",
-          display_name: userData.nom + " " + userData.prenom,
-          role: "admin",
-          partenaire_id: authUser.id,
-          active: true,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          require_password_change: false,
-        };
-
-        // Créer un partenaire basique
-        const partnerData: Partner = {
-          id: authUser.id,
-          company_name: userData.organisation || "Entreprise",
-          legal_status: "SARL",
-          rccm: "RCCM/GN/CON/2024/001",
-          nif: "NIF123456789",
-          activity_domain: "Technologie",
-          headquarters_address: userData.adresse || "Conakry, Guinée",
-          phone: userData.telephone || "+224 123 456 789",
-          email: authUser.email || "",
-          employees_count: 10,
-          payroll: "Mensuel",
-          cdi_count: 5,
-          cdd_count: 2,
-          payment_date: new Date().toISOString().split("T")[0],
-          rep_full_name: userData.nom + " " + userData.prenom,
-          rep_position: userData.poste || "Directeur",
-          rep_email: authUser.email || "",
-          rep_phone: userData.telephone || "+224 123 456 789",
-          hr_full_name: userData.nom + " " + userData.prenom,
-          hr_email: authUser.email || "",
-          hr_phone: userData.telephone || "+224 123 456 789",
-          agreement: true,
-          status: "approved",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
-
-        const fallbackSession = {
-          user: authUser,
-          admin: adminUser,
-          partner: partnerData,
-        };
-
-        // Mettre en cache
-        setCachedSession(authUser.id, fallbackSession);
-        return fallbackSession;
-      }
-
-      // Récupérer les vraies données partenaire depuis partners
-      const { data: partnerData, error: partnerError } = await supabase
-        .from("partners")
-        .select("*")
-        .eq("id", adminData.partenaire_id)
-        .eq("status", "approved")
-        .single();
-
-      if (partnerError || !partnerData) {
-        throw new Error("Partenaire introuvable ou non approuvé");
-      }
-
-      // Mettre à jour la dernière connexion
-      await supabase
-        .from("admin_users")
-        .update({
-          last_login: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", authUser.id);
-
-      const fullSession = {
-        user: authUser,
-        admin: { ...adminData, last_login: new Date().toISOString() },
-        partner: partnerData,
       };
 
-      // Mettre en cache
-      setCachedSession(authUser.id, fullSession);
-      console.log(
-        "Session récupérée avec succès depuis admin_users et partners"
-      );
-      return fullSession;
-    } catch (error) {
-      console.error("Erreur chargement session:", error);
-      throw error;
-    }
-  };
+      // Race entre le timeout et le chargement
+      return Promise.race([loadPromise(), timeoutPromise]);
+    },
+    [getCachedSession, setCachedSession]
+  );
 
   const refreshSession = async () => {
+    if (isRefreshingRef.current) {
+      console.log("Refresh déjà en cours, ignoré");
+      return;
+    }
+
     try {
+      isRefreshingRef.current = true;
       setLoading(true);
       setError(null);
 
@@ -310,14 +327,17 @@ export function useSession(): UseSessionReturn {
         const fullSession = await loadUserSession(user);
         setSession(fullSession);
         lastRefreshRef.current = Date.now();
+        console.log("Session rafraîchie avec succès");
       } else {
         setSession(null);
       }
     } catch (error: any) {
+      console.error("Erreur lors du refresh:", error);
       setError(error.message);
       setSession(null);
     } finally {
       setLoading(false);
+      isRefreshingRef.current = false;
     }
   };
 
@@ -536,14 +556,14 @@ export function useSession(): UseSessionReturn {
     }
   };
 
-  const clearCache = () => {
-    globalSessionCache.clear();
-    cacheStats.hits = 0;
-    cacheStats.misses = 0;
-  };
-
   const forceRefresh = async () => {
+    if (isRefreshingRef.current) {
+      console.log("Force refresh déjà en cours, ignoré");
+      return;
+    }
+
     try {
+      isRefreshingRef.current = true;
       setLoading(true);
       clearCache(); // Vider le cache
 
@@ -558,9 +578,19 @@ export function useSession(): UseSessionReturn {
         console.log("Session forcée mise à jour depuis la BD");
       }
     } catch (error: any) {
+      console.error("Erreur lors du force refresh:", error);
       setError(error.message);
+
+      // Retry automatique après 5 secondes
+      setTimeout(() => {
+        if (!isRefreshingRef.current) {
+          console.log("Tentative de retry automatique...");
+          forceRefresh();
+        }
+      }, 5000);
     } finally {
       setLoading(false);
+      isRefreshingRef.current = false;
     }
   };
 
@@ -624,13 +654,14 @@ export function useSession(): UseSessionReturn {
           .on(
             "postgres_changes",
             {
-              event: "*",
+              event: "*", // INSERT, UPDATE, DELETE
               schema: "public",
               table: "partners",
               filter: `id=eq.${authUser.id}`,
             },
             async (payload) => {
               try {
+                // Vider le cache et recharger
                 clearCache();
                 const fullSession = await loadUserSession(authUser);
                 if (fullSession) {
@@ -655,13 +686,14 @@ export function useSession(): UseSessionReturn {
           .on(
             "postgres_changes",
             {
-              event: "*",
+              event: "*", // INSERT, UPDATE, DELETE
               schema: "public",
               table: "avis",
               filter: `partenaire_id=eq.${authUser.id}`,
             },
             async (payload) => {
               try {
+                // Vider le cache et recharger
                 clearCache();
                 const fullSession = await loadUserSession(authUser);
                 if (fullSession) {
@@ -691,46 +723,57 @@ export function useSession(): UseSessionReturn {
         );
       }
     },
-    [cleanupRealtimeListeners]
+    [cleanupRealtimeListeners, clearCache, loadUserSession]
   );
 
   // Refresh automatique intelligent avec gestion d'erreurs
-  const startAutoRefresh = useCallback((authUser: User) => {
-    // Nettoyer l'interval précédent
-    if (autoRefreshIntervalRef.current) {
-      clearInterval(autoRefreshIntervalRef.current);
-    }
-
-    const interval = setInterval(async () => {
-      try {
-        const now = Date.now();
-        const timeSinceLastRefresh = now - lastRefreshRef.current;
-
-        // Ne rafraîchir que si plus de 5 minutes se sont écoulées
-        if (timeSinceLastRefresh >= REFRESH_INTERVAL) {
-          // Vérifier si l'utilisateur est toujours connecté
-          const {
-            data: { user: currentUser },
-          } = await supabase.auth.getUser();
-          if (!currentUser) {
-            clearInterval(interval);
-            return;
-          }
-
-          clearCache();
-          const fullSession = await loadUserSession(authUser);
-          if (fullSession) {
-            setSession(fullSession);
-            lastRefreshRef.current = now;
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors du refresh automatique:", error);
+  const startAutoRefresh = useCallback(
+    (authUser: User) => {
+      // Nettoyer l'interval précédent
+      if (autoRefreshIntervalRef.current) {
+        clearInterval(autoRefreshIntervalRef.current);
       }
-    }, REFRESH_INTERVAL);
 
-    autoRefreshIntervalRef.current = interval;
-  }, []);
+      const interval = setInterval(async () => {
+        if (isRefreshingRef.current) {
+          console.log("Refresh automatique ignoré - refresh manuel en cours");
+          return;
+        }
+
+        try {
+          const now = Date.now();
+          const timeSinceLastRefresh = now - lastRefreshRef.current;
+
+          // Ne rafraîchir que si plus de 3 minutes se sont écoulées
+          if (timeSinceLastRefresh >= REFRESH_INTERVAL) {
+            // Vérifier si l'utilisateur est toujours connecté
+            const {
+              data: { user: currentUser },
+            } = await supabase.auth.getUser();
+            if (!currentUser) {
+              clearInterval(interval);
+              return;
+            }
+
+            console.log("Refresh automatique en cours...");
+            clearCache();
+            const fullSession = await loadUserSession(authUser);
+            if (fullSession) {
+              setSession(fullSession);
+              lastRefreshRef.current = now;
+              console.log("Refresh automatique terminé avec succès");
+            }
+          }
+        } catch (error) {
+          console.error("Erreur lors du refresh automatique:", error);
+          // Ne pas arrêter l'interval en cas d'erreur, juste logger
+        }
+      }, REFRESH_INTERVAL);
+
+      autoRefreshIntervalRef.current = interval;
+    },
+    [clearCache, loadUserSession]
+  );
 
   // Nettoyage du cache expiré toutes les minutes
   useEffect(() => {

@@ -1,5 +1,5 @@
 "use client";
-import { Bell, LogOut, Moon, Sun, User } from "lucide-react";
+import { Bell, LogOut, Moon, Sun, User, RefreshCw } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
@@ -12,9 +12,10 @@ export default function EntrepriseHeader() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
-  const { session, signOut } = useAuth();
+  const { session, signOut, forceRefresh } = useAuth();
   const router = useRouter();
 
   // Charger le nombre de notifications non lues
@@ -76,6 +77,22 @@ export default function EntrepriseHeader() {
     setNotificationsOpen(!notificationsOpen);
   };
 
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+
+    try {
+      setIsRefreshing(true);
+      console.log("🔄 Refresh manuel demandé...");
+      await forceRefresh();
+      await loadUnreadCount(); // Recharger aussi les notifications
+      console.log("✅ Refresh manuel terminé");
+    } catch (error) {
+      console.error("❌ Erreur lors du refresh manuel:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleLogout = async () => {
     await signOut();
     setProfileMenuOpen(false);
@@ -100,6 +117,20 @@ export default function EntrepriseHeader() {
 
         {/* Bloc actions */}
         <div className="flex items-center gap-4 md:gap-6">
+          {/* Bouton de refresh manuel */}
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Actualiser les données"
+          >
+            <RefreshCw
+              className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${
+                isRefreshing ? "animate-spin" : ""
+              }`}
+            />
+          </button>
+
           <button
             className="relative focus:outline-none"
             aria-label="Voir les notifications"
