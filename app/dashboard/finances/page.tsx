@@ -158,16 +158,16 @@ export default function FinancesPage() {
   const loadSalaryAdvanceData = async () => {
     setIsLoading(true);
     try {
-      // 1. Récupérer toutes les transactions valides pour l'entreprise (flux financier total)
-      const { data: allTransactions, error: transactionsError } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("entreprise_id", session?.partner?.id)
-        .eq("statut", "EFFECTUEE");
+      // 1. Récupérer tous les remboursements pour l'entreprise (flux financier total)
+      const { data: allRemboursements, error: remboursementsError } =
+        await supabase
+          .from("remboursements")
+          .select("*")
+          .eq("partenaire_id", session?.partner?.id);
 
-      if (transactionsError) throw transactionsError;
+      if (remboursementsError) throw remboursementsError;
 
-      console.log(allTransactions);
+      console.log(allRemboursements);
 
       // 2. Récupérer les demandes d'avance validées pour ce mois-ci
       const { data: salaryRequests, error: salaryError } = await supabase
@@ -185,13 +185,13 @@ export default function FinancesPage() {
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
 
-      // Transactions effectuées ce mois-ci (pour montant débloqué et à rembourser)
-      const transactionsMois = (allTransactions || []).filter((t: any) => {
-        const tDate = t.created_at ? new Date(t.created_at) : null;
+      // Remboursements effectués ce mois-ci (pour montant débloqué et à rembourser)
+      const remboursementsMois = (allRemboursements || []).filter((r: any) => {
+        const rDate = r.date_creation ? new Date(r.date_creation) : null;
         return (
-          tDate &&
-          tDate.getMonth() === thisMonth &&
-          tDate.getFullYear() === thisYear
+          rDate &&
+          rDate.getMonth() === thisMonth &&
+          rDate.getFullYear() === thisYear
         );
       });
 
@@ -205,15 +205,17 @@ export default function FinancesPage() {
         );
       });
 
-      // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
-      const fluxFinance = (allTransactions || []).reduce(
-        (sum: number, t: any) => sum + Number(t.montant || 0),
+      // Flux financier = somme de tous les remboursements entre l'entreprise et Zalama
+      const fluxFinance = (allRemboursements || []).reduce(
+        (sum: number, r: any) =>
+          sum + Number(r.montant_total_remboursement || 0),
         0
       );
 
-      // Montant débloqué ce mois-ci = somme des montants des transactions effectuées ce mois-ci
-      const debloqueMois = transactionsMois.reduce(
-        (sum: number, t: any) => sum + Number(t.montant || 0),
+      // Montant débloqué ce mois-ci = somme des montants des remboursements effectués ce mois-ci
+      const debloqueMois = remboursementsMois.reduce(
+        (sum: number, r: any) =>
+          sum + Number(r.montant_total_remboursement || 0),
         0
       );
 
@@ -403,13 +405,13 @@ export default function FinancesPage() {
     try {
       // Utiliser le service pour récupérer les vraies données
       const partnerService = new PartnerDataService(session.partner.id);
-      const transactions = await partnerService.getFinancialTransactions();
+      const remboursements = await partnerService.getRemboursements();
 
-      setTransactions(transactions as unknown as TransactionWithEmployee[]);
+      setTransactions(remboursements as unknown as TransactionWithEmployee[]);
 
       // Calculer les statistiques financières
       const stats = calculateFinancialStats(
-        transactions as unknown as TransactionWithEmployee[]
+        remboursements as unknown as TransactionWithEmployee[]
       );
       setFinancialStats(stats);
     } catch (error) {

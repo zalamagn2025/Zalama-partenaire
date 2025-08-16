@@ -107,19 +107,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Créer un log de transaction
+    // Mettre à jour le remboursement avec les informations de paiement
     const { error: logError } = await supabase
-      .from("financial_transactions")
-      .insert({
-        remboursement_id: remboursementId,
-        montant: data.paidAmount || 0,
-        frais: data.fees || 0,
-        methode_paiement: data.paymentMethod,
-        statut: newStatus,
-        reference_transaction: data.transactionId,
-        date_transaction: data.createdAt,
-        type_transaction: "REMBOURSEMENT",
-      });
+      .from("remboursements")
+      .update({
+        reference_paiement: data.transactionId,
+        date_remboursement_effectue: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", remboursementId);
 
     if (logError) {
       console.error(

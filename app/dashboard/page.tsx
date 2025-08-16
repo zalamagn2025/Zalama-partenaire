@@ -80,14 +80,13 @@ export default function EntrepriseDashboardPage() {
       if (!session?.partner) return;
       try {
         const { data, error } = await supabase
-          .from("transactions")
+          .from("remboursements")
           .select("*")
-          .eq("entreprise_id", session?.partner?.id)
-          .eq("statut", "EFFECTUEE");
+          .eq("partenaire_id", session?.partner?.id);
         if (error) throw error;
         setAllTransactions(data || []);
       } catch (e) {
-        console.error("Erreur lors du chargement des transactions:", e);
+        console.error("Erreur lors du chargement des remboursements:", e);
       }
     };
     if (!loading && session?.partner) {
@@ -103,10 +102,10 @@ export default function EntrepriseDashboardPage() {
       // Utiliser le service pour récupérer les vraies données
       const partnerService = new PartnerDataService(session.partner.id);
 
-      const [employees, transactions, alerts, avis, demandes, stats] =
+      const [employees, remboursements, alerts, avis, demandes, stats] =
         await Promise.all([
           partnerService.getEmployees(),
-          partnerService.getFinancialTransactions(),
+          partnerService.getRemboursements(),
           partnerService.getAlerts(),
           partnerService.getAvis(),
           partnerService.getSalaryAdvanceRequests(),
@@ -115,7 +114,7 @@ export default function EntrepriseDashboardPage() {
 
       // Définir les données récupérées de la base
       setEmployees(employees);
-      setTransactions(transactions);
+      setTransactions(remboursements);
       setAlerts(alerts);
       setAvis(avis);
       setDemandes(demandes);
@@ -177,15 +176,14 @@ export default function EntrepriseDashboardPage() {
   }, [loading, session?.partner]);
 
   useEffect(() => {
-    const loadTransactions = async () => {
+    const loadRemboursements = async () => {
       const { data, error } = await supabase
-        .from("financial_transactions")
+        .from("remboursements")
         .select("*")
-        .eq("partenaire_id", session?.partner?.id)
-        .eq("statut", "Validé");
+        .eq("partenaire_id", session?.partner?.id);
       if (!error) setTransactions(data || []);
     };
-    if (!loading && session?.partner) loadTransactions();
+    if (!loading && session?.partner) loadRemboursements();
   }, [loading, session?.partner]);
 
   // Ajoute le hook d'état pour les demandes d'avance

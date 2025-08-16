@@ -49,7 +49,7 @@ export default function GraphiquesVisualisations() {
       const partnerService = new PartnerDataService(session.partner.id);
 
       // Récupérer les données financières pour les graphiques
-      const financialData = await partnerService.getFinancialTransactions();
+      const financialData = await partnerService.getRemboursements();
       const demandesData = await partnerService.getSalaryAdvanceRequests();
 
       // Calculer les données mensuelles
