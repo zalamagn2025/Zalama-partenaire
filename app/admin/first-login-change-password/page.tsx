@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { Lock, Eye, EyeOff, Loader2, Shield, CheckCircle } from "lucide-react";
 
-export default function FirstLoginChangePasswordPage() {
+function FirstLoginChangePasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, login, refreshSession } = useEdgeAuthContext();
@@ -427,5 +427,22 @@ export default function FirstLoginChangePasswordPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function FirstLoginChangePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+          <div className="flex items-center gap-3 text-gray-600 dark:text-gray-300">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            <span className="text-lg">Chargement...</span>
+          </div>
+        </div>
+      }
+    >
+      <FirstLoginChangePasswordContent />
+    </Suspense>
   );
 }
