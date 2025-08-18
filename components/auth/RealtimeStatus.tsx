@@ -119,6 +119,36 @@ export default function RealtimeStatus({ session }: RealtimeStatusProps) {
           <span>Expiration token :</span>
           <span className="font-medium">10 minutes</span>
         </div>
+
+        {/* Informations de débogage du partenaire */}
+        {session?.partner && (
+          <>
+            <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+              <div className="flex items-center justify-between">
+                <span>Partenaire :</span>
+                <span className="font-medium">
+                  {session.partner.company_name}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>ID Partenaire :</span>
+                <span className="font-medium text-xs">
+                  {session.partner.id}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Date création (session) :</span>
+                <span className="font-medium">
+                  {session.partner.created_at
+                    ? new Date(session.partner.created_at).toLocaleDateString(
+                        "fr-FR"
+                      )
+                    : "Non disponible"}
+                </span>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {status === "active" && (

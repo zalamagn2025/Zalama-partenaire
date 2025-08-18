@@ -32,6 +32,8 @@ export interface PartnerAuthResponse {
     active_employees_count: number;
     total_salary: number;
     avg_salary: number;
+    created_at: string;
+    updated_at: string;
   };
   access_token?: string;
   refresh_token?: string;
@@ -320,6 +322,8 @@ export interface Partner {
   active_employees_count: number;
   total_salary: number;
   avg_salary: number;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface AuthSession {

@@ -205,7 +205,7 @@ export default function EntrepriseDashboardPage() {
       if (!session?.partner) return;
       // Utiliser company_name pour faire correspondre avec partnership_requests
       const { data, error } = await supabase
-        .from("partnership_requests")
+        .from("partners")
         .select("payment_day")
         .eq("company_name", session.partner.company_name)
         .eq("status", "approved")
@@ -216,6 +216,37 @@ export default function EntrepriseDashboardPage() {
     };
     fetchPaymentDay();
   }, [session?.partner]);
+
+  // Récupérer la vraie date de création du partenaire depuis la base de données
+  const [partnerCreationYear, setPartnerCreationYear] = useState<number | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchPartnerCreationYear = async () => {
+      if (!session?.partner?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from("partners")
+          .select("created_at")
+          .eq("id", session.partner.id)
+          .single();
+
+        if (!error && data?.created_at) {
+          const creationYear = new Date(data.created_at).getFullYear();
+          setPartnerCreationYear(creationYear);
+        }
+      } catch (error) {
+        console.error(
+          "Erreur lors de la récupération de la date de création:",
+          error
+        );
+      }
+    };
+
+    fetchPartnerCreationYear();
+  }, [session?.partner?.id]);
 
   // Calcul de la date de remboursement et jours restants
   const now = new Date();
@@ -504,9 +535,10 @@ export default function EntrepriseDashboardPage() {
         <div className="flex flex-col items-end">
           <span className="text-blue-400 text-sm">
             Partenaire depuis{" "}
-            {(session?.partner as any)?.created_at
-              ? new Date((session.partner as any).created_at).getFullYear()
-              : "2024"}
+            {partnerCreationYear ||
+              (session?.partner?.created_at
+                ? new Date(session.partner.created_at).getFullYear()
+                : new Date().getFullYear())}
           </span>
           <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">
             Compte actif
