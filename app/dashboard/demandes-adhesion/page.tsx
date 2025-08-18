@@ -7,6 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import {
@@ -19,6 +25,9 @@ import {
   AlertCircle,
   Loader2,
   Search,
+  Eye,
+  FileText,
+  Clock,
 } from "lucide-react";
 
 interface EmployeeWithoutAccount {
@@ -47,6 +56,9 @@ export default function DemandesAdhesionPage() {
   const [filterStatus, setFilterStatus] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const [selectedEmployee, setSelectedEmployee] =
+    useState<EmployeeWithoutAccount | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Charger les employés sans compte
   useEffect(() => {
@@ -143,6 +155,11 @@ export default function DemandesAdhesionPage() {
     }
   };
 
+  const handleViewDetails = (employee: EmployeeWithoutAccount) => {
+    setSelectedEmployee(employee);
+    setIsModalOpen(true);
+  };
+
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) {
       return "Date non disponible";
@@ -203,7 +220,7 @@ export default function DemandesAdhesionPage() {
 
       {/* Filtres et recherche */}
       <Card className="dark:bg-[var(--zalama-card)]">
-        <CardContent className="p-6 ">
+        <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Recherche */}
             <div className="relative">
@@ -218,12 +235,6 @@ export default function DemandesAdhesionPage() {
 
             {/* Filtre par statut */}
             <div>
-              {/* <Label
-                htmlFor="status-filter"
-                className="text-sm font-medium text-gray-400"
-              >
-                Statut
-              </Label> */}
               <select
                 id="status-filter"
                 value={filterStatus}
@@ -260,136 +271,302 @@ export default function DemandesAdhesionPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredEmployees.map((employee) => (
-            <Card
-              key={employee.id}
-              className="hover:shadow-lg transition-shadow dark:bg-[var(--zalama-card)]"
-            >
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg">
+        <Card className="dark:bg-[var(--zalama-card)]">
+          <CardHeader>
+            <CardTitle className="text-lg">
+              Liste des employés sans compte
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {filteredEmployees.map((employee) => (
+                <div
+                  key={employee.id}
+                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  onClick={() => handleViewDetails(employee)}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
                         {employee.prenom.charAt(0)}
                         {employee.nom.charAt(0)}
                       </span>
                     </div>
                     <div>
-                      <CardTitle className="text-lg">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {employee.prenom} {employee.nom}
-                      </CardTitle>
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge
-                          variant={employee.actif ? "default" : "secondary"}
-                        >
-                          {employee.actif ? "Actif" : "Inactif"}
-                        </Badge>
-                        <Badge variant="outline">{employee.type_contrat}</Badge>
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {employee.poste}
                       </div>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => handleCreateAccount(employee.id)}
-                    disabled={
-                      creatingAccount === employee.id || !employee.email
-                    }
-                    className={`${
-                      !employee.email
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                    }`}
-                    title={
-                      !employee.email ? "Email requis pour créer un compte" : ""
-                    }
-                  >
-                    {creatingAccount === employee.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <UserPlus className="h-4 w-4 mr-2" />
-                    )}
-                    Créer le compte
-                  </Button>
-                </div>
-              </CardHeader>
 
-              <CardContent className="space-y-4">
-                {/* Informations de contact */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant={employee.actif ? "default" : "secondary"}
+                        className="text-xs"
+                      >
+                        {employee.actif ? "Actif" : "Inactif"}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {employee.type_contrat}
+                      </Badge>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewDetails(employee);
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        <Eye className="h-3 w-3" />
+                        Détails
+                      </Button>
+
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateAccount(employee.id);
+                        }}
+                        disabled={
+                          creatingAccount === employee.id || !employee.email
+                        }
+                        className={`${
+                          !employee.email
+                            ? "bg-gray-400 cursor-not-allowed"
+                            : "bg-green-600 hover:bg-green-700"
+                        } flex items-center gap-1`}
+                        title={
+                          !employee.email
+                            ? "Email requis pour créer un compte"
+                            : ""
+                        }
+                      >
+                        {creatingAccount === employee.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <UserPlus className="h-3 w-3" />
+                        )}
+                        Créer
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Modal des détails */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Détails de l'employé</span>
+              {/* <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsModalOpen(false)}
+                className="h-8 w-8 p-0"
+              >
+                 <X className="h-4 w-4" />
+              </Button> */}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedEmployee && (
+            <div className="space-y-6">
+              {/* En-tête avec photo et nom */}
+              <div className="flex items-center gap-4 pb-4 border-b">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                  <span className="text-blue-600 dark:text-blue-400 font-semibold text-xl">
+                    {selectedEmployee.prenom.charAt(0)}
+                    {selectedEmployee.nom.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {selectedEmployee.prenom} {selectedEmployee.nom}
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {selectedEmployee.poste}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge
+                      variant={selectedEmployee.actif ? "default" : "secondary"}
+                    >
+                      {selectedEmployee.actif ? "Actif" : "Inactif"}
+                    </Badge>
+                    <Badge variant="outline">
+                      {selectedEmployee.type_contrat}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informations de contact */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  Informations de contact
+                </h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <Mail className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {employee.email || "Non renseigné"}
+                        Email
                       </div>
-                      <div className="text-xs text-gray-500">Email</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedEmployee.email || "Non renseigné"}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Informations professionnelles */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Informations professionnelles
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <Building2 className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {employee.poste}
+                        Poste
                       </div>
-                      <div className="text-xs text-gray-500">Poste</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedEmployee.poste}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <Separator />
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <FileText className="h-4 w-4 text-gray-400" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        Type de contrat
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedEmployee.type_contrat}
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Informations professionnelles */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <Calendar className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatDate(employee.date_embauche)}
-                      </div>
-                      <div className="text-xs text-gray-500">
                         Date d'embauche
+                      </div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {formatDate(selectedEmployee.date_embauche)}
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <DollarSign className="h-4 w-4 text-gray-400" />
                     <div>
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatSalary(employee.salaire_net)}
+                        Salaire net
                       </div>
-                      <div className="text-xs text-gray-500">Salaire net</div>
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
+                        {formatSalary(selectedEmployee.salaire_net)}
+                      </div>
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {employee.date_expiration && (
-                  <>
-                    <Separator />
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-orange-400" />
-                      <div>
-                        <div className="text-sm font-medium text-orange-600">
-                          Expire le {formatDate(employee.date_expiration)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          Contrat à durée déterminée
-                        </div>
+              {selectedEmployee.date_expiration && (
+                <>
+                  <Separator />
+                  <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <AlertCircle className="h-4 w-4 text-orange-500" />
+                    <div>
+                      <div className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                        Contrat à durée déterminée
+                      </div>
+                      <div className="text-sm text-orange-600 dark:text-orange-400">
+                        Expire le {formatDate(selectedEmployee.date_expiration)}
                       </div>
                     </div>
-                  </>
-                )}
+                  </div>
+                </>
+              )}
 
-                <Separator />
+              <Separator />
 
-                {/* Date d'ajout */}
-                <div className="text-xs text-gray-500">
-                  Ajouté le {formatDate(employee.created_at)}
+              {/* Informations système */}
+              <div className="space-y-4">
+                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Informations système
+                </h4>
+                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <Clock className="h-4 w-4 text-gray-400" />
+                  <div>
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      Date d'ajout
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {formatDate(selectedEmployee.created_at)}
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+
+              {/* Actions */}
+              <Separator />
+              <div className="flex justify-end gap-3 pt-4">
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                  Fermer
+                </Button>
+                <Button
+                  onClick={() => {
+                    handleCreateAccount(selectedEmployee.id);
+                    setIsModalOpen(false);
+                  }}
+                  disabled={
+                    creatingAccount === selectedEmployee.id ||
+                    !selectedEmployee.email
+                  }
+                  className={
+                    !selectedEmployee.email
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-green-600 hover:bg-green-700"
+                  }
+                  title={
+                    !selectedEmployee.email
+                      ? "Email requis pour créer un compte"
+                      : ""
+                  }
+                >
+                  {creatingAccount === selectedEmployee.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <UserPlus className="h-4 w-4 mr-2" />
+                  )}
+                  Créer le compte
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
