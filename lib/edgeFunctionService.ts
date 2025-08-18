@@ -257,20 +257,22 @@ class EdgeFunctionService {
     });
   }
 
-  // 🔐 Envoi d'OTP pour connexion sécurisée
+  // 🔐 Envoi d'OTP pour connexion sécurisée (FONCTIONNALITÉ TEMPORAIREMENT DÉSACTIVÉE)
   async sendOtp(request: SendOtpRequest): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/send-otp", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
+    console.log("⚠️ Fonctionnalité OTP temporairement désactivée");
+    return {
+      success: false,
+      message: "Fonctionnalité OTP temporairement désactivée",
+    };
   }
 
-  // ✅ Vérification d'OTP
+  // ✅ Vérification d'OTP (FONCTIONNALITÉ TEMPORAIREMENT DÉSACTIVÉE)
   async verifyOtp(request: VerifyOtpRequest): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/verify-otp", {
-      method: "POST",
-      body: JSON.stringify(request),
-    });
+    console.log("⚠️ Fonctionnalité OTP temporairement désactivée");
+    return {
+      success: false,
+      message: "Fonctionnalité OTP temporairement désactivée",
+    };
   }
 
   // 🔐 Changement de mot de passe sécurisé

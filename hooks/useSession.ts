@@ -500,41 +500,10 @@ export function useSession(): UseSessionReturn {
   };
 
   const signInWithOTP = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Se connecter avec les identifiants
-      const { data: authData, error: authError } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-      if (authError) {
-        setError(authError.message);
-        return { error: authError };
-      }
-
-      if (!authData.user) {
-        const error = { message: "Erreur lors de la connexion" };
-        setError(error.message);
-        return { error };
-      }
-
-      // Créer la session complète
-      const fullSession = await loadUserSession(authData.user);
-      setSession(fullSession);
-      lastRefreshRef.current = Date.now();
-
-      return { error: null, session: fullSession };
-    } catch (error: any) {
-      const errorMessage = error.message || "Erreur de connexion";
-      setError(errorMessage);
-      return { error: { message: errorMessage } };
-    } finally {
-      setLoading(false);
-    }
+    console.log("⚠️ Fonctionnalité OTP temporairement désactivée");
+    return {
+      error: { message: "Fonctionnalité OTP temporairement désactivée" },
+    };
   };
 
   const signIn = async (email: string, password: string) => {

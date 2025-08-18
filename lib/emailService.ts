@@ -18,32 +18,15 @@ class EmailService {
   }
 
   /**
-   * Envoie un email OTP
+   * Envoie un email OTP (FONCTIONNALITÉ TEMPORAIREMENT DÉSACTIVÉE)
    */
   async sendOTPEmail(
     to: string,
     otp: string,
     userName?: string
   ): Promise<boolean> {
-    try {
-      // Pour les tests, utiliser l'email vérifié de l'utilisateur
-      const testEmail = process.env.TEST_EMAIL || "zalamagn@gmail.com";
-      const actualTo = process.env.NODE_ENV === "development" ? testEmail : to;
-
-      const emailData: EmailData = {
-        to: actualTo,
-        subject: "Code de vérification - Partner",
-        html: this.getOTPEmailTemplate(otp, userName),
-        text: this.getOTPEmailText(otp, userName),
-        userName,
-      };
-
-      console.log(`📧 Envoi email OTP à: ${actualTo} (original: ${to})`);
-      return await this.sendEmail(emailData);
-    } catch (error) {
-      console.error("Erreur envoi email OTP:", error);
-      return false;
-    }
+    console.log("⚠️ Fonctionnalité OTP temporairement désactivée");
+    return false;
   }
 
   /**

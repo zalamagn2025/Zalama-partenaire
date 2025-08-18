@@ -1,6 +1,11 @@
+// FONCTIONNALITÉ OTP TEMPORAIREMENT DÉSACTIVÉE
+// Cette fonctionnalité a été mise de côté pour le moment
+
+/*
+// FONCTIONNALITÉ OTP TEMPORAIREMENT DÉSACTIVÉE
+// Cette fonctionnalité a été mise de côté pour le moment
+
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { emailService } from "@/lib/emailService";
 
 export async function POST(request: NextRequest) {
   try {
@@ -126,4 +131,18 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+*/
+
+// Fonction temporaire qui retourne une erreur de fonctionnalité désactivée
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  return NextResponse.json(
+    {
+      error: "Fonctionnalité OTP temporairement désactivée",
+      message: "Cette fonctionnalité a été mise de côté pour le moment",
+    },
+    { status: 503 }
+  );
 }
