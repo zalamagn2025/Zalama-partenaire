@@ -1,125 +1,322 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import { toast } from "sonner";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Eye, EyeOff } from "lucide-react";
-
-// Fonction utilitaire pour calculer la force du mot de passe
-function getPasswordStrength(password: string) {
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (password.length >= 12) score++;
-  if (score <= 1) return { label: "Faible", color: "bg-red-500", value: 1 };
-  if (score === 2 || score === 3)
-    return { label: "Moyen", color: "bg-yellow-500", value: 2 };
-  return { label: "Élevé", color: "bg-green-600", value: 3 };
-}
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { Lock, Eye, EyeOff, Loader2, Shield, CheckCircle } from "lucide-react";
 
 export default function FirstLoginChangePasswordPage() {
-  const { session, logout } = useEdgeAuthContext();
   const router = useRouter();
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const searchParams = useSearchParams();
+  const { session, login, refreshSession } = useEdgeAuthContext();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [formData, setFormData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+
+  const [passwordStrength, setPasswordStrength] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false,
+  });
+
+  // Vérifier si l'utilisateur doit changer son mot de passe
   useEffect(() => {
-    if (!session?.admin) {
-      router.replace("/login");
+    if (session?.admin?.require_password_change === false) {
+      router.replace("/dashboard");
     }
   }, [session, router]);
 
-  if (!session?.admin) {
-    return null;
-  }
+  // Calculer la force du mot de passe
+  useEffect(() => {
+    const password = formData.newPassword;
+    setPasswordStrength({
+      length: password.length >= 8,
+      uppercase: /[A-Z]/.test(password),
+      lowercase: /[a-z]/.test(password),
+      number: /\d/.test(password),
+      special: /[@$!%*?&]/.test(password),
+    });
+  }, [formData.newPassword]);
 
-  const handleChangePassword = async (e: React.FormEvent) => {
+  const isPasswordValid = Object.values(passwordStrength).every(Boolean);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || !confirmPassword) {
+
+    if (
+      !formData.currentPassword ||
+      !formData.newPassword ||
+      !formData.confirmPassword
+    ) {
       toast.error("Veuillez remplir tous les champs");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error("Les nouveaux mots de passe ne correspondent pas");
       return;
     }
-    if (newPassword.length < 8) {
-      toast.error("Le mot de passe doit contenir au moins 8 caractères");
+
+    if (!isPasswordValid) {
+      toast.error("Le mot de passe ne respecte pas les critères de sécurité");
       return;
     }
-    setIsSubmitting(true);
+
+    if (!session?.admin?.email) {
+      toast.error("Session non valide");
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      // Utiliser le service Edge Function pour changer le mot de passe
-      const response = await edgeFunctionService.changeAdminPassword(
+      // Utiliser directement le token d'accès de la session actuelle
+      if (!session?.access_token) {
+        throw new Error("Session non valide");
+      }
+
+      const changeResponse = await edgeFunctionService.changePassword(
         session.access_token,
-        { new_password: newPassword }
+        {
+          current_password: formData.currentPassword,
+          new_password: formData.newPassword,
+          confirm_password: formData.confirmPassword,
+        }
       );
 
-      if (response.success) {
+      if (changeResponse.success) {
         toast.success(
-          "Mot de passe modifié avec succès. Veuillez vous reconnecter."
+          "Mot de passe changé avec succès. Vous allez être redirigé vers le dashboard."
         );
-        await logout();
-        router.replace("/login");
+
+        // Forcer le rafraîchissement de la session pour mettre à jour require_password_change
+        try {
+          await refreshSession();
+          console.log("Session rafraîchie avec succès");
+        } catch (refreshError) {
+          console.log(
+            "Erreur lors du rafraîchissement de session:",
+            refreshError
+          );
+          // Essayer de rafraîchir manuellement
+          try {
+            const refreshResponse = await edgeFunctionService.getMe(
+              session.access_token
+            );
+            if (refreshResponse.success && refreshResponse.data) {
+              const newSessionData = {
+                user: {
+                  id: refreshResponse.data.user.id,
+                  email: refreshResponse.data.user.email,
+                },
+                admin: refreshResponse.data.user,
+                partner: refreshResponse.data.partner_info,
+                access_token: session.access_token,
+                refresh_token: session.refresh_token,
+              };
+
+              // Sauvegarder la session mise à jour
+              localStorage.setItem(
+                "partner_session",
+                JSON.stringify(newSessionData)
+              );
+
+              // Forcer la mise à jour du contexte
+              window.location.reload();
+            }
+          } catch (manualRefreshError) {
+            console.log(
+              "Erreur lors du rafraîchissement manuel:",
+              manualRefreshError
+            );
+          }
+        }
+
+        // Rediriger vers le dashboard après un délai
+        setTimeout(() => {
+          router.replace("/dashboard");
+        }, 2000);
       } else {
         throw new Error(
-          response.message || "Erreur lors du changement de mot de passe"
+          changeResponse.message || "Erreur lors du changement de mot de passe"
         );
       }
     } catch (error: any) {
+      console.error("Erreur lors du changement de mot de passe:", error);
+
+      // Si l'erreur indique un problème de token, essayer de se reconnecter
+      if (
+        error.message?.includes("Session expirée") ||
+        error.message?.includes("401")
+      ) {
+        try {
+          console.log("Tentative de reconnexion...");
+          const loginResponse = await edgeFunctionService.login({
+            email: session.admin.email,
+            password: formData.currentPassword,
+          });
+
+          if (loginResponse.success && loginResponse.access_token) {
+            // Réessayer avec le nouveau token
+            const retryResponse = await edgeFunctionService.changePassword(
+              loginResponse.access_token,
+              {
+                current_password: formData.currentPassword,
+                new_password: formData.newPassword,
+                confirm_password: formData.confirmPassword,
+              }
+            );
+
+            if (retryResponse.success) {
+              toast.success(
+                "Mot de passe changé avec succès. Vous allez être redirigé vers le dashboard."
+              );
+
+              // Mettre à jour la session
+              if (loginResponse.user && loginResponse.partner_info) {
+                const newSessionData = {
+                  user: {
+                    id: loginResponse.user.id,
+                    email: loginResponse.user.email,
+                  },
+                  admin: loginResponse.user,
+                  partner: loginResponse.partner_info,
+                  access_token: loginResponse.access_token,
+                  refresh_token: loginResponse.refresh_token || "",
+                };
+
+                localStorage.setItem(
+                  "partner_session",
+                  JSON.stringify(newSessionData)
+                );
+
+                // Forcer la mise à jour du contexte
+                window.location.reload();
+              }
+
+              setTimeout(() => {
+                router.replace("/dashboard");
+              }, 2000);
+              return;
+            }
+          }
+        } catch (retryError: any) {
+          console.error(
+            "Erreur lors de la tentative de reconnexion:",
+            retryError
+          );
+          toast.error("Mot de passe actuel incorrect ou erreur de connexion");
+          return;
+        }
+      }
+
       toast.error(error.message || "Erreur lors du changement de mot de passe");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  const strength = getPasswordStrength(newPassword);
+  if (!session?.admin?.require_password_change) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600 dark:text-gray-400">Redirection...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Changement de mot de passe obligatoire</CardTitle>
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          </div>
+          <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
+            Premier accès
+          </CardTitle>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+            Pour des raisons de sécurité, vous devez changer votre mot de passe
+            avant de continuer.
+          </p>
         </CardHeader>
-        <form onSubmit={handleChangePassword}>
-          <CardContent className="space-y-4 mb-4">
-            <p className="text-gray-700 dark:text-gray-300 text-sm mb-2">
-              Pour des raisons de sécurité, vous devez définir un nouveau mot de
-              passe avant d'accéder au dashboard.
-            </p>
+
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Mot de passe actuel */}
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Nouveau mot de passe
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mot de passe actuel
               </label>
               <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Nouveau mot de passe"
-                  disabled={isSubmitting}
+                  type={showCurrentPassword ? "text" : "password"}
+                  value={formData.currentPassword}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      currentPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Entrez votre mot de passe actuel"
+                  className="pl-10 pr-12"
+                  required
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-2 text-gray-400"
-                  onClick={() => setShowNewPassword((v) => !v)}
-                  tabIndex={-1}
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                >
+                  {showCurrentPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Nouveau mot de passe */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Nouveau mot de passe
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                <Input
+                  type={showNewPassword ? "text" : "password"}
+                  value={formData.newPassword}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      newPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Entrez votre nouveau mot de passe"
+                  className="pl-10 pr-12"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
                 >
                   {showNewPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -128,50 +325,32 @@ export default function FirstLoginChangePasswordPage() {
                   )}
                 </button>
               </div>
-              {/* Indicateur de force du mot de passe */}
-              {newPassword && (
-                <div className="mt-2 flex items-center gap-2">
-                  <div className="w-28 h-2 rounded bg-gray-200 overflow-hidden">
-                    <div
-                      className={`h-2 rounded ${strength.color}`}
-                      style={{
-                        width:
-                          strength.value === 1
-                            ? "33%"
-                            : strength.value === 2
-                            ? "66%"
-                            : "100%",
-                      }}
-                    />
-                  </div>
-                  <span
-                    className={`text-xs font-semibold ${strength.color.replace(
-                      "bg-",
-                      "text-"
-                    )}`}
-                  >
-                    Sécurité: {strength.label}
-                  </span>
-                </div>
-              )}
             </div>
+
+            {/* Confirmation du nouveau mot de passe */}
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Confirmer le mot de passe
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Confirmer le nouveau mot de passe
               </label>
               <div className="relative">
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                 <Input
                   type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirmer le mot de passe"
-                  disabled={isSubmitting}
+                  value={formData.confirmPassword}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                  placeholder="Confirmez votre nouveau mot de passe"
+                  className="pl-10 pr-12"
+                  required
                 />
                 <button
                   type="button"
-                  className="absolute right-2 top-2 text-gray-400"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  tabIndex={-1}
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -181,22 +360,71 @@ export default function FirstLoginChangePasswordPage() {
                 </button>
               </div>
             </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? "Changement..." : "Changer le mot de passe"}
-            </Button>
+
+            {/* Critères de sécurité */}
+            {formData.newPassword && (
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+                <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                  Critères de sécurité :
+                </p>
+                <div className="space-y-1">
+                  {Object.entries(passwordStrength).map(([key, valid]) => (
+                    <div key={key} className="flex items-center gap-2">
+                      <CheckCircle
+                        className={`h-3 w-3 ${
+                          valid ? "text-green-500" : "text-gray-400"
+                        }`}
+                      />
+                      <span
+                        className={`text-xs ${
+                          valid
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
+                        {key === "length" && "Au moins 8 caractères"}
+                        {key === "uppercase" && "Une lettre majuscule"}
+                        {key === "lowercase" && "Une lettre minuscule"}
+                        {key === "number" && "Un chiffre"}
+                        {key === "special" && "Un caractère spécial (@$!%*?&)"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bouton de soumission */}
             <Button
-              type="button"
-              variant="ghost"
+              type="submit"
+              disabled={
+                isLoading ||
+                !formData.currentPassword ||
+                !formData.newPassword ||
+                !formData.confirmPassword ||
+                !isPasswordValid
+              }
               className="w-full"
-              onClick={logout}
-              disabled={isSubmitting}
             >
-              Se déconnecter
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Changement en cours...
+                </>
+              ) : (
+                "Changer le mot de passe"
+              )}
             </Button>
-          </CardFooter>
-        </form>
+          </form>
+
+          {/* Informations supplémentaires */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              En changeant votre mot de passe, vous acceptez les conditions
+              d'utilisation de ZaLaMa.
+            </p>
+          </div>
+        </CardContent>
       </Card>
     </div>
   );

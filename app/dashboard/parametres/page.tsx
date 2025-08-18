@@ -135,30 +135,60 @@ export default function ParametresPage() {
   };
 
   const handlePasswordChange = async () => {
-    if (!passwordData.newPassword || !passwordData.confirmPassword) {
+    if (
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.confirmPassword
+    ) {
       toast.error("Veuillez remplir tous les champs");
       return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error("Les nouveaux mots de passe ne correspondent pas");
       return;
     }
 
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Le mot de passe doit contenir au moins 6 caractères");
+    // Validation de la complexité du mot de passe
+    const passwordRegex =
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
+      toast.error(
+        "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (@$!%*?&)"
+      );
+      return;
+    }
+
+    if (!session?.access_token) {
+      toast.error("Session non valide");
       return;
     }
 
     setIsChangingPassword(true);
     try {
-      // TODO: Implémenter le changement de mot de passe via Edge Function
-      toast.success("Mot de passe changé avec succès");
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
+      const response = await edgeFunctionService.changePassword(
+        session.access_token,
+        {
+          current_password: passwordData.currentPassword,
+          new_password: passwordData.newPassword,
+          confirm_password: passwordData.confirmPassword,
+        }
+      );
+
+      if (response.success) {
+        toast.success(
+          "Mot de passe changé avec succès. Un email de confirmation a été envoyé."
+        );
+        setPasswordData({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        throw new Error(
+          response.message || "Erreur lors du changement de mot de passe"
+        );
+      }
     } catch (error: any) {
       console.error("Erreur lors du changement de mot de passe:", error);
       toast.error(error.message || "Erreur lors du changement de mot de passe");
@@ -545,6 +575,40 @@ export default function ParametresPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Mot de passe actuel
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={passwordData.currentPassword}
+                        onChange={(e) =>
+                          setPasswordData({
+                            ...passwordData,
+                            currentPassword: e.target.value,
+                          })
+                        }
+                        placeholder="Entrez votre mot de passe actuel"
+                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowCurrentPassword(!showCurrentPassword)
+                        }
+                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Nouveau mot de passe
                     </label>
                     <div className="relative">
@@ -614,6 +678,7 @@ export default function ParametresPage() {
                       onClick={handlePasswordChange}
                       disabled={
                         isChangingPassword ||
+                        !passwordData.currentPassword ||
                         !passwordData.newPassword ||
                         !passwordData.confirmPassword
                       }

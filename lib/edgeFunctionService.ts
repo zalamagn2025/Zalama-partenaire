@@ -52,6 +52,22 @@ export interface CreateEmployeeAccountRequest {
   employee_id: string;
 }
 
+export interface SendOtpRequest {
+  email: string;
+  password: string;
+}
+
+export interface VerifyOtpRequest {
+  sessionId: string;
+  otp: string;
+}
+
+export interface ChangePasswordRequest {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+}
+
 class EdgeFunctionService {
   private async makeRequest<T>(
     endpoint: string,
@@ -233,6 +249,36 @@ class EdgeFunctionService {
     request: { new_password: string }
   ): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/change-admin-password", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(request),
+    });
+  }
+
+  // 🔐 Envoi d'OTP pour connexion sécurisée
+  async sendOtp(request: SendOtpRequest): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/send-otp", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  // ✅ Vérification d'OTP
+  async verifyOtp(request: VerifyOtpRequest): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/verify-otp", {
+      method: "POST",
+      body: JSON.stringify(request),
+    });
+  }
+
+  // 🔐 Changement de mot de passe sécurisé
+  async changePassword(
+    accessToken: string,
+    request: ChangePasswordRequest
+  ): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/change-password", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${accessToken}`,
