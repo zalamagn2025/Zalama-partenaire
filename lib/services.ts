@@ -823,7 +823,6 @@ export class PartnerDataService {
         .from("employees")
         .select("*")
         .eq("partner_id", this.partnerId)
-        .eq("actif", true)
         .order("created_at", { ascending: false });
 
       if (error) {

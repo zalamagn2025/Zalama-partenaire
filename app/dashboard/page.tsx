@@ -497,7 +497,7 @@ export default function EntrepriseDashboardPage() {
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
               {session?.partner?.activity_domain} • {activeEmployees.length}{" "}
-              employés
+              employés inscrits
             </p>
           </div>
         </div>
@@ -517,7 +517,7 @@ export default function EntrepriseDashboardPage() {
       {/* Cartes statistiques principales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
-          title="Employés inscrits"
+          title="Employés actifs/Total"
           value={`${activeEmployees.length}/${employees.length}`}
           icon={Users}
           color="blue"
