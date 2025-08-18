@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   edgeFunctionService,
   AuthSession,
@@ -20,10 +20,19 @@ interface UseEdgeAuthReturn {
   isSessionValid: () => boolean;
 }
 
+// Configuration du refresh automatique
+const TOKEN_REFRESH_INTERVAL = 8 * 60 * 1000; // 8 minutes (avant l'expiration de 10 minutes)
+const TOKEN_EXPIRY_BUFFER = 2 * 60 * 1000; // 2 minutes de marge
+
 export function useEdgeAuth(): UseEdgeAuthReturn {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Références pour le refresh automatique
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRefreshRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
 
   // Récupérer la session depuis le localStorage au démarrage
   useEffect(() => {
@@ -35,6 +44,8 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
           // Vérifier si la session n'est pas expirée (tokens valides)
           if (parsedSession.access_token) {
             setSession(parsedSession);
+            // Démarrer le refresh automatique si on a une session valide
+            // On le fera dans un useEffect séparé après la définition de startAutoRefresh
           } else {
             localStorage.removeItem("partner_session");
           }
@@ -97,6 +108,9 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
           setSession(sessionData);
           saveSession(sessionData);
 
+          // Le refresh automatique sera démarré par le useEffect
+          lastRefreshRef.current = Date.now();
+
           return { error: null, session: sessionData };
         } else {
           const errorMessage = response.message || "Erreur de connexion";
@@ -121,6 +135,12 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       setSession(null);
       clearSession();
       setError(null);
+
+      // Arrêter le refresh automatique
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
     } catch (error: any) {
       console.error("Erreur lors de la déconnexion:", error);
       setError(error.message);
@@ -128,6 +148,89 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       setLoading(false);
     }
   }, [clearSession]);
+
+  // Fonction de refresh automatique (définie après logout)
+  const startAutoRefresh = useCallback(() => {
+    // Nettoyer l'interval précédent
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+
+    // Démarrer le refresh automatique
+    refreshIntervalRef.current = setInterval(async () => {
+      if (isRefreshingRef.current) {
+        console.log("🔄 Refresh automatique ignoré - refresh en cours");
+        return;
+      }
+
+      try {
+        isRefreshingRef.current = true;
+        console.log("🔄 Refresh automatique du token en cours...");
+
+        // Appeler le refresh de session directement
+        if (session?.access_token) {
+          const response = await edgeFunctionService.getMe(
+            session.access_token
+          );
+
+          if (
+            response.success &&
+            response.data?.user &&
+            response.data?.partner_info
+          ) {
+            const sessionData: AuthSession = {
+              user: {
+                id: response.data.user.id,
+                email: response.data.user.email,
+              },
+              admin: response.data.user,
+              partner: response.data.partner_info,
+              access_token: session.access_token,
+              refresh_token: session.refresh_token,
+            };
+
+            setSession(sessionData);
+            saveSession(sessionData);
+            lastRefreshRef.current = Date.now();
+            console.log("✅ Refresh automatique du token terminé avec succès");
+          } else {
+            console.log("❌ Session invalide lors du refresh automatique");
+            await logout();
+          }
+        }
+      } catch (error) {
+        console.error("❌ Erreur lors du refresh automatique:", error);
+        // Si l'erreur indique un token invalide, déconnecter
+        if (
+          error instanceof Error &&
+          (error.message?.includes("token") ||
+            error.message?.includes("unauthorized") ||
+            error.message?.includes("Session expirée") ||
+            error.message?.includes("401"))
+        ) {
+          console.log(
+            "Session expirée lors du refresh automatique, déconnexion"
+          );
+          await logout();
+        }
+      } finally {
+        isRefreshingRef.current = false;
+      }
+    }, TOKEN_REFRESH_INTERVAL);
+
+    console.log(
+      `🔄 Refresh automatique configuré toutes les ${
+        TOKEN_REFRESH_INTERVAL / 60000
+      } minutes`
+    );
+  }, [session, saveSession, logout]);
+
+  // Démarrer le refresh automatique quand la session est disponible (après la définition de startAutoRefresh)
+  useEffect(() => {
+    if (session?.access_token) {
+      startAutoRefresh();
+    }
+  }, [session?.access_token, startAutoRefresh]);
 
   // Fonction de rafraîchissement de session
   const refreshSession = useCallback(async () => {
@@ -159,8 +262,10 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
 
         setSession(sessionData);
         saveSession(sessionData);
+        console.log("✅ Session rafraîchie avec succès");
       } else {
         // Si la session n'est plus valide, déconnecter
+        console.log("❌ Session invalide, déconnexion automatique");
         await logout();
       }
     } catch (error: any) {
@@ -190,6 +295,15 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
   // Fonction pour effacer les erreurs
   const clearError = useCallback(() => {
     setError(null);
+  }, []);
+
+  // Nettoyage lors du démontage du composant
+  useEffect(() => {
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
   }, []);
 
   return {

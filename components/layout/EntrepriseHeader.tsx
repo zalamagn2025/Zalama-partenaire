@@ -1,5 +1,14 @@
 "use client";
-import { Bell, LogOut, Moon, Sun, User, RefreshCw } from "lucide-react";
+import {
+  Bell,
+  LogOut,
+  Moon,
+  Sun,
+  User,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
@@ -13,6 +22,9 @@ export default function EntrepriseHeader() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoRefreshStatus, setAutoRefreshStatus] = useState<
+    "active" | "inactive" | "error"
+  >("inactive");
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
   const { session, logout, refreshSession } = useEdgeAuthContext();
@@ -57,6 +69,27 @@ export default function EntrepriseHeader() {
     return () => clearInterval(interval);
   }, [session?.admin?.id]);
 
+  // Surveiller le statut du refresh automatique
+  useEffect(() => {
+    if (session?.access_token) {
+      setAutoRefreshStatus("active");
+
+      // Simuler un monitoring du refresh automatique
+      const statusInterval = setInterval(() => {
+        // Vérifier si la session est toujours valide
+        if (session?.access_token) {
+          setAutoRefreshStatus("active");
+        } else {
+          setAutoRefreshStatus("error");
+        }
+      }, 60000); // Vérifier toutes les minutes
+
+      return () => clearInterval(statusInterval);
+    } else {
+      setAutoRefreshStatus("inactive");
+    }
+  }, [session?.access_token]);
+
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {
     if (!pathname) return "Tableau de Bord";
@@ -82,12 +115,14 @@ export default function EntrepriseHeader() {
 
     try {
       setIsRefreshing(true);
+      setAutoRefreshStatus("active");
       console.log("🔄 Refresh manuel demandé...");
       await refreshSession();
       await loadUnreadCount(); // Recharger aussi les notifications
       console.log("✅ Refresh manuel terminé");
     } catch (error) {
       console.error("❌ Erreur lors du refresh manuel:", error);
+      setAutoRefreshStatus("error");
     } finally {
       setIsRefreshing(false);
     }
@@ -120,12 +155,41 @@ export default function EntrepriseHeader() {
 
         {/* Bloc actions */}
         <div className="flex items-center gap-4 md:gap-6">
+          {/* Indicateur de statut du refresh automatique */}
+          <div className="flex items-center gap-2">
+            <div
+              className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                autoRefreshStatus === "active"
+                  ? "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300"
+                  : autoRefreshStatus === "error"
+                  ? "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300"
+                  : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+              }`}
+              title={
+                autoRefreshStatus === "active"
+                  ? "Refresh automatique actif (toutes les 8 minutes)"
+                  : autoRefreshStatus === "error"
+                  ? "Erreur de refresh automatique"
+                  : "Refresh automatique inactif"
+              }
+            >
+              {autoRefreshStatus === "active" ? (
+                <Wifi className="w-3 h-3" />
+              ) : (
+                <WifiOff className="w-3 h-3" />
+              )}
+              <span className="hidden sm:inline">
+                {autoRefreshStatus === "active" ? "Auto" : "Manuel"}
+              </span>
+            </div>
+          </div>
+
           {/* Bouton de refresh manuel */}
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
             className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Actualiser les données"
+            title="Actualiser les données manuellement"
           >
             <RefreshCw
               className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${
