@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   edgeFunctionService,
   AuthSession,
@@ -28,11 +29,39 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   // Références pour le refresh automatique
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefreshRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
+
+  // Fonction de déconnexion avec redirection
+  const logoutWithRedirect = useCallback(async () => {
+    try {
+      console.log("🚪 Déconnexion automatique en cours...");
+
+      // Arrêter le refresh automatique
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+        refreshIntervalRef.current = null;
+      }
+
+      // Nettoyer la session
+      setSession(null);
+      localStorage.removeItem("partner_session");
+      setError(null);
+
+      console.log("✅ Déconnexion terminée, redirection vers /login");
+
+      // Rediriger vers la page de connexion
+      router.push("/login");
+    } catch (error) {
+      console.error("❌ Erreur lors de la déconnexion:", error);
+      // Forcer la redirection même en cas d'erreur
+      router.push("/login");
+    }
+  }, [router]);
 
   // Récupérer la session depuis le localStorage au démarrage
   useEffect(() => {
@@ -149,6 +178,38 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
     }
   }, [clearSession]);
 
+  // Fonction pour détecter les erreurs de token expiré
+  const isTokenExpiredError = useCallback((error: any): boolean => {
+    if (!error) return false;
+
+    const errorMessage = error.message || error.toString() || "";
+    const errorStatus = error.status || error.code;
+
+    // Erreurs liées aux tokens expirés
+    const tokenExpiredPatterns = [
+      "token",
+      "unauthorized",
+      "Session expirée",
+      "401",
+      "403",
+      "refresh token expired",
+      "access token expired",
+      "invalid token",
+      "expired",
+      "authentication failed",
+    ];
+
+    // Vérifier les patterns dans le message d'erreur
+    const hasTokenError = tokenExpiredPatterns.some((pattern) =>
+      errorMessage.toLowerCase().includes(pattern.toLowerCase())
+    );
+
+    // Vérifier les codes d'erreur HTTP
+    const hasTokenStatus = errorStatus === 401 || errorStatus === 403;
+
+    return hasTokenError || hasTokenStatus;
+  }, []);
+
   // Fonction de refresh automatique (définie après logout)
   const startAutoRefresh = useCallback(() => {
     // Nettoyer l'interval précédent
@@ -195,23 +256,16 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
             console.log("✅ Refresh automatique du token terminé avec succès");
           } else {
             console.log("❌ Session invalide lors du refresh automatique");
-            await logout();
+            await logoutWithRedirect();
           }
         }
       } catch (error) {
         console.error("❌ Erreur lors du refresh automatique:", error);
-        // Si l'erreur indique un token invalide, déconnecter
-        if (
-          error instanceof Error &&
-          (error.message?.includes("token") ||
-            error.message?.includes("unauthorized") ||
-            error.message?.includes("Session expirée") ||
-            error.message?.includes("401"))
-        ) {
-          console.log(
-            "Session expirée lors du refresh automatique, déconnexion"
-          );
-          await logout();
+
+        // Vérifier si c'est une erreur de token expiré
+        if (isTokenExpiredError(error)) {
+          console.log("🔑 Token expiré détecté, déconnexion automatique");
+          await logoutWithRedirect();
         }
       } finally {
         isRefreshingRef.current = false;
@@ -223,7 +277,7 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
         TOKEN_REFRESH_INTERVAL / 60000
       } minutes`
     );
-  }, [session, saveSession, logout]);
+  }, [session, saveSession, logoutWithRedirect, isTokenExpiredError]);
 
   // Démarrer le refresh automatique quand la session est disponible (après la définition de startAutoRefresh)
   useEffect(() => {
@@ -266,26 +320,22 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       } else {
         // Si la session n'est plus valide, déconnecter
         console.log("❌ Session invalide, déconnexion automatique");
-        await logout();
+        await logoutWithRedirect();
       }
     } catch (error: any) {
       console.error("Erreur lors du rafraîchissement de session:", error);
-      // Si l'erreur indique un token invalide ou session expirée, déconnecter
-      if (
-        error.message?.includes("token") ||
-        error.message?.includes("unauthorized") ||
-        error.message?.includes("Session expirée") ||
-        error.message?.includes("401")
-      ) {
-        console.log("Session expirée, déconnexion automatique");
-        await logout();
+
+      // Vérifier si c'est une erreur de token expiré
+      if (isTokenExpiredError(error)) {
+        console.log("🔑 Token expiré détecté, déconnexion automatique");
+        await logoutWithRedirect();
       } else {
         setError(error.message);
       }
     } finally {
       setLoading(false);
     }
-  }, [session, saveSession, logout]);
+  }, [session, saveSession, logoutWithRedirect, isTokenExpiredError]);
 
   // Fonction pour vérifier si la session est valide
   const isSessionValid = useCallback(() => {
