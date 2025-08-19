@@ -142,7 +142,27 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
 
           return { error: null, session: sessionData };
         } else {
-          const errorMessage = response.message || "Erreur de connexion";
+          // Analyser le message d'erreur pour le rendre plus précis
+          let errorMessage = response.message || "Erreur de connexion";
+
+          // Personnaliser les messages d'erreur selon le type
+          if (
+            errorMessage.toLowerCase().includes("invalid credentials") ||
+            errorMessage.toLowerCase().includes("email") ||
+            errorMessage.toLowerCase().includes("password")
+          ) {
+            errorMessage =
+              "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
+          } else if (errorMessage.toLowerCase().includes("user not found")) {
+            errorMessage = "Aucun compte trouvé avec cette adresse email.";
+          } else if (
+            errorMessage.toLowerCase().includes("inactive") ||
+            errorMessage.toLowerCase().includes("disabled")
+          ) {
+            errorMessage =
+              "Ce compte a été désactivé. Contactez l'administrateur.";
+          }
+
           setError(errorMessage);
           return { error: { message: errorMessage } };
         }

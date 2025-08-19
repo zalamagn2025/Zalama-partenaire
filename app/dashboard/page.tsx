@@ -74,7 +74,7 @@ export default function EntrepriseDashboardPage() {
     }
   }, [loading, session?.partner]);
 
-  // Charger les transactions depuis la table transactions
+  // Charger les transactions depuis la table remboursements
   useEffect(() => {
     const loadTransactions = async () => {
       if (!session?.partner) return;
@@ -82,8 +82,10 @@ export default function EntrepriseDashboardPage() {
         const { data, error } = await supabase
           .from("remboursements")
           .select("*")
-          .eq("partenaire_id", session?.partner?.id);
+          .eq("partenaire_id", session?.partner?.id)
+          .order("date_creation", { ascending: false });
         if (error) throw error;
+        console.log("Remboursements chargés:", data);
         setAllTransactions(data || []);
       } catch (e) {
         console.error("Erreur lors du chargement des remboursements:", e);
@@ -328,13 +330,22 @@ export default function EntrepriseDashboardPage() {
 
   // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
   const fluxFinance = allTransactions.reduce(
-    (sum: number, t: any) => sum + Number(t.montant || 0),
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
-  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise
-  const debloqueMois = allTransactions.reduce(
-    (sum: number, t: any) => sum + Number(t.montant || 0),
+  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise ce mois-ci
+  const remboursementsMois = allTransactions.filter((r: any) => {
+    const rDate = r.date_creation ? new Date(r.date_creation) : null;
+    return (
+      rDate &&
+      rDate.getMonth() === thisMonth &&
+      rDate.getFullYear() === thisYear
+    );
+  });
+
+  const debloqueMois = remboursementsMois.reduce(
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
@@ -605,7 +616,10 @@ export default function EntrepriseDashboardPage() {
               Taux de remboursement
             </span>
             <span className="text-2xl font-bold dark:text-white">
-              {((aRembourserMois / debloqueMois) * 100 || 0).toFixed(1)}%
+              {debloqueMois > 0
+                ? ((aRembourserMois / debloqueMois) * 100).toFixed(1)
+                : "0.0"}
+              %
             </span>
           </div>
         </div>
@@ -628,7 +642,13 @@ export default function EntrepriseDashboardPage() {
             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
               <div
                 className="bg-yellow-400 h-2 rounded-full"
-                style={{ width: `${(aRembourserMois / debloqueMois) * 100}%` }}
+                style={{
+                  width: `${
+                    debloqueMois > 0
+                      ? (aRembourserMois / debloqueMois) * 100
+                      : 0
+                  }%`,
+                }}
               ></div>
             </div>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
