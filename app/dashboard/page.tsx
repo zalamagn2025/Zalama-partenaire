@@ -561,7 +561,7 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
           title="Employés actifs/Total"
-          value={`${activeEmployees.length}/${employees.length}`}
+          value={`${activeEmployees.length}/${session?.partner?.employees_count || 0}`}
           icon={Users}
           color="blue"
         />
@@ -594,7 +594,7 @@ export default function EntrepriseDashboardPage() {
         <h2 className="text-gray-600 dark:text-white text-lg font-semibold mb-4">
           Performance financière
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Montant total débloqué
@@ -611,7 +611,7 @@ export default function EntrepriseDashboardPage() {
               {gnfFormatter(aRembourserMois)}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          {/* <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Taux de remboursement
             </span>
@@ -621,7 +621,7 @@ export default function EntrepriseDashboardPage() {
                 : "0.0"}
               %
             </span>
-          </div>
+          </div> */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
