@@ -10,7 +10,6 @@ import {
   Filter,
   Calendar,
   Download,
-  Plus,
   MoreHorizontal,
   User,
   MessageSquare,
@@ -210,16 +209,6 @@ export default function DemandesPage() {
           >
             <Download className="h-4 w-4" />
             Export CSV
-          </button>
-          <button
-            onClick={() => {
-              // TODO: Implémenter la création de demande
-              toast.info("Création de demande à implémenter");
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[var(--zalama-primary)] rounded-lg hover:bg-[var(--zalama-primary-hover)]"
-          >
-            <Plus className="h-4 w-4" />
-            Nouvelle Demande
           </button>
         </div>
       </div>

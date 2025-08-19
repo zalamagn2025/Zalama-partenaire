@@ -478,24 +478,12 @@ export default function RemboursementsPage() {
                 </>
               )}
             </Button>
-            <Button
-              onClick={() => handlePayerTous()}
-              disabled={paying || totalAttente === 0}
-              size="sm"
-              className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-2 text-sm font-medium shadow-sm"
-            >
-              {paying ? (
-                <>
-                  <Clock className="w-4 h-4 mr-2 animate-spin" />
-                  Traitement...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="w-4 h-4 mr-2" />
-                  Payer tous les remboursements
-                </>
-              )}
-            </Button>
+            <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                Paiement via Chèque
+              </span>
+            </div>
           </div>
         </div>
       </div>
