@@ -96,7 +96,19 @@ class EdgeFunctionService {
       if (!response.ok) {
         // Gestion spécifique des erreurs 401 (non autorisé)
         if (response.status === 401) {
-          throw new Error("Session expirée. Veuillez vous reconnecter.");
+          // Vérifier si c'est une erreur de connexion ou de session expirée
+          const errorMessage = data.message || data.error || "";
+          if (
+            errorMessage.toLowerCase().includes("invalid credentials") ||
+            errorMessage.toLowerCase().includes("email") ||
+            errorMessage.toLowerCase().includes("password")
+          ) {
+            throw new Error(
+              "Email ou mot de passe incorrect. Veuillez réessayer."
+            );
+          } else {
+            throw new Error("Session expirée. Veuillez vous reconnecter.");
+          }
         }
 
         // Gestion spécifique des erreurs 403 (accès interdit)

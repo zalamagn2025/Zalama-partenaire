@@ -36,6 +36,8 @@ export default function LoginPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const { login, session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
@@ -66,8 +68,30 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      toast.error("Veuillez remplir tous les champs");
+    // Réinitialiser les erreurs
+    setEmailError("");
+    setPasswordError("");
+
+    // Validation des champs
+    let hasErrors = false;
+
+    if (!email) {
+      setEmailError("L'adresse email est requise");
+      hasErrors = true;
+    } else if (!email.includes("@")) {
+      setEmailError("Veuillez saisir une adresse email valide");
+      hasErrors = true;
+    }
+
+    if (!password) {
+      setPasswordError("Le mot de passe est requis");
+      hasErrors = true;
+    } else if (password.length < 6) {
+      setPasswordError("Le mot de passe doit contenir au moins 6 caractères");
+      hasErrors = true;
+    }
+
+    if (hasErrors) {
       return;
     }
 
@@ -79,7 +103,23 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Erreur de connexion:", error);
-        toast.error(error.message || "Erreur de connexion");
+        // Afficher des messages d'erreur plus spécifiques
+        let errorMessage = error.message || "Erreur de connexion";
+
+        // Personnaliser les messages d'erreur
+        if (
+          errorMessage.toLowerCase().includes("email") ||
+          errorMessage.toLowerCase().includes("password")
+        ) {
+          errorMessage =
+            "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
+        } else if (errorMessage.toLowerCase().includes("session expirée")) {
+          errorMessage = "Votre session a expiré. Veuillez vous reconnecter.";
+        } else if (errorMessage.toLowerCase().includes("non autorisé")) {
+          errorMessage = "Accès non autorisé. Vérifiez vos permissions.";
+        }
+
+        toast.error(errorMessage);
       } else if (newSession) {
         toast.success(
           `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
@@ -181,10 +221,17 @@ export default function LoginPage() {
                     type="email"
                     placeholder="admin@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError("");
+                    }}
                     required
                     disabled={isLoading}
+                    className={emailError ? "border-red-500" : ""}
                   />
+                  {emailError && (
+                    <p className="text-sm text-red-500 mt-1">{emailError}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -195,9 +242,13 @@ export default function LoginPage() {
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (passwordError) setPasswordError("");
+                      }}
                       required
                       disabled={isLoading}
+                      className={passwordError ? "border-red-500" : ""}
                     />
                     <Button
                       type="button"
@@ -214,6 +265,9 @@ export default function LoginPage() {
                       )}
                     </Button>
                   </div>
+                  {passwordError && (
+                    <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+                  )}
                 </div>
 
                 <div className="text-right">

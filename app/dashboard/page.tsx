@@ -74,7 +74,7 @@ export default function EntrepriseDashboardPage() {
     }
   }, [loading, session?.partner]);
 
-  // Charger les transactions depuis la table transactions
+  // Charger les transactions depuis la table remboursements
   useEffect(() => {
     const loadTransactions = async () => {
       if (!session?.partner) return;
@@ -82,8 +82,10 @@ export default function EntrepriseDashboardPage() {
         const { data, error } = await supabase
           .from("remboursements")
           .select("*")
-          .eq("partenaire_id", session?.partner?.id);
+          .eq("partenaire_id", session?.partner?.id)
+          .order("date_creation", { ascending: false });
         if (error) throw error;
+        console.log("Remboursements chargés:", data);
         setAllTransactions(data || []);
       } catch (e) {
         console.error("Erreur lors du chargement des remboursements:", e);
@@ -146,6 +148,8 @@ export default function EntrepriseDashboardPage() {
   // Afficher un message de bienvenue
   useEffect(() => {
     if (session?.partner && !isLoading) {
+      console.log("Données du partenaire:", session.partner);
+      console.log("employees_count:", session.partner.employees_count);
       toast.success(
         `Bienvenue sur le tableau de bord de ${session.partner.company_name}`,
         {
@@ -221,31 +225,41 @@ export default function EntrepriseDashboardPage() {
   const [partnerCreationYear, setPartnerCreationYear] = useState<number | null>(
     null
   );
+  const [partnerEmployeesCount, setPartnerEmployeesCount] = useState<number>(0);
 
   useEffect(() => {
-    const fetchPartnerCreationYear = async () => {
+    const fetchPartnerData = async () => {
       if (!session?.partner?.id) return;
 
       try {
         const { data, error } = await supabase
           .from("partners")
-          .select("created_at")
+          .select("created_at, employees_count")
           .eq("id", session.partner.id)
           .single();
 
-        if (!error && data?.created_at) {
-          const creationYear = new Date(data.created_at).getFullYear();
-          setPartnerCreationYear(creationYear);
+        if (!error && data) {
+          if (data.created_at) {
+            const creationYear = new Date(data.created_at).getFullYear();
+            setPartnerCreationYear(creationYear);
+          }
+          if (data.employees_count) {
+            setPartnerEmployeesCount(data.employees_count);
+            console.log(
+              "employees_count récupéré depuis la DB:",
+              data.employees_count
+            );
+          }
         }
       } catch (error) {
         console.error(
-          "Erreur lors de la récupération de la date de création:",
+          "Erreur lors de la récupération des données du partenaire:",
           error
         );
       }
     };
 
-    fetchPartnerCreationYear();
+    fetchPartnerData();
   }, [session?.partner?.id]);
 
   // Calcul de la date de remboursement et jours restants
@@ -328,13 +342,22 @@ export default function EntrepriseDashboardPage() {
 
   // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
   const fluxFinance = allTransactions.reduce(
-    (sum: number, t: any) => sum + Number(t.montant || 0),
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
-  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise
-  const debloqueMois = allTransactions.reduce(
-    (sum: number, t: any) => sum + Number(t.montant || 0),
+  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise ce mois-ci
+  const remboursementsMois = allTransactions.filter((r: any) => {
+    const rDate = r.date_creation ? new Date(r.date_creation) : null;
+    return (
+      rDate &&
+      rDate.getMonth() === thisMonth &&
+      rDate.getFullYear() === thisYear
+    );
+  });
+
+  const debloqueMois = remboursementsMois.reduce(
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
@@ -550,7 +573,9 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
           title="Employés actifs/Total"
-          value={`${activeEmployees.length}/${employees.length}`}
+          value={`${activeEmployees.length}/${
+            partnerEmployeesCount || session?.partner?.employees_count || 0
+          }`}
           icon={Users}
           color="blue"
         />
@@ -583,7 +608,7 @@ export default function EntrepriseDashboardPage() {
         <h2 className="text-gray-600 dark:text-white text-lg font-semibold mb-4">
           Performance financière
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Montant total débloqué
@@ -600,14 +625,17 @@ export default function EntrepriseDashboardPage() {
               {gnfFormatter(aRembourserMois)}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          {/* <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Taux de remboursement
             </span>
             <span className="text-2xl font-bold dark:text-white">
-              {((aRembourserMois / debloqueMois) * 100 || 0).toFixed(1)}%
+              {debloqueMois > 0
+                ? ((aRembourserMois / debloqueMois) * 100).toFixed(1)
+                : "0.0"}
+              %
             </span>
-          </div>
+          </div> */}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
@@ -628,7 +656,13 @@ export default function EntrepriseDashboardPage() {
             <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
               <div
                 className="bg-yellow-400 h-2 rounded-full"
-                style={{ width: `${(aRembourserMois / debloqueMois) * 100}%` }}
+                style={{
+                  width: `${
+                    debloqueMois > 0
+                      ? (aRembourserMois / debloqueMois) * 100
+                      : 0
+                  }%`,
+                }}
               ></div>
             </div>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
