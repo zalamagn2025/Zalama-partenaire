@@ -677,7 +677,7 @@ export default function RemboursementsPage() {
                         <Eye className="w-3 h-3" />
                         Voir
                       </Button>
-                      {r.statut === "EN_ATTENTE" && (
+                      {/* {r.statut === "EN_ATTENTE" && (
                         <Button
                           size="sm"
                           variant="default"
@@ -688,7 +688,7 @@ export default function RemboursementsPage() {
                           <CreditCard className="w-3 h-3" />
                           Payer
                         </Button>
-                      )}
+                      )} */}
                     </div>
                   </td>
                 </tr>
