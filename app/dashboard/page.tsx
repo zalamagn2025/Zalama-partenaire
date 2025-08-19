@@ -148,6 +148,8 @@ export default function EntrepriseDashboardPage() {
   // Afficher un message de bienvenue
   useEffect(() => {
     if (session?.partner && !isLoading) {
+      console.log("Données du partenaire:", session.partner);
+      console.log("employees_count:", session.partner.employees_count);
       toast.success(
         `Bienvenue sur le tableau de bord de ${session.partner.company_name}`,
         {
@@ -223,31 +225,41 @@ export default function EntrepriseDashboardPage() {
   const [partnerCreationYear, setPartnerCreationYear] = useState<number | null>(
     null
   );
+  const [partnerEmployeesCount, setPartnerEmployeesCount] = useState<number>(0);
 
   useEffect(() => {
-    const fetchPartnerCreationYear = async () => {
+    const fetchPartnerData = async () => {
       if (!session?.partner?.id) return;
 
       try {
         const { data, error } = await supabase
           .from("partners")
-          .select("created_at")
+          .select("created_at, employees_count")
           .eq("id", session.partner.id)
           .single();
 
-        if (!error && data?.created_at) {
-          const creationYear = new Date(data.created_at).getFullYear();
-          setPartnerCreationYear(creationYear);
+        if (!error && data) {
+          if (data.created_at) {
+            const creationYear = new Date(data.created_at).getFullYear();
+            setPartnerCreationYear(creationYear);
+          }
+          if (data.employees_count) {
+            setPartnerEmployeesCount(data.employees_count);
+            console.log(
+              "employees_count récupéré depuis la DB:",
+              data.employees_count
+            );
+          }
         }
       } catch (error) {
         console.error(
-          "Erreur lors de la récupération de la date de création:",
+          "Erreur lors de la récupération des données du partenaire:",
           error
         );
       }
     };
 
-    fetchPartnerCreationYear();
+    fetchPartnerData();
   }, [session?.partner?.id]);
 
   // Calcul de la date de remboursement et jours restants
@@ -561,7 +573,9 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
           title="Employés actifs/Total"
-          value={`${activeEmployees.length}/${session?.partner?.employees_count || 0}`}
+          value={`${activeEmployees.length}/${
+            partnerEmployeesCount || session?.partner?.employees_count || 0
+          }`}
           icon={Users}
           color="blue"
         />
