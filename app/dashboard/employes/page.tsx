@@ -73,21 +73,42 @@ export default function EmployesPage() {
 
     setIsLoading(true);
     try {
-      const { data: employeesData, error } = await supabase
+      // Récupérer TOUS les employés pour les statistiques
+      const { data: allEmployeesData, error: allError } = await supabase
         .from("employees")
         .select("*")
         .eq("partner_id", session.partner.id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Erreur lors du chargement des employés:", error);
+      if (allError) {
+        console.error(
+          "Erreur lors du chargement de tous les employés:",
+          allError
+        );
         toast.error("Erreur lors du chargement des employés");
         return;
       }
 
-      // Récupérer les remboursements payés pour chaque employé
-      const employeesWithRemainingSalary = await Promise.all(
-        (employeesData || []).map(async (employee) => {
+      // Récupérer seulement les employés avec user_id non vide pour la liste
+      const { data: employeesWithUserId, error: userError } = await supabase
+        .from("employees")
+        .select("*")
+        .eq("partner_id", session.partner.id)
+        .not("user_id", "is", null)
+        .order("created_at", { ascending: false });
+
+      if (userError) {
+        console.error(
+          "Erreur lors du chargement des employés avec user_id:",
+          userError
+        );
+        toast.error("Erreur lors du chargement des employés");
+        return;
+      }
+
+      // Traiter TOUS les employés pour les statistiques
+      const allEmployeesWithRemainingSalary = await Promise.all(
+        (allEmployeesData || []).map(async (employee) => {
           try {
             // Récupérer tous les remboursements payés de cet employé
             const { data: remboursements, error: rembError } = await supabase
@@ -131,8 +152,56 @@ export default function EmployesPage() {
         })
       );
 
-      setEmployees(employeesWithRemainingSalary);
-      setFilteredEmployees(employeesWithRemainingSalary);
+      // Traiter seulement les employés avec user_id pour la liste
+      const employeesWithUserIdAndSalary = await Promise.all(
+        (employeesWithUserId || []).map(async (employee) => {
+          try {
+            // Récupérer tous les remboursements payés de cet employé
+            const { data: remboursements, error: rembError } = await supabase
+              .from("remboursements")
+              .select("montant_total_remboursement")
+              .eq("employe_id", employee.id)
+              .eq("statut", "PAYE");
+
+            if (rembError) {
+              console.error("Erreur récupération remboursements:", rembError);
+              return {
+                ...employee,
+                salaire_restant: employee.salaire_net || 0,
+              };
+            }
+
+            // Calculer le salaire restant
+            const totalRemboursements = (remboursements || []).reduce(
+              (sum, remb) => {
+                return sum + Number(remb.montant_total_remboursement || 0);
+              },
+              0
+            );
+
+            const salaireRestant = Math.max(
+              0,
+              (employee.salaire_net || 0) - totalRemboursements
+            );
+
+            return {
+              ...employee,
+              salaire_restant: salaireRestant,
+            };
+          } catch (error) {
+            console.error("Erreur calcul salaire restant:", error);
+            return {
+              ...employee,
+              salaire_restant: employee.salaire_net || 0,
+            };
+          }
+        })
+      );
+
+      // Stocker tous les employés pour les statistiques
+      setEmployees(allEmployeesWithRemainingSalary);
+      // Stocker seulement les employés avec user_id pour la liste
+      setFilteredEmployees(employeesWithUserIdAndSalary);
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
       toast.error("Erreur lors du chargement des employés");
@@ -150,7 +219,8 @@ export default function EmployesPage() {
 
   // Filtrer les employés en fonction des critères de recherche
   useEffect(() => {
-    let filtered = employees;
+    // Commencer avec les employés qui ont un user_id (déjà filtrés dans loadEmployees)
+    let filtered = employees.filter((employee) => employee.user_id);
 
     // Filtre par recherche
     if (searchTerm) {
@@ -351,7 +421,8 @@ export default function EmployesPage() {
             Gestion des employés
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {session?.partner?.company_name} - {totalEmployees} employés
+            {session?.partner?.company_name} - {totalEmployees} employés total (
+            {filteredEmployees.length} avec compte)
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -680,7 +751,7 @@ export default function EmployesPage() {
                   <span className="font-medium">
                     {filteredEmployees.length}
                   </span>{" "}
-                  résultats
+                  employés avec compte
                 </p>
               </div>
               <div>
