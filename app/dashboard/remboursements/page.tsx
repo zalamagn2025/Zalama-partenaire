@@ -460,17 +460,40 @@ export default function RemboursementsPage() {
               Suivi et traitement des remboursements d'avances salariales
             </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowFinancialInfoModal(true)}
-              size="sm"
-              variant="outline"
-              className="text-green-600 hover:text-green-800 border-green-300 hover:border-green-400"
-            >
-              <Building className="w-4 h-4 mr-2" />
-              Voir les informations financières de ZaLaMa
-            </Button>
-            <Button
+            <div>
+              <div className="flex items-center justify-center space-x-2 px-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Remboursement
+                </span>
+              </div>
+              <div className="relative">
+                {/* Curseur animé */}
+                <div className="absolute -top-8 -left-8 w-6 h-6 pointer-events-none animate-cursor-click">
+                  <div className="w-6 h-6 bg-white border-2 border-gray-800 rounded-sm transform rotate-45 relative">
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-gray-800 rounded-sm"></div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setShowFinancialInfoModal(true)}
+                  size="sm"
+                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0 relative overflow-hidden group cursor-pointer px-6 py-2"
+                >
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+                  <Building className="w-4 h-4 mr-2 relative z-10" />
+                  <span className="relative z-10">
+                    Voir coordonnées bancaires de ZaLaMa
+                  </span>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 group-hover:animate-shimmer"></div>
+                </Button>
+              </div>
+            </div>
+
+            {/* <Button
               onClick={() => handleRefreshStatus()}
               disabled={isLoading}
               size="sm"
@@ -494,7 +517,7 @@ export default function RemboursementsPage() {
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Paiement via Chèque
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -1231,7 +1254,7 @@ export default function RemboursementsPage() {
                       Intitulé de compte :
                     </span>
                     <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      ZaLaMa SARL
+                      ZALAMA SARL
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
