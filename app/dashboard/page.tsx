@@ -346,7 +346,7 @@ export default function EntrepriseDashboardPage() {
     0
   );
 
-  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise ce mois-ci
+  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise ce mois-ci (PAYE + EN_ATTENTE)
   const remboursementsMois = allTransactions.filter((r: any) => {
     const rDate = r.date_creation ? new Date(r.date_creation) : null;
     return (
@@ -361,8 +361,21 @@ export default function EntrepriseDashboardPage() {
     0
   );
 
-  // Montant à rembourser = même montant que débloqué
-  const aRembourserMois = debloqueMois;
+  // Montant à rembourser = seulement les remboursements avec statut EN_ATTENTE ce mois-ci
+  const remboursementsEnAttenteMois = allTransactions.filter((r: any) => {
+    const rDate = r.date_creation ? new Date(r.date_creation) : null;
+    return (
+      rDate &&
+      rDate.getMonth() === thisMonth &&
+      rDate.getFullYear() === thisYear &&
+      r.statut === "EN_ATTENTE"
+    );
+  });
+
+  const aRembourserMois = remboursementsEnAttenteMois.reduce(
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
+    0
+  );
 
   // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées ce mois-ci
   const employesApprouves = demandesMois.length;
@@ -482,13 +495,13 @@ export default function EntrepriseDashboardPage() {
   const montantsEvolutionData = monthsToShow.map(({ month, year, name }) => {
     const total = allTransactions
       .filter((t) => {
-        const transactionDate = new Date(t.created_at);
+        const transactionDate = new Date(t.date_creation);
         return (
           transactionDate.getMonth() === month &&
           transactionDate.getFullYear() === year
         );
       })
-      .reduce((sum, t) => sum + Number(t.montant || 0), 0);
+      .reduce((sum, t) => sum + Number(t.montant_total_remboursement || 0), 0);
 
     return { mois: name, montant: total };
   });
