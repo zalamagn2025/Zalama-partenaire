@@ -932,10 +932,11 @@ export class PartnerDataService {
     }
   }
 
-  // Récupérer les demandes d'avance de salaire du partenaire
+  // Récupérer les demandes d'avance de salaire du partenaire avec leurs transactions
   async getSalaryAdvanceRequests(): Promise<SalaryAdvanceRequest[]> {
     try {
-      const { data, error } = await supabase
+      // Récupérer les demandes avec les employés
+      const { data: demandes, error: demandesError } = await supabase
         .from("salary_advance_requests")
         .select(
           `
@@ -951,12 +952,55 @@ export class PartnerDataService {
         .eq("partenaire_id", this.partnerId)
         .order("date_creation", { ascending: false });
 
-      if (error) {
-        console.error("Erreur lors de la récupération des demandes:", error);
+      if (demandesError) {
+        console.error(
+          "Erreur lors de la récupération des demandes:",
+          demandesError
+        );
         return [];
       }
 
-      return data || [];
+      // Récupérer les transactions correspondantes
+      const { data: transactions, error: transactionsError } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("entreprise_id", this.partnerId);
+
+      if (transactionsError) {
+        console.error(
+          "Erreur lors de la récupération des transactions:",
+          transactionsError
+        );
+        return demandes || [];
+      }
+
+      // Créer un map des transactions par demande_avance_id
+      const transactionsMap = new Map();
+      (transactions || []).forEach((transaction) => {
+        if (transaction.demande_avance_id) {
+          transactionsMap.set(transaction.demande_avance_id, transaction);
+        }
+      });
+
+      // Traiter les demandes et ajuster le statut selon les transactions
+      const demandesTraitees = (demandes || []).map((demande) => {
+        const transaction = transactionsMap.get(demande.id);
+
+        // Si la demande est approuvée mais n'a pas de transaction effectuée, la marquer comme rejetée
+        if (
+          demande.statut === "Validé" &&
+          (!transaction || transaction.statut !== "EFFECTUEE")
+        ) {
+          return {
+            ...demande,
+            statut: "Rejeté",
+          };
+        }
+
+        return demande;
+      });
+
+      return demandesTraitees;
     } catch (error) {
       console.error("Erreur lors de la récupération des demandes:", error);
       return [];
