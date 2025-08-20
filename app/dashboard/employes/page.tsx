@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 // Type étendu pour inclure le salaire restant
 type EmployeeWithRemainingSalary = Employee & {
   salaire_restant?: number;
+  user_id?: string;
 };
 
 // Fonction pour formatter les dates
@@ -265,11 +266,12 @@ export default function EmployesPage() {
   const totalEmployees = employees.length;
   const activeEmployees = employees.filter((emp) => emp.actif).length;
   const newThisMonth = employees.filter((emp) => {
-    const hireDate = new Date(emp.date_embauche || "");
+    const createdDate = new Date(emp.created_at || "");
     const now = new Date();
     return (
-      hireDate.getMonth() === now.getMonth() &&
-      hireDate.getFullYear() === now.getFullYear()
+      emp.user_id && // Vérifier que l'employé a un user_id
+      createdDate.getMonth() === now.getMonth() &&
+      createdDate.getFullYear() === now.getFullYear()
     );
   }).length;
   const retentionRate =
