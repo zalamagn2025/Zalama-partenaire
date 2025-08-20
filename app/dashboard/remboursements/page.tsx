@@ -1184,7 +1184,7 @@ export default function RemboursementsPage() {
         open={showFinancialInfoModal}
         onOpenChange={setShowFinancialInfoModal}
       >
-        <DialogContent className="max-w-8xl">
+        <DialogContent className="max-w-7xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <Building className="w-6 h-6 text-green-600" />
