@@ -328,57 +328,72 @@ export default function EntrepriseDashboardPage() {
       .reduce((sum: number, t: any) => sum + Number(t.montant || 0), 0);
   };
 
-  // Calculs dynamiques pour la section Performance financière
-  const thisMonth = now.getMonth();
-  const thisYear = now.getFullYear();
+  // Calculer les dates de paiement selon le payment_day
+  const calculatePaymentDates = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
 
-  // Transactions effectuées ce mois-ci (pour nombre d'employés)
-  const demandesMois = salaryRequests.filter((d: any) => {
-    const dVal = d.date_validation ? new Date(d.date_validation) : null;
-    return (
-      dVal && dVal.getMonth() === thisMonth && dVal.getFullYear() === thisYear
+    // Date de paiement du mois courant
+    const paiementMoisCourant = new Date(
+      currentYear,
+      currentMonth,
+      paymentDay || 25
     );
-  });
 
-  // Flux financier = somme de toutes les transactions valides entre l'entreprise et Zalama
+    let dernierPaiement: Date;
+    let prochainPaiement: Date;
+
+    if (today >= paiementMoisCourant) {
+      // Si on a dépassé ou on est le jour de paiement du mois courant
+      dernierPaiement = paiementMoisCourant;
+      prochainPaiement = new Date(
+        currentYear,
+        currentMonth + 1,
+        paymentDay || 25
+      );
+    } else {
+      // Si on n'a pas encore atteint le jour de paiement du mois courant
+      dernierPaiement = new Date(
+        currentYear,
+        currentMonth - 1,
+        paymentDay || 25
+      );
+      prochainPaiement = paiementMoisCourant;
+    }
+
+    return { dernierPaiement, prochainPaiement };
+  };
+
+  const { dernierPaiement, prochainPaiement } = calculatePaymentDates();
+
+  // Flux financier = somme de tous les remboursements entre l'entreprise et Zalama
   const fluxFinance = allTransactions.reduce(
     (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
-  // Montant débloqué = somme de toutes les transactions EFFECTUEE de l'entreprise ce mois-ci (PAYE + EN_ATTENTE)
-  const remboursementsMois = allTransactions.filter((r: any) => {
-    const rDate = r.date_creation ? new Date(r.date_creation) : null;
-    return (
-      rDate &&
-      rDate.getMonth() === thisMonth &&
-      rDate.getFullYear() === thisYear
-    );
+  // Montant débloqué = somme des demandes validées dans la période de paiement actuelle
+  const demandesValideesPeriode = salaryRequests.filter((d: any) => {
+    const dVal = d.date_validation ? new Date(d.date_validation) : null;
+    return dVal && dVal >= dernierPaiement && dVal < prochainPaiement;
   });
 
-  const debloqueMois = remboursementsMois.reduce(
-    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
+  const debloqueMois = demandesValideesPeriode.reduce(
+    (sum: number, d: any) => sum + Number(d.montant_demande || 0),
     0
   );
 
-  // Montant à rembourser = seulement les remboursements avec statut EN_ATTENTE ce mois-ci
-  const remboursementsEnAttenteMois = allTransactions.filter((r: any) => {
-    const rDate = r.date_creation ? new Date(r.date_creation) : null;
-    return (
-      rDate &&
-      rDate.getMonth() === thisMonth &&
-      rDate.getFullYear() === thisYear &&
-      r.statut === "EN_ATTENTE"
-    );
-  });
+  // Montant à rembourser = seulement les remboursements avec statut EN_ATTENTE (tous les remboursements en attente)
+  const aRembourserMois = allTransactions.reduce((sum: number, t: any) => {
+    if (t.statut === "EN_ATTENTE") {
+      return sum + Number(t.montant_total_remboursement || 0);
+    }
+    return sum;
+  }, 0);
 
-  const aRembourserMois = remboursementsEnAttenteMois.reduce(
-    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
-    0
-  );
-
-  // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées ce mois-ci
-  const employesApprouves = demandesMois.length;
+  // Nombre d'employés ayant eu une demande approuvée dans la période de paiement
+  const employesApprouves = demandesValideesPeriode.length;
 
   // Calculer la balance
   const totalRecupere = transactions
