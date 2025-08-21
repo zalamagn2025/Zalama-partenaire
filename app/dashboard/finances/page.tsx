@@ -54,25 +54,31 @@ interface FinancialStats {
   repartitionParStatut: any[];
 }
 
-// Interface pour les transactions avec employé
-interface TransactionWithEmployee {
+// Interface pour les remboursements avec employé
+interface RemboursementWithEmployee {
   id: string;
-  demande_avance_id: string | null;
-  employe_id: string | null;
-  entreprise_id: string;
-  montant: number;
-  numero_transaction: string;
-  methode_paiement: string;
+  transaction_id: string;
+  demande_avance_id: string;
+  employe_id: string;
+  partenaire_id: string;
+  montant_transaction: number;
+  frais_service: number;
+  montant_total_remboursement: number;
+  methode_remboursement: string;
+  date_creation: string;
+  date_transaction_effectuee: string;
+  date_limite_remboursement: string;
+  date_remboursement_effectue: string | null;
+  statut: string;
   numero_compte: string | null;
   numero_reception: string | null;
-  date_transaction: string;
-  recu_url: string | null;
-  date_creation: string;
-  statut: string;
+  reference_paiement: string | null;
+  commentaire_partenaire: string | null;
+  commentaire_admin: string | null;
+  motif_retard: string | null;
   created_at: string;
   updated_at: string;
-  description: string | null;
-  message_callback: string | null;
+  pay_id: string | null;
   employees?: {
     id: string;
     prenom: string;
@@ -86,11 +92,11 @@ export default function FinancesPage() {
   const router = useRouter();
 
   // États pour les données financières
-  const [transactions, setTransactions] = useState<TransactionWithEmployee[]>(
+  const [transactions, setTransactions] = useState<RemboursementWithEmployee[]>(
     []
   );
   const [filteredTransactions, setFilteredTransactions] = useState<
-    TransactionWithEmployee[]
+    RemboursementWithEmployee[]
   >([]);
   const [financialStats, setFinancialStats] = useState<FinancialStats | null>(
     null
@@ -122,10 +128,9 @@ export default function FinancesPage() {
     const fetchPaymentDay = async () => {
       if (!session?.partner) return;
       const { data, error } = await supabase
-        .from("partnership_requests")
+        .from("partners")
         .select("payment_day")
-        .eq("company_name", session.partner.company_name)
-        .eq("status", "approved")
+        .eq("id", session.partner.id)
         .single();
       if (!error && data && data.payment_day) {
         setPaymentDay(data.payment_day);
@@ -158,50 +163,122 @@ export default function FinancesPage() {
   const loadSalaryAdvanceData = async () => {
     setIsLoading(true);
     try {
-      // 1. Récupérer tous les remboursements pour l'entreprise (flux financier total)
+      // 1. Récupérer les demandes avec les employés
+      const { data: demandes, error: demandesError } = await supabase
+        .from("salary_advance_requests")
+        .select(
+          `
+          *,
+          employees!salary_advance_requests_employe_id_fkey (
+            id,
+            nom,
+            prenom,
+            poste
+          )
+        `
+        )
+        .eq("partenaire_id", session?.partner?.id)
+        .order("date_creation", { ascending: false });
+
+      if (demandesError) {
+        console.error(
+          "Erreur lors de la récupération des demandes:",
+          demandesError
+        );
+        return;
+      }
+
+      // 2. Récupérer les transactions correspondantes
+      const { data: transactions, error: transactionsError } = await supabase
+        .from("transactions")
+        .select("*")
+        .eq("entreprise_id", session?.partner?.id);
+
+      if (transactionsError) {
+        console.error(
+          "Erreur lors de la récupération des transactions:",
+          transactionsError
+        );
+        return;
+      }
+
+      // 3. Créer un map des transactions par demande_avance_id
+      const transactionsMap = new Map();
+      (transactions || []).forEach((transaction) => {
+        if (transaction.demande_avance_id) {
+          transactionsMap.set(transaction.demande_avance_id, transaction);
+        }
+      });
+
+      // 4. Traiter les demandes et ajuster le statut selon les transactions
+      const demandesTraitees = (demandes || []).map((demande) => {
+        const transaction = transactionsMap.get(demande.id);
+
+        // Si la demande est approuvée mais n'a pas de transaction effectuée, la marquer comme rejetée
+        if (
+          demande.statut === "Validé" &&
+          (!transaction || transaction.statut !== "EFFECTUEE")
+        ) {
+          return {
+            ...demande,
+            statut: "Rejeté",
+          };
+        }
+
+        return demande;
+      });
+
+      setSalaryRequests(demandesTraitees);
+
+      // 5. Récupérer tous les remboursements pour l'entreprise
       const { data: allRemboursements, error: remboursementsError } =
         await supabase
           .from("remboursements")
           .select("*")
           .eq("partenaire_id", session?.partner?.id);
 
-      if (remboursementsError) throw remboursementsError;
+      if (remboursementsError) {
+        console.error(
+          "Erreur lors de la récupération des remboursements:",
+          remboursementsError
+        );
+        return;
+      }
 
-      console.log(allRemboursements);
-
-      // 2. Récupérer les demandes d'avance validées pour ce mois-ci
-      const { data: salaryRequests, error: salaryError } = await supabase
-        .from("salary_advance_requests")
-        .select("*")
-        .eq("partenaire_id", session?.partner?.id)
-        .eq("statut", "Validé");
-
-      if (salaryError) throw salaryError;
-
-      setSalaryRequests(salaryRequests || []);
-
-      // Calculs selon votre logique
+      // Calculs selon la nouvelle logique
       const now = new Date();
       const thisMonth = now.getMonth();
       const thisYear = now.getFullYear();
 
-      // Remboursements effectués ce mois-ci (pour montant débloqué et à rembourser)
+      // Demandes validées ce mois-ci (après traitement avec les transactions)
+      const demandesValideesMois = demandesTraitees.filter((d: any) => {
+        const dVal = d.date_validation ? new Date(d.date_validation) : null;
+        return (
+          dVal &&
+          dVal.getMonth() === thisMonth &&
+          dVal.getFullYear() === thisYear &&
+          d.statut === "Validé" // Seulement les vraies demandes validées
+        );
+      });
+
+      // Demandes rejetées ce mois-ci (après traitement avec les transactions)
+      const demandesRejeteesMois = demandesTraitees.filter((d: any) => {
+        const dVal = d.date_validation ? new Date(d.date_validation) : null;
+        return (
+          dVal &&
+          dVal.getMonth() === thisMonth &&
+          dVal.getFullYear() === thisYear &&
+          d.statut === "Rejeté" // Demandes rejetées après vérification des transactions
+        );
+      });
+
+      // Remboursements effectués ce mois-ci
       const remboursementsMois = (allRemboursements || []).filter((r: any) => {
         const rDate = r.date_creation ? new Date(r.date_creation) : null;
         return (
           rDate &&
           rDate.getMonth() === thisMonth &&
           rDate.getFullYear() === thisYear
-        );
-      });
-
-      // Demandes validées ce mois-ci (pour nombre d'employés)
-      const demandesMois = (salaryRequests || []).filter((d: any) => {
-        const dVal = d.date_validation ? new Date(d.date_validation) : null;
-        return (
-          dVal &&
-          dVal.getMonth() === thisMonth &&
-          dVal.getFullYear() === thisYear
         );
       });
 
@@ -212,18 +289,77 @@ export default function FinancesPage() {
         0
       );
 
-      // Montant débloqué ce mois-ci = somme des montants des remboursements effectués ce mois-ci
-      const debloqueMois = remboursementsMois.reduce(
-        (sum: number, r: any) =>
-          sum + Number(r.montant_total_remboursement || 0),
+      // Calculer les dates de paiement selon le payment_day
+      const calculatePaymentDates = () => {
+        const today = new Date();
+        const currentMonth = today.getMonth();
+        const currentYear = today.getFullYear();
+
+        // Date de paiement du mois courant
+        const paiementMoisCourant = new Date(
+          currentYear,
+          currentMonth,
+          paymentDay || 25
+        );
+
+        let dernierPaiement: Date;
+        let prochainPaiement: Date;
+
+        if (today >= paiementMoisCourant) {
+          // Si on a dépassé ou on est le jour de paiement du mois courant
+          dernierPaiement = paiementMoisCourant;
+          prochainPaiement = new Date(
+            currentYear,
+            currentMonth + 1,
+            paymentDay || 25
+          );
+        } else {
+          // Si on n'a pas encore atteint le jour de paiement du mois courant
+          dernierPaiement = new Date(
+            currentYear,
+            currentMonth - 1,
+            paymentDay || 25
+          );
+          prochainPaiement = paiementMoisCourant;
+        }
+
+        return { dernierPaiement, prochainPaiement };
+      };
+
+      const { dernierPaiement, prochainPaiement } = calculatePaymentDates();
+
+      // Montant débloqué ce mois-ci = somme des montants des demandes validées dans la période de paiement
+      const debloqueMois = demandesTraitees.reduce((sum: number, d: any) => {
+        const dVal = d.date_validation ? new Date(d.date_validation) : null;
+        if (dVal && d.statut === "Validé") {
+          // Vérifier si la demande est dans la période de paiement actuelle
+          if (dVal >= dernierPaiement && dVal < prochainPaiement) {
+            return sum + Number(d.montant_demande || 0);
+          }
+        }
+        return sum;
+      }, 0);
+
+      // Montant à rembourser ce mois-ci = somme des remboursements avec statut EN_ATTENTE
+      const aRembourserMois = (allRemboursements || []).reduce(
+        (sum: number, r: any) => {
+          if (r.statut === "EN_ATTENTE") {
+            return sum + Number(r.montant_total_remboursement || 0);
+          }
+          return sum;
+        },
         0
       );
 
-      // Montant à rembourser ce mois-ci = même montant que débloqué
-      const aRembourserMois = debloqueMois;
-
-      // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées ce mois-ci
-      const employesApprouves = demandesMois.length;
+      // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées dans la période de paiement
+      const employesApprouves = demandesTraitees.filter((d: any) => {
+        const dVal = d.date_validation ? new Date(d.date_validation) : null;
+        if (dVal && d.statut === "Validé") {
+          // Vérifier si la demande est dans la période de paiement actuelle
+          return dVal >= dernierPaiement && dVal < prochainPaiement;
+        }
+        return false;
+      }).length;
 
       setStats({
         fluxFinance,
@@ -242,49 +378,53 @@ export default function FinancesPage() {
 
   // Calculer les statistiques financières dynamiques
   const calculateFinancialStats = (
-    transactions: TransactionWithEmployee[]
+    remboursements: RemboursementWithEmployee[]
   ): FinancialStats => {
-    // Calculs de base - adapter selon les types de transactions dans la table transactions
-    const totalDebloque = transactions
-      .filter((t) => t.statut === "EFFECTUEE")
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    // Calculs de base - adapter selon les types de remboursements dans la table remboursements
+    const totalDebloque = remboursements
+      .filter((r) => r.statut === "PAYE")
+      .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
 
-    const totalRecupere = transactions
-      .filter((t) => t.statut === "EFFECTUEE")
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    const totalRecupere = remboursements
+      .filter((r) => r.statut === "PAYE")
+      .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
 
-    const totalRevenus = transactions
-      .filter((t) => t.statut === "EFFECTUEE")
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    const totalRevenus = remboursements
+      .filter((r) => r.statut === "PAYE")
+      .reduce((sum, r) => sum + (r.frais_service || 0), 0);
 
-    const totalRemboursements = transactions
-      .filter((t) => t.statut === "EFFECTUEE")
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    const totalRemboursements = remboursements.reduce(
+      (sum, r) => sum + (r.montant_total_remboursement || 0),
+      0
+    );
 
-    const totalCommissions = transactions
-      .filter((t) => t.statut === "EFFECTUEE")
-      .reduce((sum, t) => sum + (t.montant || 0), 0);
+    const totalCommissions = remboursements.reduce(
+      (sum, r) => sum + (r.frais_service || 0),
+      0
+    );
 
-    const pendingTransactions = transactions.filter(
-      (t) => t.statut === "EN_COURS"
+    const pendingTransactions = remboursements.filter(
+      (r) => r.statut === "EN_ATTENTE"
     ).length;
-    const totalTransactions = transactions.length;
+    const totalTransactions = remboursements.length;
     const balance =
       totalDebloque - totalRecupere + totalRevenus - totalRemboursements;
     const montantMoyen =
       totalTransactions > 0
-        ? transactions.reduce((sum, t) => sum + (t.montant || 0), 0) /
-          totalTransactions
+        ? remboursements.reduce(
+            (sum, r) => sum + (r.montant_total_remboursement || 0),
+            0
+          ) / totalTransactions
         : 0;
 
     // Calcul de l'évolution mensuelle
-    const evolutionMensuelle = calculateMonthlyEvolution(transactions);
+    const evolutionMensuelle = calculateMonthlyEvolution(remboursements);
 
     // Répartition par type
-    const repartitionParType = calculateTypeDistribution(transactions);
+    const repartitionParType = calculateTypeDistribution(remboursements);
 
     // Répartition par statut
-    const repartitionParStatut = calculateStatusDistribution(transactions);
+    const repartitionParStatut = calculateStatusDistribution(remboursements);
 
     return {
       totalDebloque,
@@ -304,7 +444,7 @@ export default function FinancesPage() {
 
   // Calculer l'évolution mensuelle
   const calculateMonthlyEvolution = (
-    transactions: TransactionWithEmployee[]
+    remboursements: RemboursementWithEmployee[]
   ) => {
     const months = [
       "Jan",
@@ -323,26 +463,26 @@ export default function FinancesPage() {
     const currentYear = new Date().getFullYear();
 
     const monthlyData = months.map((month, index) => {
-      const monthTransactions = transactions.filter((t) => {
-        const transactionDate = new Date(t.created_at);
+      const monthRemboursements = remboursements.filter((r) => {
+        const remboursementDate = new Date(r.date_creation);
         return (
-          transactionDate.getFullYear() === currentYear &&
-          transactionDate.getMonth() === index
+          remboursementDate.getFullYear() === currentYear &&
+          remboursementDate.getMonth() === index
         );
       });
 
-      // Pour le graphique, on prend toutes les transactions effectuées du mois (comme dans les StatCards)
-      const debloque = monthTransactions
-        .filter((t) => t.statut === "EFFECTUEE")
-        .reduce((sum, t) => sum + (t.montant || 0), 0);
+      // Pour le graphique, on prend tous les remboursements effectués du mois
+      const debloque = monthRemboursements
+        .filter((r) => r.statut === "PAYE")
+        .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
 
-      const recupere = monthTransactions
-        .filter((t) => t.statut === "EFFECTUEE")
-        .reduce((sum, t) => sum + (t.montant || 0), 0);
+      const recupere = monthRemboursements
+        .filter((r) => r.statut === "PAYE")
+        .reduce((sum, r) => sum + (r.montant_total_remboursement || 0), 0);
 
-      const revenus = monthTransactions
-        .filter((t) => t.statut === "EFFECTUEE")
-        .reduce((sum, t) => sum + (t.montant || 0), 0);
+      const revenus = monthRemboursements
+        .filter((r) => r.statut === "PAYE")
+        .reduce((sum, r) => sum + (r.frais_service || 0), 0);
 
       return {
         mois: month,
@@ -358,19 +498,18 @@ export default function FinancesPage() {
 
   // Calculer la répartition par type
   const calculateTypeDistribution = (
-    transactions: TransactionWithEmployee[]
+    remboursements: RemboursementWithEmployee[]
   ) => {
     const typeCounts: { [key: string]: number } = {};
 
-    transactions.forEach((t) => {
-      let type = "Autre";
-      if (t.description?.includes("Débloqué")) type = "Débloqué";
-      else if (t.description?.includes("Récupéré")) type = "Récupéré";
-      else if (t.description?.includes("Revenu")) type = "Revenu";
-      else if (t.description?.includes("Remboursement")) type = "Remboursement";
-      else if (t.description?.includes("Commission")) type = "Commission";
+    remboursements.forEach((r) => {
+      let type = "Remboursement";
+      if (r.statut === "PAYE") type = "Payé";
+      else if (r.statut === "EN_ATTENTE") type = "En attente";
+      else if (r.statut === "ANNULE") type = "Annulé";
 
-      typeCounts[type] = (typeCounts[type] || 0) + (t.montant || 0);
+      typeCounts[type] =
+        (typeCounts[type] || 0) + (r.montant_total_remboursement || 0);
     });
 
     const colors = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
@@ -383,12 +522,12 @@ export default function FinancesPage() {
 
   // Calculer la répartition par statut
   const calculateStatusDistribution = (
-    transactions: TransactionWithEmployee[]
+    remboursements: RemboursementWithEmployee[]
   ) => {
     const statusCounts: { [key: string]: number } = {};
 
-    transactions.forEach((t) => {
-      const status = t.statut || "Inconnu";
+    remboursements.forEach((r) => {
+      const status = r.statut || "Inconnu";
       statusCounts[status] = (statusCounts[status] || 0) + 1;
     });
 
@@ -407,11 +546,11 @@ export default function FinancesPage() {
       const partnerService = new PartnerDataService(session.partner.id);
       const remboursements = await partnerService.getRemboursements();
 
-      setTransactions(remboursements as unknown as TransactionWithEmployee[]);
+      setTransactions(remboursements as unknown as RemboursementWithEmployee[]);
 
       // Calculer les statistiques financières
       const stats = calculateFinancialStats(
-        remboursements as unknown as TransactionWithEmployee[]
+        remboursements as unknown as RemboursementWithEmployee[]
       );
       setFinancialStats(stats);
     } catch (error) {
@@ -425,15 +564,15 @@ export default function FinancesPage() {
     }
   };
 
-  // Pour l'historique des transactions, charge les données de transactions :
+  // Pour l'historique des remboursements, charge les données de remboursements :
   const loadTransactions = async () => {
     try {
       const { data, error } = await supabase
-        .from("transactions")
+        .from("remboursements")
         .select(
           `
           *,
-          employees (
+          employees!remboursements_employe_id_fkey (
             id,
             prenom,
             nom,
@@ -441,12 +580,12 @@ export default function FinancesPage() {
           )
         `
         )
-        .eq("entreprise_id", session?.partner?.id)
-        .order("date_transaction", { ascending: false });
+        .eq("partenaire_id", session?.partner?.id)
+        .order("date_creation", { ascending: false });
       if (error) throw error;
 
-      console.log("Transactions chargées:", data);
-      console.log("Nombre de transactions:", data?.length);
+      console.log("Remboursements chargés:", data);
+      console.log("Nombre de remboursements:", data?.length);
 
       setTransactions(data || []);
 
@@ -455,8 +594,8 @@ export default function FinancesPage() {
       console.log("Stats calculées:", stats);
       setFinancialStats(stats);
     } catch (e) {
-      console.error("Erreur lors du chargement des transactions:", e);
-      toast.error("Erreur lors du chargement des transactions");
+      console.error("Erreur lors du chargement des remboursements:", e);
+      toast.error("Erreur lors du chargement des remboursements");
     }
   };
   useEffect(() => {
@@ -478,16 +617,10 @@ export default function FinancesPage() {
 
     if (selectedType) {
       filtered = filtered.filter((transaction) => {
-        if (selectedType === "Débloqué")
-          return transaction.description?.includes("Débloqué");
-        if (selectedType === "Récupéré")
-          return transaction.description?.includes("Récupéré");
-        if (selectedType === "Revenu")
-          return transaction.description?.includes("Revenu");
-        if (selectedType === "Remboursement")
-          return transaction.description?.includes("Remboursement");
-        if (selectedType === "Commission")
-          return transaction.description?.includes("Commission");
+        if (selectedType === "Payé") return transaction.statut === "PAYE";
+        if (selectedType === "En attente")
+          return transaction.statut === "EN_ATTENTE";
+        if (selectedType === "Annulé") return transaction.statut === "ANNULE";
         return false;
       });
     }
@@ -495,12 +628,9 @@ export default function FinancesPage() {
     if (selectedStatus) {
       filtered = filtered.filter((transaction) => {
         if (selectedStatus === "En attente")
-          return transaction.statut === "EN_COURS";
-        if (selectedStatus === "Validé")
-          return transaction.statut === "EFFECTUEE";
-        if (selectedStatus === "Rejeté") return transaction.statut === "ECHEC";
-        if (selectedStatus === "Annulé")
-          return transaction.statut === "ANNULEE";
+          return transaction.statut === "EN_ATTENTE";
+        if (selectedStatus === "Payé") return transaction.statut === "PAYE";
+        if (selectedStatus === "Annulé") return transaction.statut === "ANNULE";
         return false;
       });
     }
@@ -541,16 +671,16 @@ export default function FinancesPage() {
       ...transactions.map((transaction) =>
         [
           transaction.id,
-          formatDate(transaction.date_transaction),
+          formatDate(transaction.date_creation),
           transaction.employees
             ? `${transaction.employees.prenom} ${transaction.employees.nom}`
             : "Non spécifié",
           transaction.employees?.poste || "Non spécifié",
-          transaction.montant,
-          transaction.description?.split(" ")[0] || "Transaction",
-          transaction.description || "",
+          transaction.montant_total_remboursement,
+          transaction.methode_remboursement || "Remboursement",
+          transaction.methode_remboursement || "",
           transaction.statut,
-          transaction.numero_transaction || "",
+          transaction.reference_paiement || "",
         ].join(",")
       ),
     ].join("\n");
@@ -721,11 +851,9 @@ export default function FinancesPage() {
               className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
             >
               <option value="">Tous les types</option>
-              <option value="Débloqué">Débloqué</option>
-              <option value="Récupéré">Récupéré</option>
-              <option value="Revenu">Revenu</option>
-              <option value="Remboursement">Remboursement</option>
-              <option value="Commission">Commission</option>
+              <option value="Payé">Payé</option>
+              <option value="En attente">En attente</option>
+              <option value="Annulé">Annulé</option>
             </select>
           </div>
 
@@ -740,7 +868,8 @@ export default function FinancesPage() {
               className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
             >
               <option value="">Tous les statuts</option>
-              <option value="Validé">Validé</option>
+              <option value="Payé">Payé</option>
+              <option value="En attente">En attente</option>
               <option value="Annulé">Annulé</option>
             </select>
           </div>
@@ -751,8 +880,8 @@ export default function FinancesPage() {
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
         <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            Historique des transactions ({filteredTransactions.length}{" "}
-            transactions)
+            Historique des remboursements ({filteredTransactions.length}{" "}
+            remboursements)
           </h3>
         </div>
         <div className="overflow-x-auto">
@@ -766,47 +895,44 @@ export default function FinancesPage() {
                   Employé
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
-                  Description
+                  Méthode
                 </th>
+
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Type
+                  Montant Total
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Montant
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
+                  Frais Service
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
                   Statut
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
+                {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
+                  Date Limite
+                </th> */}
+                {/* <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden xl:table-cell">
                   Référence
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
               {currentTransactions.length > 0 ? (
                 currentTransactions.map((transaction) => {
-                  // Déterminer le type basé sur la description
-                  let transactionType = "Transaction";
-                  if (transaction.description?.includes("Débloqué"))
-                    transactionType = "Débloqué";
-                  else if (transaction.description?.includes("Récupéré"))
-                    transactionType = "Récupéré";
-                  else if (transaction.description?.includes("Revenu"))
-                    transactionType = "Revenu";
-                  else if (transaction.description?.includes("Remboursement"))
-                    transactionType = "Remboursement";
-                  else if (transaction.description?.includes("Commission"))
-                    transactionType = "Commission";
+                  // Déterminer le type basé sur le statut
+                  let transactionType = "Remboursement";
+                  if (transaction.statut === "PAYE") transactionType = "Payé";
+                  else if (transaction.statut === "EN_ATTENTE")
+                    transactionType = "En attente";
+                  else if (transaction.statut === "ANNULE")
+                    transactionType = "Annulé";
 
                   // Mapper les statuts
                   let statusDisplay = transaction.statut;
-                  if (transaction.statut === "EN_COURS")
+                  if (transaction.statut === "EN_ATTENTE")
                     statusDisplay = "En attente";
-                  else if (transaction.statut === "EFFECTUEE")
-                    statusDisplay = "Validé";
-                  else if (transaction.statut === "ECHEC")
-                    statusDisplay = "Rejeté";
-                  else if (transaction.statut === "ANNULEE")
+                  else if (transaction.statut === "PAYE")
+                    statusDisplay = "Payé";
+                  else if (transaction.statut === "ANNULE")
                     statusDisplay = "Annulé";
 
                   return (
@@ -815,7 +941,7 @@ export default function FinancesPage() {
                       className="hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
-                        {formatDate(transaction.date_transaction)}
+                        {formatDate(transaction.date_creation)}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         <div className="flex flex-col">
@@ -835,36 +961,27 @@ export default function FinancesPage() {
                         <div
                           className="max-w-xs truncate"
                           title={
-                            transaction.description || "Aucune description"
+                            transaction.methode_remboursement ||
+                            "Aucune méthode"
                           }
                         >
-                          {transaction.description || "Aucune description"}
+                          {transaction.methode_remboursement ||
+                            "Aucune méthode"}
                         </div>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            transactionType === "Débloqué"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-                              : transactionType === "Récupéré"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : transactionType === "Revenu"
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                              : transactionType === "Commission"
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          }`}
-                        >
-                          {transactionType}
-                        </span>
-                      </td>
+
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
-                        {gnfFormatter(transaction.montant || 0)}
+                        {gnfFormatter(
+                          transaction.montant_total_remboursement || 0
+                        )}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white hidden sm:table-cell">
+                        {gnfFormatter(transaction.frais_service || 0)}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
                         <span
                           className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            statusDisplay === "Validé"
+                            statusDisplay === "Payé"
                               ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                               : statusDisplay === "En attente"
                               ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
@@ -874,24 +991,34 @@ export default function FinancesPage() {
                           {statusDisplay}
                         </span>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
+                      {/* <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                         <div
                           className="max-w-24 truncate"
-                          title={transaction.numero_transaction || "-"}
+                          title={formatDate(
+                            transaction.date_limite_remboursement
+                          )}
                         >
-                          {transaction.numero_transaction || "-"}
+                          {formatDate(transaction.date_limite_remboursement)}
                         </div>
-                      </td>
+                      </td> */}
+                      {/* <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden xl:table-cell">
+                        <div
+                          className="max-w-24 truncate"
+                          title={transaction.reference_paiement || "-"}
+                        >
+                          {transaction.reference_paiement || "-"}
+                        </div>
+                      </td> */}
                     </tr>
                   );
                 })
               ) : (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={9}
                     className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
                   >
-                    Aucune transaction trouvée
+                    Aucun remboursement trouvé
                   </td>
                 </tr>
               )}

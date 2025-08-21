@@ -37,6 +37,7 @@ import {
   Receipt,
   History,
   AlertCircle,
+  Building,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
@@ -91,6 +92,7 @@ export default function RemboursementsPage() {
   const [selectedRemboursement, setSelectedRemboursement] =
     useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showFinancialInfoModal, setShowFinancialInfoModal] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -458,8 +460,40 @@ export default function RemboursementsPage() {
               Suivi et traitement des remboursements d'avances salariales
             </p>
           </div>
+
           <div className="flex items-center gap-2">
-            <Button
+            <div>
+              <div className="flex items-center justify-center space-x-2 px-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Remboursement
+                </span>
+              </div>
+              <div className="relative">
+                {/* Curseur animé */}
+                <div className="absolute -top-8 -left-8 w-6 h-6 pointer-events-none animate-cursor-click">
+                  <div className="w-6 h-6 bg-white border-2 border-gray-800 rounded-sm transform rotate-45 relative">
+                    <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-white border border-gray-800 rounded-sm"></div>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => setShowFinancialInfoModal(true)}
+                  size="sm"
+                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0 relative overflow-hidden group cursor-pointer px-6 py-2"
+                >
+                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+                  <Building className="w-4 h-4 mr-2 relative z-10" />
+                  <span className="relative z-10">
+                    Voir coordonnées bancaires de ZaLaMa
+                  </span>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 group-hover:animate-shimmer"></div>
+                </Button>
+              </div>
+            </div>
+
+            {/* <Button
               onClick={() => handleRefreshStatus()}
               disabled={isLoading}
               size="sm"
@@ -483,7 +517,7 @@ export default function RemboursementsPage() {
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Paiement via Chèque
               </span>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
@@ -1136,6 +1170,139 @@ export default function RemboursementsPage() {
             <Button
               variant="outline"
               onClick={handleCloseModal}
+              className="flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal des informations financières de ZaLaMa */}
+      <Dialog
+        open={showFinancialInfoModal}
+        onOpenChange={setShowFinancialInfoModal}
+      >
+        <DialogContent className="max-w-7xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Building className="w-6 h-6 text-green-600" />
+              Informations Financières - ZaLaMa SARL
+            </DialogTitle>
+
+            <DialogDescription>
+              Relevé d'identité bancaire et adresse de l'entreprise
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            {/* Informations bancaires */}
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-green-600" />
+                Relevé d'Identité Bancaire (RIB)
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Nom :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      Ecobank
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Code Swift :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      ECOCGNCN
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Code Banque :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      GN010
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Code Guichet :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      008
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Numéro de Compte :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      7336020099
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Intitulé de compte :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      ZALAMA SARL
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      RIB :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      010008733602009966
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      IBAN :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      GN010008733602009966
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                      Devise :
+                    </span>
+                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                      GNF
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Adresse intégrée dans la section bancaire */}
+              <div className="mt-6 pt-6 border-t border-green-200 dark:border-green-700">
+                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
+                  Adresse de l'agence :
+                </h4>
+                <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
+                  Immeuble AL Iman
+                  <br />
+                  Avenue de la République
+                  <br />
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="mt-6">
+            <Button
+              variant="outline"
+              onClick={() => setShowFinancialInfoModal(false)}
               className="flex items-center gap-2"
             >
               <ArrowLeft className="w-4 h-4" />

@@ -21,6 +21,7 @@ import {
   User,
   Key,
   RefreshCw,
+  Copy,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -194,6 +195,22 @@ export default function ParametresPage() {
       toast.error(error.message || "Erreur lors du changement de mot de passe");
     } finally {
       setIsChangingPassword(false);
+    }
+  };
+
+  // Fonction pour copier la clé API
+  const handleCopyApiKey = async () => {
+    if (!apiKeyData.api_key) {
+      toast.error("Aucune clé API à copier");
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(apiKeyData.api_key);
+      toast.success("Clé API copiée dans le presse-papiers");
+    } catch (error) {
+      console.error("Erreur lors de la copie:", error);
+      toast.error("Erreur lors de la copie de la clé API");
     }
   };
 
@@ -736,9 +753,17 @@ export default function ParametresPage() {
 
                   <div className="flex gap-3">
                     <button
+                      onClick={handleCopyApiKey}
+                      disabled={!apiKeyData.api_key}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded"
+                    >
+                      <Copy className="w-4 h-4" />
+                      Copier la clé
+                    </button>
+                    <button
                       onClick={handleRegenerateApiKey}
                       disabled={isRegeneratingApiKey}
-                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded"
                     >
                       {isRegeneratingApiKey ? (
                         <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent" />
