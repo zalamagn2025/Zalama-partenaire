@@ -373,14 +373,9 @@ export default function EntrepriseDashboardPage() {
     0
   );
 
-  // Montant débloqué = somme des demandes validées dans la période de paiement actuelle
-  const demandesValideesPeriode = salaryRequests.filter((d: any) => {
-    const dVal = d.date_validation ? new Date(d.date_validation) : null;
-    return dVal && dVal >= dernierPaiement && dVal < prochainPaiement;
-  });
-
-  const debloqueMois = demandesValideesPeriode.reduce(
-    (sum: number, d: any) => sum + Number(d.montant_demande || 0),
+  // Montant débloqué = somme de tous les montants des remboursements (tous les mois)
+  const debloqueMois = allTransactions.reduce(
+    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
@@ -393,6 +388,11 @@ export default function EntrepriseDashboardPage() {
   }, 0);
 
   // Nombre d'employés ayant eu une demande approuvée dans la période de paiement
+  const demandesValideesPeriode = salaryRequests.filter((d: any) => {
+    const dVal = d.date_validation ? new Date(d.date_validation) : null;
+    return dVal && dVal >= dernierPaiement && dVal < prochainPaiement;
+  });
+
   const employesApprouves = demandesValideesPeriode.length;
 
   // Calculer la balance
@@ -639,7 +639,7 @@ export default function EntrepriseDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Montant total débloqué
+              Montant total débloqué (tous les mois)
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(debloqueMois)}
