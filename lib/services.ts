@@ -901,7 +901,7 @@ export class PartnerDataService {
     }
   }
 
-  // Récupérer les avis des employés du partenaire
+  // Récupérer les avis des employés du partenaire (seulement les avis approuvés)
   async getAvis(): Promise<Avis[]> {
     try {
       const { data, error } = await supabase
@@ -918,6 +918,7 @@ export class PartnerDataService {
         `
         )
         .eq("partner_id", this.partnerId)
+        .eq("approuve", true)
         .order("date_avis", { ascending: false });
 
       if (error) {
