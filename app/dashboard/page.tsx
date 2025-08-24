@@ -159,13 +159,14 @@ export default function EntrepriseDashboardPage() {
     }
   }, [session?.partner, isLoading]);
 
-  // Ajoute une fonction utilitaire pour charger les avis dynamiquement :
+  // Ajoute une fonction utilitaire pour charger les avis dynamiquement (seulement les avis approuvés) :
   const loadAvis = async () => {
     try {
       const { data, error } = await supabase
         .from("avis")
         .select("*")
         .eq("partner_id", session?.partner?.id)
+        .eq("approuve", true)
         .order("date_avis", { ascending: false });
       if (error) throw error;
       setAvis(data || []);
