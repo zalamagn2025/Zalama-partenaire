@@ -3,6 +3,7 @@
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-auth`;
+const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
 
 export interface PartnerAuthResponse {
   success: boolean;
@@ -68,6 +69,25 @@ export interface ChangePasswordRequest {
   current_password: string;
   new_password: string;
   confirm_password: string;
+}
+
+export interface ApprovalRequest {
+  requestId: string;
+  action: "approve" | "reject";
+  approverId: string;
+  approverRole: "rh" | "responsable";
+  reason?: string;
+}
+
+export interface ApprovalResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    requestId: string;
+    newStatus: string;
+    approverRole: string;
+    reason?: string;
+  };
 }
 
 class EdgeFunctionService {
@@ -301,6 +321,72 @@ class EdgeFunctionService {
       },
       body: JSON.stringify(request),
     });
+  }
+
+  // ✅ Approuver une demande d'avance sur salaire
+  async approveRequest(
+    accessToken: string,
+    request: ApprovalRequest
+  ): Promise<ApprovalResponse> {
+    const url = PARTNER_APPROVAL_URL;
+
+    const config: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(request),
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de l'approbation:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
+  }
+
+  // ❌ Rejeter une demande d'avance sur salaire
+  async rejectRequest(
+    accessToken: string,
+    request: ApprovalRequest
+  ): Promise<ApprovalResponse> {
+    const url = PARTNER_APPROVAL_URL;
+
+    const config: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(request),
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors du rejet:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
   }
 }
 
