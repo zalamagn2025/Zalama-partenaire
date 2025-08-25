@@ -15,10 +15,30 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "ZaLaMa Partner Dashboard",
   description: "Tableau de bord des partenaires ZaLaMa",
+  applicationName: "Partner-ZaLaMa",
+  manifest: "/manifest.json",
+  themeColor: "#0d6efd",
   icons: {
-    icon: "/images/logo-fav.png",
-    shortcut: "/images/logo-fav.png",
-    apple: "/images/logo-fav.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png" }
+    ],
+    apple: [
+      { url: "/apple-icon.png", sizes: "180x180", type: "image/png" }
+    ],
+    shortcut: ["/favicon.ico"],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Partner-ZaLaMa",
+    statusBarStyle: "default",
+  },
+  formatDetection: { telephone: false },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    viewportFit: "cover",
   },
 };
 
