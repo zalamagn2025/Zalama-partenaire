@@ -25,6 +25,7 @@ import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -176,30 +177,30 @@ export default function DemandesPage() {
 
     setApprovingRequest(requestId);
     try {
-      const response = await fetch("/api/partner-approval", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      // Déterminer le rôle de l'utilisateur
+      const userRole = session.admin?.role?.toLowerCase();
+      const approverRole =
+        userRole === "rh" || userRole === "responsable" ? userRole : "rh";
+
+      const result = await edgeFunctionService.approveRequest(
+        session.access_token,
+        {
           requestId: requestId,
           action: "approve",
-          approverId: session.partner?.id,
-          approverRole: "rh",
+          approverId: session.admin?.id || session.user?.id,
+          approverRole: approverRole as "rh" | "responsable",
           reason: "Demande approuvée par le service RH",
-        }),
-      });
+        }
+      );
 
-      if (response.ok) {
+      if (result.success) {
         toast.success("Demande approuvée avec succès");
         // Recharger les demandes
         const partnerService = new PartnerDataService(session.partner.id);
         const demandes = await partnerService.getSalaryAdvanceRequests();
         setDemandesAvance(demandes);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors de l'approbation");
+        throw new Error(result.message || "Erreur lors de l'approbation");
       }
     } catch (error: any) {
       console.error("Erreur lors de l'approbation:", error);
@@ -218,30 +219,32 @@ export default function DemandesPage() {
 
     setRejectingRequest(requestId);
     try {
-      const response = await fetch("/api/partner-approval", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
+      // Déterminer le rôle de l'utilisateur
+      const userRole = session.admin?.role?.toLowerCase();
+      const approverRole =
+        userRole === "rh" || userRole === "responsable"
+          ? userRole
+          : "responsable";
+
+      const result = await edgeFunctionService.rejectRequest(
+        session.access_token,
+        {
           requestId: requestId,
           action: "reject",
-          approverId: session.partner?.id,
-          approverRole: "rh",
+          approverId: session.admin?.id || session.user?.id,
+          approverRole: approverRole as "rh" | "responsable",
           reason: "Demande rejetée par le service RH",
-        }),
-      });
+        }
+      );
 
-      if (response.ok) {
+      if (result.success) {
         toast.success("Demande rejetée avec succès");
         // Recharger les demandes
         const partnerService = new PartnerDataService(session.partner.id);
         const demandes = await partnerService.getSalaryAdvanceRequests();
         setDemandesAvance(demandes);
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Erreur lors du rejet");
+        throw new Error(result.message || "Erreur lors du rejet");
       }
     } catch (error: any) {
       console.error("Erreur lors du rejet:", error);
@@ -606,16 +609,19 @@ export default function DemandesPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                    {/* Boutons d'approbation/rejet pour les demandes en attente RH/Responsable */}
-                    {demande.statut === "En attente RH/Responsable" && (
-                      <>
+                    {/* Actions pour les demandes en attente RH/Responsable */}
+                    {demande.statut === "En attente RH/Responsable" ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">
+                          ⏳ En attente d'approbation
+                        </span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleApproveRequest(demande.id);
                           }}
                           disabled={approvingRequest === demande.id}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {approvingRequest === demande.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -630,7 +636,7 @@ export default function DemandesPage() {
                             handleRejectRequest(demande.id);
                           }}
                           disabled={rejectingRequest === demande.id}
-                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {rejectingRequest === demande.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -639,7 +645,14 @@ export default function DemandesPage() {
                           )}
                           Rejeter
                         </button>
-                      </>
+                      </div>
+                    ) : (
+                      // Indicateur pour les autres statuts
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {demande.statut === "Validé" && "✅ Traitée"}
+                        {demande.statut === "Rejeté" && "❌ Rejetée"}
+                        {demande.statut === "En attente" && "⏳ En cours"}
+                      </div>
                     )}
                     <button className="p-1 rounded-full hover:bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]/70 hover:text-[var(--zalama-text)]">
                       <MoreHorizontal className="h-4 w-4" />
