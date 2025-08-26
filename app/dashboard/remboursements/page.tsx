@@ -1184,117 +1184,161 @@ export default function RemboursementsPage() {
         open={showFinancialInfoModal}
         onOpenChange={setShowFinancialInfoModal}
       >
-        <DialogContent className="max-w-5xl">
+        <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
-              <Building className="w-6 h-6 text-green-600" />
+              <Building className="w-6 h-6 text-[var(--zalama-green)]" />
               Informations Financières - ZaLaMa SARL
             </DialogTitle>
 
             <DialogDescription>
-              Relevé d'identité bancaire et adresse de l'entreprise
+              Relevé d'identité bancaire et coordonnées de l'entreprise
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            {/* Informations bancaires */}
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <CreditCard className="w-5 h-5 text-green-600" />
-                Relevé d'Identité Bancaire (RIB)
-              </h3>
+          {/* Conteneur avec scroll */}
+          <div className="max-h-[60vh] overflow-y-auto pr-2">
+            <div className="space-y-6">
+              {/* Informations bancaires */}
+              <div className="bg-gradient-to-br from-[var(--zalama-green)]/10 to-[var(--zalama-blue)]/10 dark:from-[var(--zalama-green)]/20 dark:to-[var(--zalama-blue)]/20 border border-[var(--zalama-green)]/30 dark:border-[var(--zalama-green)]/50 rounded-lg p-6">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-[var(--zalama-green)]" />
+                  Relevé d'Identité Bancaire (RIB)
+                </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Nom :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      Ecobank
-                    </span>
+                {/* Disposition verticale avec scroll */}
+                <div className="space-y-4">
+                  {/* Informations de l'entreprise */}
+                  <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-[var(--zalama-green)] dark:text-[var(--zalama-green)] mb-3 flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Informations de l'entreprise
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Intitulé de compte :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-green)]/10 dark:bg-[var(--zalama-green)]/20 px-3 py-1 rounded">
+                          ZALAMA SARL
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          RIB :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          010008733602009966
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          IBAN :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          GN010008733602009966
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Devise :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-green)]/10 dark:bg-[var(--zalama-green)]/20 px-3 py-1 rounded">
+                          GNF
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Code Swift :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      ECOCGNCN
-                    </span>
+
+                  {/* Informations de la banque */}
+                  <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-[var(--zalama-blue)] dark:text-[var(--zalama-blue)] mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Informations de la banque
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Nom :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded">
+                          Ecobank
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Code Swift :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          ECOCGNCN
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Code Banque :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          GN010
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Code Guichet :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          008
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Numéro de Compte :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          7336020099
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Code Banque :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      GN010
-                    </span>
+
+                  {/* Adresse de l'agence */}
+                  <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-[var(--zalama-green)] dark:text-[var(--zalama-green)] mb-3 flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Adresse de l'agence
+                    </h4>
+                    <div className="bg-[var(--zalama-green)]/5 dark:bg-[var(--zalama-green)]/10 border border-[var(--zalama-green)]/20 dark:border-[var(--zalama-green)]/30 rounded-lg p-4">
+                      <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
+                        <span className="font-medium">Immeuble AL Iman</span>
+                        <br />
+                        <span className="font-medium">
+                          Avenue de la République
+                        </span>
+                        <br />
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Conakry, Guinée
+                        </span>
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Code Guichet :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      008
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Numéro de Compte :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      7336020099
-                    </span>
+
+                  {/* Note importante */}
+                  <div className="bg-[var(--zalama-green)]/5 dark:bg-[var(--zalama-green)]/10 border border-[var(--zalama-green)]/20 dark:border-[var(--zalama-green)]/30 rounded-lg p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-[var(--zalama-green)] mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h5 className="text-sm font-medium text-[var(--zalama-green)] dark:text-[var(--zalama-green)] mb-1">
+                          Note importante
+                        </h5>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                          Veuillez utiliser ces coordonnées bancaires pour
+                          effectuer vos virements de remboursement. Assurez-vous
+                          de bien indiquer la référence de votre demande
+                          d'avance dans le libellé du virement.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Intitulé de compte :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      ZALAMA SARL
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      RIB :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      010008733602009966
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      IBAN :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      GN010008733602009966
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Devise :
-                    </span>
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      GNF
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Adresse intégrée dans la section bancaire */}
-              <div className="mt-6 pt-6 border-t border-green-200 dark:border-green-700">
-                <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-3">
-                  Adresse de l'agence :
-                </h4>
-                <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
-                  Immeuble AL Iman
-                  <br />
-                  Avenue de la République
-                  <br />
-                </p>
               </div>
             </div>
           </div>
@@ -1303,7 +1347,7 @@ export default function RemboursementsPage() {
             <Button
               variant="outline"
               onClick={() => setShowFinancialInfoModal(false)}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 border-[var(--zalama-border)] hover:bg-[var(--zalama-green)]/10 dark:hover:bg-[var(--zalama-green)]/20"
             >
               <ArrowLeft className="w-4 h-4" />
               Fermer
