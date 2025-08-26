@@ -11,6 +11,7 @@ import {
   CreditCard,
   Star,
   FolderOpen,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -27,7 +28,7 @@ const getNavItems = () => [
     icon: Users,
     href: `/dashboard/demandes-adhesion`,
   },
-  { label: "Employés", icon: Users, href: `/dashboard/employes` },
+  { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
   { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Remboursements
