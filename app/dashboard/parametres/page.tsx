@@ -576,252 +576,271 @@ export default function ParametresPage() {
       )}
 
       {activeTab === "securite" && (
-        <div className="max-w-2xl">
+        <div className="w-full">
           <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
               Sécurité du compte
             </h2>
 
-            <div className="space-y-6">
-              {/* Changement de mot de passe */}
-              <div>
-                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-                  Changer le mot de passe
-                </h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Colonne gauche - Changement de mot de passe */}
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Lock className="w-5 h-5 text-blue-600" />
+                    Changer le mot de passe
+                  </h3>
 
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Mot de passe actuel
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={passwordData.currentPassword}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            currentPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Entrez votre mot de passe actuel"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                      />
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Mot de passe actuel
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type={showCurrentPassword ? "text" : "password"}
+                          value={passwordData.currentPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              currentPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Entrez votre mot de passe actuel"
+                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
+                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        >
+                          {showCurrentPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nouveau mot de passe
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type={showNewPassword ? "text" : "password"}
+                          value={passwordData.newPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              newPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Entrez votre nouveau mot de passe"
+                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        >
+                          {showNewPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Confirmer le nouveau mot de passe
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type={showConfirmPassword ? "text" : "password"}
+                          value={passwordData.confirmPassword}
+                          onChange={(e) =>
+                            setPasswordData({
+                              ...passwordData,
+                              confirmPassword: e.target.value,
+                            })
+                          }
+                          placeholder="Confirmez votre nouveau mot de passe"
+                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
+                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        >
+                          {showConfirmPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4">
                       <button
-                        type="button"
-                        onClick={() =>
-                          setShowCurrentPassword(!showCurrentPassword)
+                        onClick={handlePasswordChange}
+                        disabled={
+                          isChangingPassword ||
+                          !passwordData.currentPassword ||
+                          !passwordData.newPassword ||
+                          !passwordData.confirmPassword
                         }
-                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors rounded-lg"
                       >
-                        {showCurrentPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                        {isChangingPassword ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Save className="w-4 h-4" />
                         )}
+                        {isChangingPassword
+                          ? "Changement..."
+                          : "Changer le mot de passe"}
                       </button>
                     </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Nouveau mot de passe
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        value={passwordData.newPassword}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            newPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Entrez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
-                      >
-                        {showNewPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Confirmer le nouveau mot de passe
-                    </label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={passwordData.confirmPassword}
-                        onChange={(e) =>
-                          setPasswordData({
-                            ...passwordData,
-                            confirmPassword: e.target.value,
-                          })
-                        }
-                        placeholder="Confirmez votre nouveau mot de passe"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setShowConfirmPassword(!showConfirmPassword)
-                        }
-                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600 "
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="pt-4">
-                    <button
-                      onClick={handlePasswordChange}
-                      disabled={
-                        isChangingPassword ||
-                        !passwordData.currentPassword ||
-                        !passwordData.newPassword ||
-                        !passwordData.confirmPassword
-                      }
-                      className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {isChangingPassword ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent bg-[var(--zalama-green)]" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      {isChangingPassword
-                        ? "Changement..."
-                        : "Changer le mot de passe"}
-                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Gestion de la clé API */}
-              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-                  Clé API
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Votre clé API
-                    </label>
-                    <div className="relative">
-                      <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                      <input
-                        type={showApiKey ? "text" : "password"}
-                        value={apiKeyData.api_key}
-                        readOnly
-                        placeholder="Clé API non disponible"
-                        className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
-                      >
-                        {showApiKey ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Cette clé permet à vos employés de s'inscrire via l'API
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleCopyApiKey}
-                      disabled={!apiKeyData.api_key}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded"
-                    >
-                      <Copy className="w-4 h-4" />
-                      Copier la clé
-                    </button>
-                    <button
-                      onClick={handleRegenerateApiKey}
-                      disabled={isRegeneratingApiKey}
-                      className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded"
-                    >
-                      {isRegeneratingApiKey ? (
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
-                      {isRegeneratingApiKey
-                        ? "Régénération..."
-                        : "Régénérer la clé"}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Informations de sécurité */}
-              <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-                  Informations de sécurité
-                </h3>
-                <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
+                {/* Conseils de sécurité */}
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
                     <Lock className="w-4 h-4" />
-                    <span>
-                      Dernière connexion:{" "}
-                      {session?.admin?.last_login
-                        ? formatDate(session.admin.last_login)
-                        : "Non disponible"}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    <span>Rôle: {session?.admin?.role || "Non défini"}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    <span>
-                      Compte créé:{" "}
-                      {session?.admin?.created_at
-                        ? formatDate(session.admin.created_at)
-                        : "Non disponible"}
-                    </span>
-                  </div>
+                    Conseils de sécurité
+                  </h4>
+                  <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
+                    <li>• Utilisez un mot de passe d'au moins 8 caractères</li>
+                    <li>
+                      • Incluez des lettres, chiffres et caractères spéciaux
+                    </li>
+                    <li>• Ne partagez jamais vos identifiants</li>
+                    <li>• Changez votre mot de passe régulièrement</li>
+                  </ul>
                 </div>
               </div>
 
-              {/* Conseils de sécurité */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">
-                  Conseils de sécurité
-                </h4>
-                <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
-                  <li>• Utilisez un mot de passe d'au moins 8 caractères</li>
-                  <li>
-                    • Incluez des lettres, chiffres et caractères spéciaux
-                  </li>
-                  <li>• Ne partagez jamais vos identifiants</li>
-                  <li>• Changez votre mot de passe régulièrement</li>
-                </ul>
+              {/* Colonne droite - Clé API et Informations */}
+              <div className="space-y-6">
+                {/* Gestion de la clé API */}
+                <div>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Key className="w-5 h-5 text-orange-600" />
+                    Clé API
+                  </h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Votre clé API
+                      </label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <input
+                          type={showApiKey ? "text" : "password"}
+                          value={apiKeyData.api_key}
+                          readOnly
+                          placeholder="Clé API non disponible"
+                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                        >
+                          {showApiKey ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Cette clé permet à vos employés de s'inscrire via l'API
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleCopyApiKey}
+                        disabled={!apiKeyData.api_key}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded-lg"
+                      >
+                        <Copy className="w-4 h-4" />
+                        Copier la clé
+                      </button>
+                      <button
+                        onClick={handleRegenerateApiKey}
+                        disabled={isRegeneratingApiKey}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded-lg"
+                      >
+                        {isRegeneratingApiKey ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent" />
+                        ) : (
+                          <RefreshCw className="w-4 h-4" />
+                        )}
+                        {isRegeneratingApiKey
+                          ? "Régénération..."
+                          : "Régénérer la clé"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Informations de sécurité */}
+                <div>
+                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <User className="w-5 h-5 text-green-600" />
+                    Informations de sécurité
+                  </h3>
+                  <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Lock className="w-4 h-4 text-blue-500" />
+                      <div>
+                        <span className="font-medium">Dernière connexion:</span>
+                        <br />
+                        <span>
+                          {session?.admin?.last_login
+                            ? formatDate(session.admin.last_login)
+                            : "Non disponible"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <User className="w-4 h-4 text-green-500" />
+                      <div>
+                        <span className="font-medium">Rôle:</span>
+                        <br />
+                        <span>{session?.admin?.role || "Non défini"}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <Calendar className="w-4 h-4 text-purple-500" />
+                      <div>
+                        <span className="font-medium">Compte créé:</span>
+                        <br />
+                        <span>
+                          {session?.admin?.created_at
+                            ? formatDate(session.admin.created_at)
+                            : "Non disponible"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
