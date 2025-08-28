@@ -52,6 +52,7 @@ export default function DemandesPage() {
     SalaryAdvanceRequestWithEmployee[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false); // Nouvel état pour le loading du tableau
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -62,26 +63,41 @@ export default function DemandesPage() {
   const [approvingRequest, setApprovingRequest] = useState<string | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<string | null>(null);
 
-  // Charger les demandes
-  useEffect(() => {
-    const loadDemandes = async () => {
-      if (!session?.partner) return;
+  // Fonction pour charger les demandes
+  const loadDemandes = async (showTableLoader = false, delay = 0) => {
+    if (!session?.partner) return;
 
+    if (showTableLoader) {
+      setTableLoading(true);
+    } else {
       setLoading(true);
-      try {
-        // Utiliser le service pour récupérer les vraies données
-        const partnerService = new PartnerDataService(session.partner.id);
-        const demandes = await partnerService.getSalaryAdvanceRequests();
+    }
 
-        setDemandesAvance(demandes);
-      } catch (error) {
-        console.error("Erreur lors du chargement des demandes:", error);
-        toast.error("Erreur lors du chargement des demandes");
-      } finally {
+    try {
+      // Ajouter un délai si spécifié
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+
+      // Utiliser le service pour récupérer les vraies données
+      const partnerService = new PartnerDataService(session.partner.id);
+      const demandes = await partnerService.getSalaryAdvanceRequests();
+
+      setDemandesAvance(demandes);
+    } catch (error) {
+      console.error("Erreur lors du chargement des demandes:", error);
+      toast.error("Erreur lors du chargement des demandes");
+    } finally {
+      if (showTableLoader) {
+        setTableLoading(false);
+      } else {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  // Charger les demandes au montage
+  useEffect(() => {
     loadDemandes();
   }, [session?.partner]);
 
@@ -182,6 +198,11 @@ export default function DemandesPage() {
       const approverRole =
         userRole === "rh" || userRole === "responsable" ? userRole : "rh";
 
+      // Afficher un toast de chargement
+      const loadingToast = toast.loading(
+        "Traitement de l'approbation... (8 secondes)"
+      );
+
       const result = await edgeFunctionService.approveRequest(
         session.access_token,
         {
@@ -193,12 +214,13 @@ export default function DemandesPage() {
         }
       );
 
+      // Fermer le toast de chargement
+      toast.dismiss(loadingToast);
+
       if (result.success) {
         toast.success("Demande approuvée avec succès");
-        // Recharger les demandes
-        const partnerService = new PartnerDataService(session.partner.id);
-        const demandes = await partnerService.getSalaryAdvanceRequests();
-        setDemandesAvance(demandes);
+        // Recharger les demandes avec un délai de 8 secondes pour montrer le loading complet
+        await loadDemandes(true, 8000);
       } else {
         throw new Error(result.message || "Erreur lors de l'approbation");
       }
@@ -226,6 +248,9 @@ export default function DemandesPage() {
           ? userRole
           : "responsable";
 
+      // Afficher un toast de chargement
+      const loadingToast = toast.loading("Traitement du rejet... (8 secondes)");
+
       const result = await edgeFunctionService.rejectRequest(
         session.access_token,
         {
@@ -237,12 +262,13 @@ export default function DemandesPage() {
         }
       );
 
+      // Fermer le toast de chargement
+      toast.dismiss(loadingToast);
+
       if (result.success) {
         toast.success("Demande rejetée avec succès");
-        // Recharger les demandes
-        const partnerService = new PartnerDataService(session.partner.id);
-        const demandes = await partnerService.getSalaryAdvanceRequests();
-        setDemandesAvance(demandes);
+        // Recharger les demandes avec un délai de 8 secondes pour montrer le loading complet
+        await loadDemandes(true, 8000);
       } else {
         throw new Error(result.message || "Erreur lors du rejet");
       }
@@ -291,14 +317,23 @@ export default function DemandesPage() {
     <div className="p-6">
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-            Demandes de Services
-          </h1>
-          <p className="text-[var(--zalama-text)]/60 mt-1">
-            Gérez les demandes d'avance sur salaire et de prêts P2P de vos
-            employés
-          </p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
+              Demandes de Services
+            </h1>
+            <p className="text-[var(--zalama-text)]/60 mt-1">
+              Gérez les demandes d'avance sur salaire et de prêts P2P de vos
+              employés
+            </p>
+          </div>
+          {/* Indicateur de rafraîchissement */}
+          {tableLoading && (
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Mise à jour...</span>
+            </div>
+          )}
         </div>
         <div className="flex gap-3">
           <button
@@ -533,7 +568,27 @@ export default function DemandesPage() {
       </div>
 
       {/* Liste des demandes */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm">
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm relative">
+        {/* Overlay de loading pour le tableau */}
+        {tableLoading && (
+          <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 text-blue-500 mx-auto mb-4 animate-spin" />
+              <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
+                Traitement en cours...
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Mise à jour des données de la demande
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
+                ⏱️ Temps estimé : 8 secondes
+              </p>
+              <div className="w-48 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full animate-pulse"></div>
+              </div>
+            </div>
+          </div>
+        )}
         {currentItems.length === 0 ? (
           <div className="p-8 text-center">
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -620,7 +675,11 @@ export default function DemandesPage() {
                             e.stopPropagation();
                             handleApproveRequest(demande.id);
                           }}
-                          disabled={approvingRequest === demande.id}
+                          disabled={
+                            approvingRequest === demande.id ||
+                            rejectingRequest === demande.id ||
+                            tableLoading
+                          }
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {approvingRequest === demande.id ? (
@@ -628,14 +687,20 @@ export default function DemandesPage() {
                           ) : (
                             <Check className="h-3 w-3" />
                           )}
-                          Approuver
+                          {approvingRequest === demande.id
+                            ? "Traitement..."
+                            : "Approuver"}
                         </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleRejectRequest(demande.id);
                           }}
-                          disabled={rejectingRequest === demande.id}
+                          disabled={
+                            rejectingRequest === demande.id ||
+                            approvingRequest === demande.id ||
+                            tableLoading
+                          }
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {rejectingRequest === demande.id ? (
@@ -643,7 +708,9 @@ export default function DemandesPage() {
                           ) : (
                             <X className="h-3 w-3" />
                           )}
-                          Rejeter
+                          {rejectingRequest === demande.id
+                            ? "Traitement..."
+                            : "Rejeter"}
                         </button>
                       </div>
                     ) : (
