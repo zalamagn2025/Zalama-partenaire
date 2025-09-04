@@ -111,12 +111,12 @@ export default function EmployesPage() {
       const allEmployeesWithRemainingSalary = await Promise.all(
         (allEmployeesData || []).map(async (employee) => {
           try {
-            // Récupérer tous les remboursements payés de cet employé
+            // Récupérer tous les remboursements (payés et en attente) de cet employé
             const { data: remboursements, error: rembError } = await supabase
               .from("remboursements")
               .select("montant_total_remboursement")
               .eq("employe_id", employee.id)
-              .eq("statut", "PAYE");
+              .in("statut", ["PAYE", "EN_ATTENTE"]);
 
             if (rembError) {
               console.error("Erreur récupération remboursements:", rembError);
@@ -157,12 +157,12 @@ export default function EmployesPage() {
       const employeesWithUserIdAndSalary = await Promise.all(
         (employeesWithUserId || []).map(async (employee) => {
           try {
-            // Récupérer tous les remboursements payés de cet employé
+            // Récupérer tous les remboursements (payés et en attente) de cet employé
             const { data: remboursements, error: rembError } = await supabase
               .from("remboursements")
               .select("montant_total_remboursement")
               .eq("employe_id", employee.id)
-              .eq("statut", "PAYE");
+              .in("statut", ["PAYE", "EN_ATTENTE"]);
 
             if (rembError) {
               console.error("Erreur récupération remboursements:", rembError);
