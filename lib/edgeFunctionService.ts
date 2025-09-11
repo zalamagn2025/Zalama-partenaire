@@ -388,6 +388,39 @@ class EdgeFunctionService {
       throw error instanceof Error ? error : new Error("Erreur de connexion");
     }
   }
+
+  // ❌ Rejeter une inscription d'employé
+  async rejectEmployeeRegistration(
+    accessToken: string,
+    request: { employee_id: string; reason?: string }
+  ): Promise<PartnerAuthResponse> {
+    const url = `${SUPABASE_URL}/functions/v1/partner-employees/reject`;
+
+    const config: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(request),
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors du rejet de l'inscription:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
+  }
 }
 
 // Instance singleton

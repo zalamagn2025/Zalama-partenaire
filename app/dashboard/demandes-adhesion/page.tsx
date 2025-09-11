@@ -28,6 +28,8 @@ import {
   Eye,
   FileText,
   Clock,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 
 interface EmployeeWithoutAccount {
@@ -59,6 +61,11 @@ export default function DemandesAdhesionPage() {
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeWithoutAccount | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [rejectingEmployee, setRejectingEmployee] = useState<string | null>(
+    null
+  );
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   // Charger les employés sans compte
   useEffect(() => {
@@ -158,6 +165,51 @@ export default function DemandesAdhesionPage() {
   const handleViewDetails = (employee: EmployeeWithoutAccount) => {
     setSelectedEmployee(employee);
     setIsModalOpen(true);
+  };
+
+  const handleRejectEmployee = (employee: EmployeeWithoutAccount) => {
+    setSelectedEmployee(employee);
+    setRejectReason("");
+    setIsRejectModalOpen(true);
+  };
+
+  const confirmRejectEmployee = async () => {
+    if (!session?.access_token || !selectedEmployee) {
+      toast.error("Session non valide");
+      return;
+    }
+
+    setRejectingEmployee(selectedEmployee.id);
+    try {
+      const response = await edgeFunctionService.rejectEmployeeRegistration(
+        session.access_token,
+        {
+          employee_id: selectedEmployee.id,
+          reason: rejectReason.trim() || undefined,
+        }
+      );
+
+      if (response.success) {
+        toast.success("Inscription d'employé rejetée avec succès");
+        // Retirer l'employé de la liste
+        setEmployees((prev) =>
+          prev.filter((emp) => emp.id !== selectedEmployee.id)
+        );
+        setFilteredEmployees((prev) =>
+          prev.filter((emp) => emp.id !== selectedEmployee.id)
+        );
+        setIsRejectModalOpen(false);
+        setSelectedEmployee(null);
+        setRejectReason("");
+      } else {
+        throw new Error(response.message || "Erreur lors du rejet");
+      }
+    } catch (error: any) {
+      console.error("Erreur lors du rejet de l'inscription:", error);
+      toast.error(error.message || "Erreur lors du rejet de l'inscription");
+    } finally {
+      setRejectingEmployee(null);
+    }
   };
 
   const formatDate = (dateString: string | null | undefined) => {
@@ -324,6 +376,24 @@ export default function DemandesAdhesionPage() {
                       >
                         <Eye className="h-3 w-3" />
                         Détails
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectEmployee(employee);
+                        }}
+                        disabled={rejectingEmployee === employee.id}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                      >
+                        {rejectingEmployee === employee.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )}
+                        Rejeter
                       </Button>
 
                       <Button
@@ -528,36 +598,134 @@ export default function DemandesAdhesionPage() {
 
               {/* Actions */}
               <Separator />
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => setIsModalOpen(false)}>
-                  Fermer
-                </Button>
+              <div className="flex justify-between gap-3 pt-4">
                 <Button
+                  variant="outline"
                   onClick={() => {
-                    handleCreateAccount(selectedEmployee.id);
+                    handleRejectEmployee(selectedEmployee);
                     setIsModalOpen(false);
                   }}
-                  disabled={
-                    creatingAccount === selectedEmployee.id ||
-                    !selectedEmployee.email
-                  }
-                  className={
-                    !selectedEmployee.email
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-green-600 hover:bg-green-700"
-                  }
-                  title={
-                    !selectedEmployee.email
-                      ? "Email requis pour créer un compte"
-                      : ""
-                  }
+                  disabled={rejectingEmployee === selectedEmployee.id}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
                 >
-                  {creatingAccount === selectedEmployee.id ? (
+                  {rejectingEmployee === selectedEmployee.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                  Rejeter l'inscription
+                </Button>
+
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsModalOpen(false)}
+                  >
+                    Fermer
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      handleCreateAccount(selectedEmployee.id);
+                      setIsModalOpen(false);
+                    }}
+                    disabled={
+                      creatingAccount === selectedEmployee.id ||
+                      !selectedEmployee.email
+                    }
+                    className={
+                      !selectedEmployee.email
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                    }
+                    title={
+                      !selectedEmployee.email
+                        ? "Email requis pour créer un compte"
+                        : ""
+                    }
+                  >
+                    {creatingAccount === selectedEmployee.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Créer le compte
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmation de rejet */}
+      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Rejeter l'inscription
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedEmployee && (
+            <div className="space-y-4">
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <span className="text-red-600 dark:text-red-400 font-semibold">
+                      {selectedEmployee.prenom.charAt(0)}
+                      {selectedEmployee.nom.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="font-medium text-red-900 dark:text-red-100">
+                      {selectedEmployee.prenom} {selectedEmployee.nom}
+                    </div>
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      {selectedEmployee.poste}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Motif du rejet (optionnel)
+                </label>
+                <textarea
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                  placeholder="Expliquez pourquoi cette inscription est rejetée..."
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-white"
+                  rows={3}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Ce motif sera envoyé à l'employé par email et SMS.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsRejectModalOpen(false);
+                    setRejectReason("");
+                    setSelectedEmployee(null);
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  onClick={confirmRejectEmployee}
+                  disabled={rejectingEmployee === selectedEmployee.id}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {rejectingEmployee === selectedEmployee.id ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
-                    <UserPlus className="h-4 w-4 mr-2" />
+                    <X className="h-4 w-4 mr-2" />
                   )}
-                  Créer le compte
+                  Confirmer le rejet
                 </Button>
               </div>
             </div>
