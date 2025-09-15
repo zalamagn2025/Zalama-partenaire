@@ -3,17 +3,18 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Eye,
-  EyeOff,
   LogIn,
   Shield,
   Loader2,
   Mail,
   ArrowLeft,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PinInput } from "@/components/ui/PinInput";
 import {
   Card,
   CardContent,
@@ -29,15 +30,15 @@ import { toast } from "sonner";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [pinCode, setPinCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [hasRedirected, setHasRedirected] = useState(false);
-  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showForgotPin, setShowForgotPin] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [isResettingPin, setIsResettingPin] = useState(false);
   const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [showPin, setShowPin] = useState(false);
   const { login, session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
@@ -70,7 +71,7 @@ export default function LoginPage() {
 
     // Réinitialiser les erreurs
     setEmailError("");
-    setPasswordError("");
+    setPinError("");
 
     // Validation des champs
     let hasErrors = false;
@@ -83,11 +84,11 @@ export default function LoginPage() {
       hasErrors = true;
     }
 
-    if (!password) {
-      setPasswordError("Le mot de passe est requis");
+    if (!pinCode) {
+      setPinError("Le code PIN est requis");
       hasErrors = true;
-    } else if (password.length < 6) {
-      setPasswordError("Le mot de passe doit contenir au moins 6 caractères");
+    } else if (pinCode.length !== 6) {
+      setPinError("Le code PIN doit contenir exactement 6 chiffres");
       hasErrors = true;
     }
 
@@ -99,7 +100,7 @@ export default function LoginPage() {
 
     try {
       // Connexion directe avec les Edge Functions
-      const { error, session: newSession } = await login({ email, password });
+      const { error, session: newSession } = await login({ email, password: pinCode });
 
       if (error) {
         console.error("Erreur de connexion:", error);
@@ -112,7 +113,7 @@ export default function LoginPage() {
           errorMessage.toLowerCase().includes("password")
         ) {
           errorMessage =
-            "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
+            "Email ou code PIN incorrect. Veuillez vérifier vos identifiants.";
         } else if (errorMessage.toLowerCase().includes("session expirée")) {
           errorMessage = "Votre session a expiré. Veuillez vous reconnecter.";
         } else if (errorMessage.toLowerCase().includes("non autorisé")) {
@@ -120,6 +121,7 @@ export default function LoginPage() {
         }
 
         toast.error(errorMessage);
+        setPinError("Code PIN incorrect");
       } else if (newSession) {
         toast.success(
           `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
@@ -131,12 +133,13 @@ export default function LoginPage() {
     } catch (error) {
       console.error("Erreur de connexion:", error);
       toast.error("Une erreur est survenue lors de la connexion");
+      setPinError("Erreur de connexion");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
+  const handleForgotPin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!resetEmail) {
@@ -144,7 +147,7 @@ export default function LoginPage() {
       return;
     }
 
-    setIsResettingPassword(true);
+    setIsResettingPin(true);
 
     try {
       const response = await edgeFunctionService.resetPassword({
@@ -152,8 +155,8 @@ export default function LoginPage() {
       });
 
       if (response.success) {
-        toast.success("Email de réinitialisation envoyé avec succès");
-        setShowForgotPassword(false);
+        toast.success("Email de réinitialisation du code PIN envoyé avec succès");
+        setShowForgotPin(false);
         setResetEmail("");
       } else {
         throw new Error(
@@ -163,10 +166,10 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Erreur lors de la réinitialisation:", error);
       toast.error(
-        error.message || "Erreur lors de l'envoi de l'email de réinitialisation"
+        error.message || "Erreur lors de l'envoi de l'email de réinitialisation du code PIN"
       );
     } finally {
-      setIsResettingPassword(false);
+      setIsResettingPin(false);
     }
   };
 
@@ -200,7 +203,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-md space-y-8">
-        {!showForgotPassword ? (
+        {!showForgotPin ? (
           <Card>
             <CardHeader>
               <CardTitle className="text-center text-2xl font-bold">
@@ -234,39 +237,35 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        if (passwordError) setPasswordError("");
-                      }}
-                      required
-                      disabled={isLoading}
-                      className={passwordError ? "border-red-500" : ""}
-                    />
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="pin">Code PIN</Label>
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
+                      className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
+                      onClick={() => setShowPin(!showPin)}
                       disabled={isLoading}
                     >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
+                      {showPin ? (
+                        <EyeOff className="h-4 w-4 text-gray-500" />
                       ) : (
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 text-gray-500" />
                       )}
                     </Button>
                   </div>
-                  {passwordError && (
-                    <p className="text-sm text-red-500 mt-1">{passwordError}</p>
+                  <PinInput
+                    value={pinCode}
+                    onChange={setPinCode}
+                    length={6}
+                    disabled={isLoading}
+                    error={!!pinError}
+                    masked={!showPin}
+                    className="mt-4"
+                  />
+                  {pinError && (
+                    <p className="text-sm text-red-500 mt-2 text-center">{pinError}</p>
                   )}
                 </div>
 
@@ -275,10 +274,10 @@ export default function LoginPage() {
                     type="button"
                     variant="link"
                     className="text-sm text-blue-600 hover:text-blue-800"
-                    onClick={() => setShowForgotPassword(true)}
+                    onClick={() => setShowForgotPin(true)}
                     disabled={isLoading}
                   >
-                    Mot de passe oublié ?
+                    Code PIN oublié ?
                   </Button>
                 </div>
 
@@ -323,24 +322,24 @@ export default function LoginPage() {
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowForgotPassword(false)}
-                  disabled={isResettingPassword}
+                  onClick={() => setShowForgotPin(false)}
+                  disabled={isResettingPin}
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div>
                   <CardTitle className="text-center text-2xl font-bold">
-                    Mot de passe oublié
+                    Code PIN oublié
                   </CardTitle>
                   <CardDescription>
                     Entrez votre adresse email pour recevoir un lien de
-                    réinitialisation
+                    réinitialisation de votre code PIN
                   </CardDescription>
                 </div>
               </div>
             </CardHeader>
 
-            <form onSubmit={handleForgotPassword}>
+            <form onSubmit={handleForgotPin}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="reset-email">Adresse email</Label>
@@ -352,7 +351,7 @@ export default function LoginPage() {
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
                       required
-                      disabled={isResettingPassword}
+                      disabled={isResettingPin}
                     />
                     <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
@@ -362,7 +361,7 @@ export default function LoginPage() {
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
                     <p>
-                      Un email contenant un lien de réinitialisation sera envoyé
+                      Un email contenant un lien de réinitialisation de votre code PIN sera envoyé
                       à votre adresse email.
                     </p>
                     <p className="mt-2 text-sm">
@@ -377,9 +376,9 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={isResettingPassword}
+                  disabled={isResettingPin}
                 >
-                  {isResettingPassword ? (
+                  {isResettingPin ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Envoi en cours...
@@ -387,7 +386,7 @@ export default function LoginPage() {
                   ) : (
                     <div className="flex items-center gap-2">
                       <Mail className="w-4 h-4" />
-                      Envoyer l'email de réinitialisation
+                      Envoyer l'email de réinitialisation du code PIN
                     </div>
                   )}
                 </Button>
