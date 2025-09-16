@@ -676,32 +676,32 @@ export default function EmployesPage() {
 
       {/* Tableau des employés */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full  dark:divide-gray-700">
+        <div className="overflow-hidden">
+          <table className="w-full table-fixed dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/4 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/6 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Poste
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Type de contrat
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire net
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire restant
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date d'embauche
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/12 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/12 px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -712,59 +712,65 @@ export default function EmployesPage() {
                   key={employee.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <td className="px-2 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                             {employee.prenom.charAt(0)}
                             {employee.nom.charAt(0)}
                           </span>
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="ml-3 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {employee.prenom} {employee.nom}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {employee.email}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
+                  <td className="px-2 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white truncate">
                       {employee.poste}
                     </div>
                     {employee.role && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {employee.role}
                       </div>
                     )}
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <td className="px-2 py-4">
+                    <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                       {employee.type_contrat}
                     </span>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.salaire_net
-                      ? formatSalary(employee.salaire_net)
-                      : "Non défini"}
+                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
+                    <div className="truncate">
+                      {employee.salaire_net
+                        ? formatSalary(employee.salaire_net)
+                        : "Non défini"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {employee.salaire_restant
-                      ? formatSalary(employee.salaire_restant)
-                      : "Non défini"}
+                  <td className="px-2 py-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    <div className="truncate">
+                      {employee.salaire_restant
+                        ? formatSalary(employee.salaire_restant)
+                        : "Non défini"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.date_embauche
-                      ? formatDate(employee.date_embauche)
-                      : "Non définie"}
+                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
+                    <div className="truncate">
+                      {employee.date_embauche
+                        ? formatDate(employee.date_embauche)
+                        : "Non définie"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${
                         employee.actif
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
@@ -773,10 +779,10 @@ export default function EmployesPage() {
                       {employee.actif ? "Actif" : "Inactif"}
                     </span>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-2 py-4 text-right text-sm font-medium">
                     <button
                       onClick={() => openViewModal(employee)}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       <Eye className="w-4 h-4" />
                     </button>

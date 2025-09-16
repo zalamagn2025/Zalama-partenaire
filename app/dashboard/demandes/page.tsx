@@ -606,7 +606,7 @@ export default function DemandesPage() {
                         setSelectedService("");
                         setShowFilterMenu(false);
                       }}
-                      className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                     >
                       Tous les services
                     </button>
@@ -617,7 +617,7 @@ export default function DemandesPage() {
                           setSelectedService(service.label);
                           setShowFilterMenu(false);
                         }}
-                        className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 rounded transition-colors"
                       >
                         <service.icon className="h-4 w-4" />
                         {service.label}
@@ -632,17 +632,17 @@ export default function DemandesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-200"
+              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
-              <option value="" className="dark:bg-[var(--zalama-card)]">
+              <option value="" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
                 Tous les statuts
               </option>
-              <option value="En attente">En attente</option>
-              <option value="En attente RH/Responsable">
+              <option value="En attente" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">En attente</option>
+              <option value="En attente RH/Responsable" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
                 En attente RH/Responsable
               </option>
-              <option value="Validé">Validé</option>
-              <option value="Rejeté">Rejeté</option>
+              <option value="Validé" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Validé</option>
+              <option value="Rejeté" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Rejeté</option>
             </select>
           </div>
         </div>
