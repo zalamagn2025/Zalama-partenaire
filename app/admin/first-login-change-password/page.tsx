@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PinInput } from "@/components/ui/PinInput";
 import { toast } from "sonner";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { Lock, Eye, EyeOff, Loader2, Shield, CheckCircle } from "lucide-react";
+import { Lock, Eye, EyeOff, Loader2, Shield, CheckCircle, KeyRound } from "lucide-react";
 
 function FirstLoginChangePasswordContent() {
   const router = useRouter();
@@ -16,64 +17,58 @@ function FirstLoginChangePasswordContent() {
   const { session, login, refreshSession } = useEdgeAuthContext();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showCurrentPin, setShowCurrentPin] = useState(false);
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [showConfirmPin, setShowConfirmPin] = useState(false);
 
   const [formData, setFormData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    currentPin: "",
+    newPin: "",
+    confirmPin: "",
   });
 
-  const [passwordStrength, setPasswordStrength] = useState({
+  const [pinStrength, setPinStrength] = useState({
     length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false,
-    special: false,
+    numbers: false,
   });
 
-  // Vérifier si l'utilisateur doit changer son mot de passe
+  // Vérifier si l'utilisateur doit changer son code PIN
   useEffect(() => {
     if (session?.admin?.require_password_change === false) {
       router.replace("/dashboard");
     }
   }, [session, router]);
 
-  // Calculer la force du mot de passe
+  // Calculer la force du code PIN
   useEffect(() => {
-    const password = formData.newPassword;
-    setPasswordStrength({
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      special: /[@$!%*?&]/.test(password),
+    const pin = formData.newPin;
+    setPinStrength({
+      length: pin.length === 6,
+      numbers: /^\d+$/.test(pin),
     });
-  }, [formData.newPassword]);
+  }, [formData.newPin]);
 
-  const isPasswordValid = Object.values(passwordStrength).every(Boolean);
+  const isPinValid = Object.values(pinStrength).every(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (
-      !formData.currentPassword ||
-      !formData.newPassword ||
-      !formData.confirmPassword
+      !formData.currentPin ||
+      !formData.newPin ||
+      !formData.confirmPin
     ) {
       toast.error("Veuillez remplir tous les champs");
       return;
     }
 
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast.error("Les nouveaux mots de passe ne correspondent pas");
+    if (formData.newPin !== formData.confirmPin) {
+      toast.error("Les nouveaux codes PIN ne correspondent pas");
       return;
     }
 
-    if (!isPasswordValid) {
-      toast.error("Le mot de passe ne respecte pas les critères de sécurité");
+    if (!isPinValid) {
+      toast.error("Le code PIN ne respecte pas les critères de sécurité");
       return;
     }
 
@@ -92,15 +87,15 @@ function FirstLoginChangePasswordContent() {
       const changeResponse = await edgeFunctionService.changePassword(
         session.access_token,
         {
-          current_password: formData.currentPassword,
-          new_password: formData.newPassword,
-          confirm_password: formData.confirmPassword,
+          current_password: formData.currentPin,
+          new_password: formData.newPin,
+          confirm_password: formData.confirmPin,
         }
       );
 
       if (changeResponse.success) {
         toast.success(
-          "Mot de passe changé avec succès. Vous allez être redirigé vers le dashboard."
+          "Code PIN changé avec succès. Vous allez être redirigé vers le dashboard."
         );
 
         // Forcer le rafraîchissement de la session pour mettre à jour require_password_change
@@ -152,11 +147,11 @@ function FirstLoginChangePasswordContent() {
         }, 2000);
       } else {
         throw new Error(
-          changeResponse.message || "Erreur lors du changement de mot de passe"
+          changeResponse.message || "Erreur lors du changement de code PIN"
         );
       }
     } catch (error: any) {
-      console.error("Erreur lors du changement de mot de passe:", error);
+      console.error("Erreur lors du changement de code PIN:", error);
 
       // Si l'erreur indique un problème de token, essayer de se reconnecter
       if (
@@ -167,7 +162,7 @@ function FirstLoginChangePasswordContent() {
           console.log("Tentative de reconnexion...");
           const loginResponse = await edgeFunctionService.login({
             email: session.admin.email,
-            password: formData.currentPassword,
+            password: formData.currentPin,
           });
 
           if (loginResponse.success && loginResponse.access_token) {
@@ -175,15 +170,15 @@ function FirstLoginChangePasswordContent() {
             const retryResponse = await edgeFunctionService.changePassword(
               loginResponse.access_token,
               {
-                current_password: formData.currentPassword,
-                new_password: formData.newPassword,
-                confirm_password: formData.confirmPassword,
+                current_password: formData.currentPin,
+                new_password: formData.newPin,
+                confirm_password: formData.confirmPin,
               }
             );
 
             if (retryResponse.success) {
               toast.success(
-                "Mot de passe changé avec succès. Vous allez être redirigé vers le dashboard."
+                "Code PIN changé avec succès. Vous allez être redirigé vers le dashboard."
               );
 
               // Mettre à jour la session
@@ -219,12 +214,12 @@ function FirstLoginChangePasswordContent() {
             "Erreur lors de la tentative de reconnexion:",
             retryError
           );
-          toast.error("Mot de passe actuel incorrect ou erreur de connexion");
+          toast.error("Code PIN actuel incorrect ou erreur de connexion");
           return;
         }
       }
 
-      toast.error(error.message || "Erreur lors du changement de mot de passe");
+      toast.error(error.message || "Erreur lors du changement de code PIN");
     } finally {
       setIsLoading(false);
     }
@@ -246,129 +241,120 @@ function FirstLoginChangePasswordContent() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            <KeyRound className="h-8 w-8 text-blue-600 dark:text-blue-400" />
           </div>
           <CardTitle className="text-xl font-bold text-gray-900 dark:text-white">
             Premier accès
           </CardTitle>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Pour des raisons de sécurité, vous devez changer votre mot de passe
+            Pour des raisons de sécurité, vous devez changer votre code PIN
             avant de continuer.
           </p>
         </CardHeader>
 
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Mot de passe actuel */}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Code PIN actuel */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Mot de passe actuel
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Code PIN actuel
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={formData.currentPassword}
-                  onChange={(e) =>
+              <div className="flex items-center gap-3">
+                <Lock className="h-4 w-4 text-gray-400" />
+                <PinInput
+                  value={formData.currentPin}
+                  onChange={(value) =>
                     setFormData({
                       ...formData,
-                      currentPassword: e.target.value,
+                      currentPin: value,
                     })
                   }
-                  placeholder="Entrez votre mot de passe actuel"
-                  className="pl-10 pr-12"
-                  required
+                  masked={!showCurrentPin}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowCurrentPin(!showCurrentPin)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 >
-                  {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                  {showCurrentPin ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Nouveau mot de passe */}
+            {/* Nouveau code PIN */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Nouveau mot de passe
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Nouveau code PIN
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  type={showNewPassword ? "text" : "password"}
-                  value={formData.newPassword}
-                  onChange={(e) =>
+              <div className="flex items-center gap-3">
+                <Lock className="h-4 w-4 text-gray-400" />
+                <PinInput
+                  value={formData.newPin}
+                  onChange={(value) =>
                     setFormData({
                       ...formData,
-                      newPassword: e.target.value,
+                      newPin: value,
                     })
                   }
-                  placeholder="Entrez votre nouveau mot de passe"
-                  className="pl-10 pr-12"
-                  required
+                  masked={!showNewPin}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowNewPin(!showNewPin)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 >
-                  {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                  {showNewPin ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Confirmation du nouveau mot de passe */}
+            {/* Confirmation du nouveau code PIN */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Confirmer le nouveau mot de passe
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Confirmer le nouveau code PIN
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={formData.confirmPassword}
-                  onChange={(e) =>
+              <div className="flex items-center gap-3">
+                <Lock className="h-4 w-4 text-gray-400" />
+                <PinInput
+                  value={formData.confirmPin}
+                  onChange={(value) =>
                     setFormData({
                       ...formData,
-                      confirmPassword: e.target.value,
+                      confirmPin: value,
                     })
                   }
-                  placeholder="Confirmez votre nouveau mot de passe"
-                  className="pl-10 pr-12"
-                  required
+                  masked={!showConfirmPin}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                  onClick={() => setShowConfirmPin(!showConfirmPin)}
+                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
+                  {showConfirmPin ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </button>
               </div>
             </div>
 
             {/* Critères de sécurité */}
-            {formData.newPassword && (
+            {formData.newPin && (
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
                 <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
                   Critères de sécurité :
                 </p>
                 <div className="space-y-1">
-                  {Object.entries(passwordStrength).map(([key, valid]) => (
+                  {Object.entries(pinStrength).map(([key, valid]) => (
                     <div key={key} className="flex items-center gap-2">
                       <CheckCircle
                         className={`h-3 w-3 ${
@@ -382,11 +368,8 @@ function FirstLoginChangePasswordContent() {
                             : "text-gray-500 dark:text-gray-400"
                         }`}
                       >
-                        {key === "length" && "Au moins 8 caractères"}
-                        {key === "uppercase" && "Une lettre majuscule"}
-                        {key === "lowercase" && "Une lettre minuscule"}
-                        {key === "number" && "Un chiffre"}
-                        {key === "special" && "Un caractère spécial (@$!%*?&)"}
+                        {key === "length" && "Exactement 6 chiffres"}
+                        {key === "numbers" && "Uniquement des chiffres"}
                       </span>
                     </div>
                   ))}
@@ -399,10 +382,10 @@ function FirstLoginChangePasswordContent() {
               type="submit"
               disabled={
                 isLoading ||
-                !formData.currentPassword ||
-                !formData.newPassword ||
-                !formData.confirmPassword ||
-                !isPasswordValid
+                !formData.currentPin ||
+                !formData.newPin ||
+                !formData.confirmPin ||
+                !isPinValid
               }
               className="w-full"
             >
@@ -412,7 +395,7 @@ function FirstLoginChangePasswordContent() {
                   Changement en cours...
                 </>
               ) : (
-                "Changer le mot de passe"
+                "Changer le code PIN"
               )}
             </Button>
           </form>
@@ -420,7 +403,7 @@ function FirstLoginChangePasswordContent() {
           {/* Informations supplémentaires */}
           <div className="mt-6 text-center">
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              En changeant votre mot de passe, vous acceptez les conditions
+              En changeant votre code PIN, vous acceptez les conditions
               d'utilisation de ZaLaMa.
             </p>
           </div>
