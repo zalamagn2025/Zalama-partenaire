@@ -2,6 +2,7 @@
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import type { Employee } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import {
@@ -61,11 +62,16 @@ export default function EmployesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // Charger les données des employés
   useEffect(() => {
     if (!loading && session?.partner) {
       loadEmployees();
+      loadCurrentMonthData();
     }
   }, [loading, session?.partner]);
 
@@ -211,6 +217,41 @@ export default function EmployesPage() {
     }
   };
 
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) return;
+
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const dashboardData = await edgeFunctionService.getDashboardData();
+
+      if (dashboardData.error) {
+        console.error("Erreur Edge Function:", dashboardData.error);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+                // Les données sont dans dashboardData.data selon la réponse Edge Function
+                const data = dashboardData.data || dashboardData;
+                setCurrentMonthData(data);
+                
+                // Mettre à jour les données locales avec les données du mois en cours
+                if (data.employees) {
+                    setEmployees(data.employees);
+                    setFilteredEmployees(data.employees.filter((emp: any) => emp.user_id));
+                }
+
+      console.log("Données des employés du mois en cours chargées:", dashboardData);
+      toast.success("Données des employés du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
+    }
+  };
+
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
     if (!loading && !session) {
@@ -262,9 +303,15 @@ export default function EmployesPage() {
     indexOfLastEmployee
   );
 
-  // Calculer les statistiques
-  const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((emp) => emp.actif).length;
+  // Calculer les statistiques - utiliser les données Edge Function en priorité
+  const totalEmployees = currentMonthData?.statistics?.total_employees || 
+    currentMonthData?.partner_info?.employees_count || 
+    employees.length;
+  
+  const activeEmployees = currentMonthData?.statistics?.active_employees || 
+    currentMonthData?.partner_info?.active_employees_count || 
+    employees.filter((emp) => emp.actif).length;
+  
   const newThisMonth = employees.filter((emp) => {
     const createdDate = new Date(emp.created_at || "");
     const now = new Date();
@@ -274,6 +321,7 @@ export default function EmployesPage() {
       createdDate.getFullYear() === now.getFullYear()
     );
   }).length;
+  
   const retentionRate =
     totalEmployees > 0
       ? ((activeEmployees / totalEmployees) * 100).toFixed(1)
@@ -392,7 +440,12 @@ export default function EmployesPage() {
   if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des employés..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -419,9 +472,24 @@ export default function EmployesPage() {
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Gestion des employés
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Gestion des employés
+            </h1>
+            {currentMonthData && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                Données du mois en cours
+              </span>
+            )}
+            <button
+              onClick={loadCurrentMonthData}
+              disabled={edgeFunctionLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              title="Actualiser les données du mois en cours"
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {session?.partner?.company_name} - {totalEmployees} employés total (
             {filteredEmployees.length} avec compte)

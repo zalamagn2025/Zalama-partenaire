@@ -4,6 +4,7 @@ import StatCard from "@/components/dashboard/StatCard";
 import DocumentsRapports from "@/components/dashboard/DocumentsRapports";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { PartnerDataService } from "@/lib/services";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import type { Alert, Employee, SalaryAdvanceRequest } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import {
@@ -11,6 +12,7 @@ import {
   ClipboardList,
   CreditCard,
   FileText,
+  RefreshCw,
   Star,
   Users,
 } from "lucide-react";
@@ -66,11 +68,16 @@ export default function EntrepriseDashboardPage() {
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
   const [paymentDay, setPaymentDay] = useState<number | null>(null);
   const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // Charger les données au montage du composant
   useEffect(() => {
     if (!loading && session?.partner) {
       loadDashboardData();
+      loadCurrentMonthData();
     }
   }, [loading, session?.partner]);
 
@@ -135,6 +142,52 @@ export default function EntrepriseDashboardPage() {
       toast.error("Erreur lors du chargement des données");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) return;
+
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const dashboardData = await edgeFunctionService.getDashboardData();
+
+      if (dashboardData.error) {
+        console.error("Erreur Edge Function:", dashboardData.error);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+      // Les données sont dans dashboardData.data selon la réponse Edge Function
+      const data = dashboardData.data || dashboardData;
+      setCurrentMonthData(data);
+      
+      // Mettre à jour les données locales avec les données du mois en cours
+      if (data.employees) {
+        setEmployees(data.employees);
+      }
+      if (data.demandes) {
+        setDemandes(data.demandes);
+      }
+      if (data.remboursements) {
+        setAllTransactions(data.remboursements);
+      }
+      if (data.alerts) {
+        setAlerts(data.alerts);
+      }
+      if (data.avis) {
+        setAvis(data.avis);
+      }
+
+      console.log("Données du mois en cours chargées:", dashboardData);
+      toast.success("Données du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
     }
   };
 
@@ -263,11 +316,13 @@ export default function EntrepriseDashboardPage() {
     fetchPartnerData();
   }, [session?.partner?.id]);
 
-  // Calcul de la date de remboursement et jours restants
+  // Calcul de la date de remboursement et jours restants - utiliser les données Edge Function en priorité
   const now = new Date();
-  let dateLimite = "";
-  let joursRestants = "-";
-  if (paymentDay) {
+  let dateLimite = currentMonthData?.financial_performance?.date_limite_remboursement || "";
+  let joursRestants = currentMonthData?.financial_performance?.jours_restants || "-";
+  
+  // Si pas de données Edge Function, calculer manuellement
+  if (!currentMonthData?.financial_performance && paymentDay) {
     let mois = now.getMonth();
     let annee = now.getFullYear();
     if (now.getDate() > paymentDay) {
@@ -293,7 +348,12 @@ export default function EntrepriseDashboardPage() {
   if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement du tableau de bord..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -315,8 +375,14 @@ export default function EntrepriseDashboardPage() {
     );
   }
 
-  // Calculer les statistiques
-  const activeEmployees = employees.filter((emp) => emp.actif);
+  // Calculer les statistiques - utiliser les données Edge Functions si disponibles
+  const currentEmployees = currentMonthData?.employees || employees;
+  const currentDemandes = currentMonthData?.demandes || demandes;
+  const currentTransactions = currentMonthData?.remboursements || allTransactions;
+  const currentAlerts = currentMonthData?.alerts || alerts;
+  const currentAvis = currentMonthData?.avis || avis;
+
+  const activeEmployees = currentEmployees.filter((emp) => emp.actif);
   const totalSalary = activeEmployees.reduce(
     (sum, emp) => sum + (emp.salaire_net || 0),
     0
@@ -369,27 +435,30 @@ export default function EntrepriseDashboardPage() {
   const { dernierPaiement, prochainPaiement } = calculatePaymentDates();
 
   // Flux financier = somme de tous les remboursements entre l'entreprise et Zalama
-  const fluxFinance = allTransactions.reduce(
+  const fluxFinance = currentTransactions.reduce(
     (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
     0
   );
 
-  // Montant débloqué = somme de tous les montants des remboursements (tous les mois)
-  const debloqueMois = allTransactions.reduce(
-    (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
-    0
-  );
+  // Montant débloqué = utiliser les données Edge Function en priorité
+  const debloqueMois = currentMonthData?.financial_performance?.debloque_mois || 
+    currentTransactions.reduce(
+      (sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0),
+      0
+    );
 
-  // Montant à rembourser = seulement les remboursements avec statut EN_ATTENTE (tous les remboursements en attente)
-  const aRembourserMois = allTransactions.reduce((sum: number, t: any) => {
-    if (t.statut === "EN_ATTENTE") {
-      return sum + Number(t.montant_total_remboursement || 0);
-    }
-    return sum;
-  }, 0);
+  // Montant à rembourser = utiliser les données Edge Function en priorité
+  const aRembourserMois = currentMonthData?.financial_performance?.a_rembourser_mois ||
+    currentTransactions.reduce((sum: number, t: any) => {
+      if (t.statut === "EN_ATTENTE") {
+        return sum + Number(t.montant_total_remboursement || 0);
+      }
+      return sum;
+    }, 0);
 
   // Nombre d'employés ayant eu une demande approuvée dans la période de paiement
-  const demandesValideesPeriode = salaryRequests.filter((d: any) => {
+  const currentSalaryRequests = currentMonthData?.demandes || salaryRequests;
+  const demandesValideesPeriode = currentSalaryRequests.filter((d: any) => {
     const dVal = d.date_validation ? new Date(d.date_validation) : null;
     return dVal && dVal >= dernierPaiement && dVal < prochainPaiement;
   });
@@ -411,12 +480,12 @@ export default function EntrepriseDashboardPage() {
     .reduce((sum, trans) => sum + (trans.montant || 0), 0);
   const balance = totalRecupere - totalRemboursements + totalRevenus;
 
-  const activeAlerts = alerts.filter((alert) => alert.statut !== "Résolue");
+  const activeAlerts = currentAlerts.filter((alert) => alert.statut !== "Résolue");
   const averageRating =
-    avis.length > 0
-      ? avis.reduce((sum, av) => sum + av.note, 0) / avis.length
+    currentAvis.length > 0
+      ? currentAvis.reduce((sum, av) => sum + av.note, 0) / currentAvis.length
       : 0;
-  const pendingDemandes = demandes.filter((dem) => dem.statut === "En attente");
+  const pendingDemandes = currentDemandes.filter((dem) => dem.statut === "En attente");
 
   // Données pour les graphiques - 6 derniers mois + données récentes
   const getLast6Months = () => {
@@ -453,7 +522,7 @@ export default function EntrepriseDashboardPage() {
 
   // Si pas de données dans les 6 derniers mois, utiliser les mois où il y a des données
   const getMonthsWithData = () => {
-    if (demandes.length === 0) return last6Months;
+    if (currentDemandes.length === 0) return last6Months;
 
     const monthNames = [
       "Jan",
@@ -471,7 +540,7 @@ export default function EntrepriseDashboardPage() {
     ];
     const monthsWithData = new Set<string>();
 
-    demandes.forEach((demande) => {
+    currentDemandes.forEach((demande) => {
       const date = new Date(demande.date_creation);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
       monthsWithData.add(key);
@@ -497,8 +566,9 @@ export default function EntrepriseDashboardPage() {
 
   const monthsToShow = getMonthsWithData();
 
-  const demandesEvolutionData = monthsToShow.map(({ month, year, name }) => {
-    const count = demandes.filter((d) => {
+  // Utiliser les données Edge Function en priorité pour les graphiques
+  const demandesEvolutionData = currentMonthData?.charts?.demandes_evolution || monthsToShow.map(({ month, year, name }) => {
+    const count = currentDemandes.filter((d) => {
       const demandDate = new Date(d.date_creation);
       return (
         demandDate.getMonth() === month && demandDate.getFullYear() === year
@@ -508,8 +578,8 @@ export default function EntrepriseDashboardPage() {
     return { mois: name, demandes: count };
   });
 
-  const montantsEvolutionData = monthsToShow.map(({ month, year, name }) => {
-    const total = allTransactions
+  const montantsEvolutionData = currentMonthData?.charts?.montants_evolution || monthsToShow.map(({ month, year, name }) => {
+    const total = currentTransactions
       .filter((t) => {
         const transactionDate = new Date(t.date_creation);
         return (
@@ -522,33 +592,31 @@ export default function EntrepriseDashboardPage() {
     return { mois: name, montant: total };
   });
 
-  // Calculer la répartition par motifs à partir des vraies données
-  const motifCounts = demandes.reduce((acc, demande) => {
-    acc[demande.type_motif] = (acc[demande.type_motif] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const repartitionMotifsData = Object.entries(motifCounts).map(
-    ([motif, count], index) => {
-      const colors = [
-        "#8884d8",
-        "#82ca9d",
-        "#ffc658",
-        "#ff7300",
-        "#00C49F",
-        "#FF8042",
-      ];
-      return {
-        motif,
-        valeur: count,
-        color: colors[index % colors.length],
-      };
-    }
-  );
+  // Utiliser les données Edge Function en priorité pour la répartition par motifs
+  const repartitionMotifsData = currentMonthData?.charts?.repartition_motifs || Object.entries(
+    currentDemandes.reduce((acc, demande) => {
+      acc[demande.type_motif] = (acc[demande.type_motif] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  ).map(([motif, count], index) => {
+    const colors = [
+      "#8884d8",
+      "#82ca9d",
+      "#ffc658",
+      "#ff7300",
+      "#00C49F",
+      "#FF8042",
+    ];
+    return {
+      motif,
+      valeur: count,
+      color: colors[index % colors.length],
+    };
+  });
 
   // Si pas de données, créer des données par défaut pour éviter les graphiques vides
-  const hasDemandesData = demandes.length > 0;
-  const hasMotifsData = repartitionMotifsData.length > 0;
+  const hasDemandesData = currentMonthData?.charts?.demandes_evolution?.some((d: any) => d.demandes > 0) || currentDemandes.length > 0;
+  const hasMotifsData = currentMonthData?.charts?.repartition_motifs?.length > 0 || repartitionMotifsData.length > 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -602,31 +670,32 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
           title="Employés actifs/Total"
-          value={`${activeEmployees.length}/${
-            partnerEmployeesCount || session?.partner?.employees_count || 0
+          value={`${currentMonthData?.statistics?.active_employees || activeEmployees.length}/${
+            currentMonthData?.statistics?.total_employees || currentMonthData?.partner_info?.employees_count || 0
           }`}
           icon={Users}
           color="blue"
         />
         <StatCard
           title="Demandes totales"
-          value={demandes.length}
+          value={currentMonthData?.statistics?.total_demandes || currentDemandes.length}
           icon={FileText}
           color="purple"
         />
         <StatCard
           title="Demandes par employé"
           value={
-            activeEmployees.length > 0
-              ? (demandes.length / activeEmployees.length).toFixed(1)
-              : "0.0"
+            currentMonthData?.statistics?.demandes_per_employee || 
+            (activeEmployees.length > 0
+              ? (currentDemandes.length / activeEmployees.length).toFixed(1)
+              : "0.0")
           }
           icon={ClipboardList}
           color="yellow"
         />
         <StatCard
           title="Note moyenne"
-          value={averageRating.toFixed(1)}
+          value={currentMonthData?.statistics?.average_rating || averageRating.toFixed(1)}
           icon={Star}
           color="green"
         />
@@ -634,13 +703,30 @@ export default function EntrepriseDashboardPage() {
 
       {/* Performance financière */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
-        <h2 className="text-gray-600 dark:text-white text-lg font-semibold mb-4">
-          Performance financière
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-gray-600 dark:text-white text-lg font-semibold">
+            Performance financière
+          </h2>
+          <div className="flex items-center gap-2">
+            {currentMonthData && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                Données du mois en cours
+              </span>
+            )}
+            <button
+              onClick={loadCurrentMonthData}
+              disabled={edgeFunctionLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              title="Actualiser les données du mois en cours"
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Montant total débloqué (tous les mois)
+              Montant total débloqué {currentMonthData ? '(mois en cours)' : '(tous les mois)'}
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(debloqueMois)}
@@ -648,7 +734,7 @@ export default function EntrepriseDashboardPage() {
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              À rembourser ce mois
+              À rembourser {currentMonthData ? 'ce mois' : 'en attente'}
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(aRembourserMois)}

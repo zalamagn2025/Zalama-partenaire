@@ -11,12 +11,14 @@ import {
   ThumbsUp,
   MessageSquare,
   BarChart2,
+  RefreshCw,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import type { Avis, Employee } from "@/lib/supabase";
 import { PartnerDataService } from "@/lib/services";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   LineChart,
   Line,
@@ -76,6 +78,10 @@ export default function AvisPage() {
   const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Créer la référence en dehors des hooks
@@ -85,6 +91,7 @@ export default function AvisPage() {
   useEffect(() => {
     if (!loading && session?.partner) {
       loadAvisData();
+      loadCurrentMonthData();
     }
   }, [loading, session?.partner]);
 
@@ -104,6 +111,41 @@ export default function AvisPage() {
       toast.error("Erreur lors du chargement des avis");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) return;
+
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const dashboardData = await edgeFunctionService.getDashboardData();
+
+      if (dashboardData.error) {
+        console.error("Erreur Edge Function:", dashboardData.error);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+                // Les données sont dans dashboardData.data selon la réponse Edge Function
+                const data = dashboardData.data || dashboardData;
+                setCurrentMonthData(data);
+                
+                // Mettre à jour les données locales avec les données du mois en cours
+                if (data.avis) {
+                    setAvis(data.avis);
+                    setFilteredAvis(data.avis);
+                }
+
+      console.log("Données des avis du mois en cours chargées:", dashboardData);
+      toast.success("Données des avis du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
     }
   };
 
@@ -229,12 +271,31 @@ export default function AvisPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-        Avis des Salariés
-      </h1>
-      <p className="text-[var(--zalama-text)]/70">
-        Entreprise: {session?.partner?.company_name}
-      </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
+              Avis des Salariés
+            </h1>
+            {currentMonthData && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                Données du mois en cours
+              </span>
+            )}
+            <button
+              onClick={loadCurrentMonthData}
+              disabled={edgeFunctionLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              title="Actualiser les données du mois en cours"
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+          <p className="text-[var(--zalama-text)]/70">
+            Entreprise: {session?.partner?.company_name}
+          </p>
+        </div>
+      </div>
 
       {/* Statistiques */}
       <h2 className="text-xl font-bold text-[var(--zalama-text)] mt-2">

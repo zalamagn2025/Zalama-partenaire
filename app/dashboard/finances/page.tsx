@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Calendar } from "lucide-react";
+import { Users, Calendar, RefreshCw } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   LineChart,
   Line,
@@ -115,11 +116,16 @@ export default function FinancesPage() {
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
   // Ajoute un état pour le payment_day
   const [paymentDay, setPaymentDay] = useState<number | null>(null);
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // Charger les demandes d'avance de salaire dynamiquement
   useEffect(() => {
     if (!loading && session?.partner) {
       loadSalaryAdvanceData();
+      loadCurrentMonthData();
     }
   }, [loading, session?.partner]);
 
@@ -380,6 +386,22 @@ export default function FinancesPage() {
   const calculateFinancialStats = (
     remboursements: RemboursementWithEmployee[]
   ): FinancialStats => {
+    // Utiliser les données Edge Function en priorité si disponibles
+    if (currentMonthData?.financial_performance) {
+      return {
+        totalDebloque: currentMonthData.financial_performance.debloque_mois,
+        totalRecupere: currentMonthData.financial_performance.a_rembourser_mois,
+        totalRevenus: currentMonthData.financial_performance.debloque_mois * 0.06, // Estimation des frais de service
+        totalRemboursements: currentMonthData.financial_performance.a_rembourser_mois,
+        totalCommissions: currentMonthData.financial_performance.debloque_mois * 0.06,
+        tauxRemboursement: parseFloat(currentMonthData.financial_performance.taux_remboursement),
+        nombreRemboursements: currentMonthData.financial_performance.employes_approuves_periode,
+        montantMoyen: currentMonthData.financial_performance.debloque_mois / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
+        montantMoyenCommission: (currentMonthData.financial_performance.debloque_mois * 0.06) / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
+        montantMoyenRemboursement: currentMonthData.financial_performance.a_rembourser_mois / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
+      };
+    }
+
     // Calculs de base - adapter selon les types de remboursements dans la table remboursements
     const totalDebloque = remboursements
       .filter((r) => r.statut === "PAYE")
@@ -564,6 +586,44 @@ export default function FinancesPage() {
     }
   };
 
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) return;
+
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const dashboardData = await edgeFunctionService.getDashboardData();
+
+      if (dashboardData.error) {
+        console.error("Erreur Edge Function:", dashboardData.error);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+                // Les données sont dans dashboardData.data selon la réponse Edge Function
+                const data = dashboardData.data || dashboardData;
+                setCurrentMonthData(data);
+                
+                // Mettre à jour les données locales avec les données du mois en cours
+                if (data.remboursements) {
+                    setTransactions(data.remboursements);
+                    
+                    // Recalculer les statistiques avec les nouvelles données
+                    const stats = calculateFinancialStats(data.remboursements);
+                    setFinancialStats(stats);
+                }
+
+      console.log("Données financières du mois en cours chargées:", dashboardData);
+      toast.success("Données financières du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
+    }
+  };
+
   // Pour l'historique des remboursements, charge les données de remboursements :
   const loadTransactions = async () => {
     try {
@@ -707,7 +767,12 @@ export default function FinancesPage() {
   if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des données financières..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -733,9 +798,26 @@ export default function FinancesPage() {
     <div className="p-3 space-y-4 w-full max-w-full overflow-hidden">
       {/* En-tête Finances */}
       <div className="mb-4">
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">
-          Finances
-        </h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-white">
+            Finances
+          </h1>
+          <div className="flex items-center gap-2">
+            {currentMonthData && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                Données du mois en cours
+              </span>
+            )}
+            <button
+              onClick={loadCurrentMonthData}
+              disabled={edgeFunctionLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              title="Actualiser les données du mois en cours"
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
+        </div>
         <p className="text-sm text-gray-400">
           Entreprise: {session.partner.company_name}
         </p>
@@ -750,14 +832,14 @@ export default function FinancesPage() {
           color="green"
         />
         <StatCard
-          title="Montant total débloqué ce mois ci"
+          title={`Montant total débloqué ${currentMonthData ? 'ce mois' : 'ce mois ci'}`}
           value={gnfFormatter(stats.debloqueMois)}
           icon={Calendar}
           color="green"
         />
 
         <StatCard
-          title="Montant à rembourser ce mois ci"
+          title={`Montant à rembourser ${currentMonthData ? 'ce mois' : 'ce mois ci'}`}
           value={gnfFormatter(stats.aRembourserMois)}
           icon={Calendar}
           color="green"
