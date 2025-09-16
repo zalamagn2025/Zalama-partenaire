@@ -68,7 +68,19 @@ function FirstLoginChangePasswordContent() {
     }
 
     if (!isPinValid) {
-      toast.error("Le code PIN ne respecte pas les critères de sécurité");
+      toast.error("Le code PIN doit contenir exactement 6 chiffres");
+      return;
+    }
+
+    // Validation supplémentaire pour s'assurer que c'est bien un code PIN
+    const pinRegex = /^\d{6}$/;
+    if (!pinRegex.test(formData.newPin)) {
+      toast.error("Le code PIN doit contenir exactement 6 chiffres");
+      return;
+    }
+
+    if (!pinRegex.test(formData.confirmPin)) {
+      toast.error("Le code PIN de confirmation doit contenir exactement 6 chiffres");
       return;
     }
 
@@ -84,6 +96,10 @@ function FirstLoginChangePasswordContent() {
         throw new Error("Session non valide");
       }
 
+      // Note: L'API Edge Function valide encore selon les anciens critères de mot de passe
+      // Pour l'instant, nous utilisons le code PIN comme mot de passe
+      // TODO: Modifier l'API Edge Function pour accepter les codes PIN de 6 chiffres
+      
       const changeResponse = await edgeFunctionService.changePassword(
         session.access_token,
         {
