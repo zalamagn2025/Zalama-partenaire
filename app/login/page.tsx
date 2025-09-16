@@ -90,6 +90,9 @@ export default function LoginPage() {
     } else if (pinCode.length !== 6) {
       setPinError("Le code PIN doit contenir exactement 6 chiffres");
       hasErrors = true;
+    } else if (!/^\d{6}$/.test(pinCode)) {
+      setPinError("Le code PIN doit contenir uniquement des chiffres");
+      hasErrors = true;
     }
 
     if (hasErrors) {

@@ -77,6 +77,20 @@ export function PinInput({
     } else if (e.key === "ArrowRight" && index < length - 1) {
       inputRefs.current[index + 1]?.focus();
       setFocusedIndex(index + 1);
+    } else if (/^\d$/.test(e.key)) {
+      // Si on tape un chiffre sur un champ masqué qui contient "•", le remplacer
+      if (masked && value[index]) {
+        e.preventDefault();
+        const newValue = value.split("");
+        newValue[index] = e.key;
+        const updatedValue = newValue.join("");
+        onChange(updatedValue);
+        
+        if (index < length - 1) {
+          inputRefs.current[index + 1]?.focus();
+          setFocusedIndex(index + 1);
+        }
+      }
     }
   };
 
@@ -126,7 +140,7 @@ export function PinInput({
             inputMode="numeric"
             pattern="[0-9]*"
             maxLength={1}
-            value={masked ? (value[index] ? "•" : "") : (value[index] || "")}
+            value={masked ? "" : (value[index] || "")}
             onChange={(e) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
@@ -141,6 +155,11 @@ export function PinInput({
             )}
             autoComplete="off"
           />
+          {masked && value[index] && (
+            <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-gray-900 dark:text-gray-100 pointer-events-none">
+              •
+            </div>
+          )}
         </div>
       ))}
     </div>
