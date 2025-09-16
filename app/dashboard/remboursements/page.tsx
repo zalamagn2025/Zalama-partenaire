@@ -13,6 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { supabase } from "@/lib/supabase";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
+import { RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 import {
   ArcElement,
@@ -93,17 +96,70 @@ export default function RemboursementsPage() {
     useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFinancialInfoModal, setShowFinancialInfoModal] = useState(false);
+  
+  // États pour les données Edge Function
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
-  // Pagination
+  // Pagination - utiliser les données Edge Function en priorité
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
-  const totalPages = Math.ceil(remboursements.length / itemsPerPage);
-  const paginatedRemboursements = remboursements.slice(
+  const dataForPagination = currentMonthData?.data || remboursements;
+  const totalPages = Math.ceil(dataForPagination.length / itemsPerPage);
+  const paginatedRemboursements = dataForPagination.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
 
-  // Fonction de récupération des remboursements
+  // Fonction pour charger les données du mois en cours depuis l'Edge Function
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) {
+      console.log("Pas de token d'accès disponible");
+      return;
+    }
+
+    setEdgeFunctionLoading(true);
+    setIsLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
+      const remboursementsData = await edgeFunctionService.getDashboardRemboursements();
+
+      if (remboursementsData.error) {
+        console.error("Erreur Edge Function:", remboursementsData.error);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+      // Les données sont directement dans la réponse selon votre exemple
+      setCurrentMonthData(remboursementsData);
+      
+      // Mettre à jour les données locales avec les données du mois en cours
+      if (remboursementsData.data && Array.isArray(remboursementsData.data)) {
+          setRemboursements(remboursementsData.data);
+          
+          // Calcul du total en attente (seulement les remboursements en attente)
+          const total = remboursementsData.data
+            .filter((r: any) => r.statut === "EN_ATTENTE")
+            .reduce(
+              (sum: number, r: any) => sum + Number(r.montant_total_remboursement),
+              0
+            );
+          setTotalAttente(total);
+      }
+      
+      toast.success("Données des remboursements du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
+      setIsLoading(false);
+    }
+  };
+
+  // Fonction de récupération des remboursements (fallback)
   const fetchRemboursements = async () => {
     if (!session?.partner) return;
     setIsLoading(true);
@@ -218,12 +274,18 @@ export default function RemboursementsPage() {
     setIsLoading(false);
   };
 
+  // Charger les remboursements au montage
   useEffect(() => {
-    if (!loading && session?.partner) {
-      console.log("Session:", session);
+    // Charger d'abord les données Edge Function
+    loadCurrentMonthData();
+  }, [session?.partner]);
+
+  // Charger les données de fallback si pas de données Edge Function
+  useEffect(() => {
+    if (!currentMonthData && !edgeFunctionLoading) {
       fetchRemboursements();
     }
-  }, [loading, session?.partner]);
+  }, [currentMonthData, edgeFunctionLoading]);
 
   // Action "Payer tous" via l'API Djomy
   const handlePayerTous = async () => {
@@ -358,13 +420,15 @@ export default function RemboursementsPage() {
     }
   };
 
-  // Données pour les graphiques
-  const stats = remboursements.reduce((acc, r) => {
+  // Données pour les graphiques - utiliser les données Edge Function en priorité
+  const dataForCharts = currentMonthData?.data || remboursements;
+  
+  const stats = dataForCharts.reduce((acc: any, r: any) => {
     acc[r.statut] = (acc[r.statut] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const employeStats = remboursements.reduce((acc, r) => {
+  const employeStats = dataForCharts.reduce((acc: any, r: any) => {
     const nom = r.employee?.nom + " " + r.employee?.prenom;
     acc[nom] = (acc[nom] || 0) + 1;
     return acc;
@@ -431,15 +495,27 @@ export default function RemboursementsPage() {
     return Number(remboursement.demande_avance?.montant_demande || 0);
   };
 
-  // Total des remboursements en attente seulement
-  const totalRemboursements = remboursements
-    .filter((r) => r.statut === "EN_ATTENTE")
-    .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
+  // Total des remboursements en attente seulement - utiliser les données Edge Function en priorité
+  const totalRemboursements = currentMonthData?.data ? 
+    currentMonthData.data
+      .filter((r: any) => r.statut === "EN_ATTENTE")
+      .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement), 0) :
+    remboursements
+      .filter((r) => r.statut === "EN_ATTENTE")
+      .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
 
   // Skeleton
   if (isLoading) {
     return (
       <div className="p-8">
+        <div className="flex items-center justify-center mb-4">
+          <div className="text-center">
+            <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des remboursements..."}
+            </p>
+          </div>
+        </div>
         <Skeleton className="h-8 w-1/3 mb-4" />
         <Skeleton className="h-12 w-full mb-4" />
         <Skeleton className="h-64 w-full mb-4" />
@@ -462,6 +538,21 @@ export default function RemboursementsPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              {currentMonthData && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  Données du mois en cours
+                </span>
+              )}
+              <button
+                onClick={loadCurrentMonthData}
+                disabled={edgeFunctionLoading}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                title="Actualiser les données du mois en cours"
+              >
+                <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <div>
               <div className="flex items-center justify-center space-x-2 px-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
                 <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -549,7 +640,7 @@ export default function RemboursementsPage() {
                 Total remboursements
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {remboursements.length}
+                {currentMonthData?.data ? currentMonthData.data.length : remboursements.length}
               </div>
             </div>
           </div>
@@ -564,7 +655,9 @@ export default function RemboursementsPage() {
                 En attente
               </div>
               <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                {remboursements.filter((r) => r.statut === "EN_ATTENTE").length}
+                {currentMonthData?.data ? 
+                  currentMonthData.data.filter((r: any) => r.statut === "EN_ATTENTE").length :
+                  remboursements.filter((r) => r.statut === "EN_ATTENTE").length}
               </div>
             </div>
           </div>
@@ -579,7 +672,9 @@ export default function RemboursementsPage() {
                 Payés
               </div>
               <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                {remboursements.filter((r) => r.statut === "PAYE").length}
+                {currentMonthData?.data ? 
+                  currentMonthData.data.filter((r: any) => r.statut === "PAYE").length :
+                  remboursements.filter((r) => r.statut === "PAYE").length}
               </div>
             </div>
           </div>
@@ -738,8 +833,8 @@ export default function RemboursementsPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">
               {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, remboursements.length)} sur{" "}
-              {remboursements.length}
+              {Math.min(currentPage * itemsPerPage, dataForPagination.length)} sur{" "}
+              {dataForPagination.length}
             </span>
           </div>
           <div className="flex items-center gap-2">
