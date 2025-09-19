@@ -20,6 +20,7 @@ import {
   Check,
   X,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
@@ -62,6 +63,10 @@ export default function DemandesPage() {
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const [approvingRequest, setApprovingRequest] = useState<string | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState<string | null>(null);
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // Fonction pour charger les demandes
   const loadDemandes = async (showTableLoader = false, delay = 0) => {
@@ -96,10 +101,65 @@ export default function DemandesPage() {
     }
   };
 
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) {
+      console.log("Pas de token d'accès disponible");
+      return;
+    }
+
+    setEdgeFunctionLoading(true);
+    setLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Utiliser directement l'endpoint des demandes pour récupérer les données du mois en cours
+      const demandesData = await edgeFunctionService.getDashboardDemandes();
+
+      if (!demandesData.success) {
+        console.error("Erreur Edge Function:", demandesData.message);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+      // Les données sont directement dans la réponse selon votre exemple
+      // Stocker les données pour les statistiques
+      setCurrentMonthData(demandesData);
+      
+      // Mettre à jour les données locales avec les données du mois en cours
+      if (demandesData.data && Array.isArray(demandesData.data)) {
+          setDemandesAvance(demandesData.data);
+      }
+      
+      toast.success("Données des demandes du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
+      setLoading(false);
+    }
+  };
+
   // Charger les demandes au montage
   useEffect(() => {
-    loadDemandes();
+    // Charger d'abord les données Edge Function
+    loadCurrentMonthData();
   }, [session?.partner]);
+
+  // Charger les données de fallback si pas de données Edge Function
+  useEffect(() => {
+    if (!currentMonthData && !edgeFunctionLoading) {
+      loadDemandes();
+    }
+  }, [currentMonthData, edgeFunctionLoading]);
+
+  // Charger les données de fallback au démarrage si pas de données
+  useEffect(() => {
+    if (demandesAvance.length === 0 && !edgeFunctionLoading && !loading) {
+      loadDemandes();
+    }
+  }, [demandesAvance.length, edgeFunctionLoading, loading]);
 
   // Formater les demandes
   const allDemandes = demandesAvance.map((d) => ({
@@ -136,20 +196,26 @@ export default function DemandesPage() {
     startIndex + itemsPerPage
   );
 
-  // Calculer les statistiques
-  const totalDemandes = allDemandes.length;
-  const approvedDemandes = allDemandes.filter(
-    (d) => d.statut === "Validé"
-  ).length;
-  const pendingDemandes = allDemandes.filter(
-    (d) => d.statut === "En attente"
-  ).length;
-  const pendingRHResponsable = allDemandes.filter(
-    (d) => d.statut === "En attente RH/Responsable"
-  ).length;
-  const rejectedDemandes = allDemandes.filter(
-    (d) => d.statut === "Rejeté"
-  ).length;
+  // Calculer les statistiques - utiliser les données Edge Function en priorité
+  const totalDemandes = currentMonthData?.statistics?.total || 
+    currentMonthData?.count ||
+    allDemandes.length;
+  
+  const approvedDemandes = currentMonthData?.statistics?.status_breakdown?.Validé || 
+    currentMonthData?.statistics?.by_status?.approved ||
+    allDemandes.filter((d) => d.statut === "Validé").length;
+  
+  const pendingDemandes = currentMonthData?.statistics?.status_breakdown?.["En attente"] || 
+    currentMonthData?.statistics?.by_status?.pending ||
+    allDemandes.filter((d) => d.statut === "En attente").length;
+  
+  const pendingRHResponsable = currentMonthData?.statistics?.status_breakdown?.["En attente RH/Responsable"] || 
+    currentMonthData?.statistics?.by_status?.pending_rh_responsable ||
+    allDemandes.filter((d) => d.statut === "En attente RH/Responsable").length;
+  
+  const rejectedDemandes = currentMonthData?.statistics?.status_breakdown?.Rejeté || 
+    currentMonthData?.statistics?.by_status?.rejected ||
+    allDemandes.filter((d) => d.statut === "Rejeté").length;
 
   const stats = [
     {
@@ -297,7 +363,7 @@ export default function DemandesPage() {
     };
   }, []);
 
-  if (loading) {
+  if (loading && demandesAvance.length === 0) {
     return (
       <div className="p-6">
         <div className="animate-pulse">
@@ -319,9 +385,24 @@ export default function DemandesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-              Demandes de Services
-            </h1>
+            <div className="flex items-center gap-3 mb-2">
+              <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
+                Demandes de Services
+              </h1>
+              {currentMonthData && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  Données du mois en cours
+                </span>
+              )}
+              <button
+                onClick={loadCurrentMonthData}
+                disabled={edgeFunctionLoading}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                title="Actualiser les données du mois en cours"
+              >
+                <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
             <p className="text-[var(--zalama-text)]/60 mt-1">
               Gérez les demandes d'avance sur salaire et de prêts P2P de vos
               employés
@@ -525,7 +606,7 @@ export default function DemandesPage() {
                         setSelectedService("");
                         setShowFilterMenu(false);
                       }}
-                      className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
                     >
                       Tous les services
                     </button>
@@ -536,7 +617,7 @@ export default function DemandesPage() {
                           setSelectedService(service.label);
                           setShowFilterMenu(false);
                         }}
-                        className="w-full text-left dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 rounded transition-colors"
                       >
                         <service.icon className="h-4 w-4" />
                         {service.label}
@@ -551,17 +632,17 @@ export default function DemandesPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-400 dark:hover:bg-gray-200"
+              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             >
-              <option value="" className="dark:bg-[var(--zalama-card)]">
+              <option value="" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
                 Tous les statuts
               </option>
-              <option value="En attente">En attente</option>
-              <option value="En attente RH/Responsable">
+              <option value="En attente" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">En attente</option>
+              <option value="En attente RH/Responsable" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
                 En attente RH/Responsable
               </option>
-              <option value="Validé">Validé</option>
-              <option value="Rejeté">Rejeté</option>
+              <option value="Validé" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Validé</option>
+              <option value="Rejeté" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Rejeté</option>
             </select>
           </div>
         </div>

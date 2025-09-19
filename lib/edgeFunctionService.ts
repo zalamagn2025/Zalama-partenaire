@@ -3,6 +3,7 @@
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-auth`;
+const DASHBOARD_EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-dashboard-data`;
 const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
 
 export interface PartnerAuthResponse {
@@ -90,16 +91,96 @@ export interface ApprovalResponse {
   };
 }
 
+export interface DashboardDataResponse {
+  success: boolean;
+  message: string;
+  data: {
+    statistics: {
+      total_employees: number;
+      active_employees: number;
+      total_demandes: number;
+      demandes_per_employee: string;
+      average_rating: string;
+      pending_demandes: number;
+      total_alerts: number;
+      active_alerts: number;
+      total_avis: number;
+      total_salary: number;
+      flux_finance: number;
+      a_rembourser_mois: number;
+    };
+    financial_performance: {
+      debloque_mois: number;
+      a_rembourser_mois: number;
+      taux_remboursement: string;
+      date_limite_remboursement: string;
+      jours_restants: string;
+      employes_approuves_periode: number;
+      dernier_paiement: string;
+      prochain_paiement: string;
+      payment_day: number;
+    };
+    charts: {
+      demandes_evolution: Array<{ mois: string; demandes: number }>;
+      montants_evolution: Array<{ mois: string; montant: number }>;
+      repartition_motifs: Array<{ motif: string; valeur: number; color: string }>;
+    };
+    partner_info: {
+      id: string;
+      company_name: string;
+      legal_status: string;
+      activity_domain: string;
+      email: string;
+      phone: string;
+      logo_url: string;
+      employees_count: number;
+      active_employees_count: number;
+      total_salary: number;
+      avg_salary: number;
+      payment_day: number;
+      created_at: string;
+      updated_at: string;
+    };
+    filters: {
+      month: number | null;
+      year: number | null;
+      payment_day: number;
+      applied: boolean;
+      period_start: string;
+      period_end: string;
+      period_description: string;
+    };
+    employees?: any[];
+    remboursements?: any[];
+    alerts?: any[];
+    avis?: any[];
+    demandes?: any[];
+  };
+}
+
 class EdgeFunctionService {
+  private accessToken: string | null = null;
+
+  setAccessToken(token: string) {
+    this.accessToken = token;
+  }
+
   private async makeRequest<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
+    useDashboardApi: boolean = false
   ): Promise<T> {
-    const url = `${EDGE_FUNCTION_BASE_URL}${endpoint}`;
+    const baseUrl = useDashboardApi ? DASHBOARD_EDGE_FUNCTION_BASE_URL : EDGE_FUNCTION_BASE_URL;
+    const url = `${baseUrl}${endpoint}`;
 
-    const defaultHeaders = {
+    const defaultHeaders: Record<string, string> = {
       "Content-Type": "application/json",
     };
+
+    // Ajouter le token d'authentification si disponible
+    if (this.accessToken) {
+      defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
+    }
 
     const config: RequestInit = {
       ...options,
@@ -172,6 +253,40 @@ class EdgeFunctionService {
       method: "POST",
       body: JSON.stringify(credentials),
     });
+  }
+
+  // 📊 Dashboard Data - Nouvelles méthodes pour les Edge Functions
+  async getDashboardData(): Promise<DashboardDataResponse> {
+    return this.makeRequest<DashboardDataResponse>("/dashboard-data", {}, true);
+  }
+
+  async getDashboardEmployees(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/employees", {}, true);
+  }
+
+  async getDashboardRemboursements(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/remboursements", {}, true);
+  }
+
+  async getDashboardAlerts(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/alerts", {}, true);
+  }
+
+  async getDashboardAvis(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/avis", {}, true);
+  }
+
+  async getDashboardDemandes(status?: string): Promise<PartnerAuthResponse> {
+    const endpoint = status ? `/demandes?status=${encodeURIComponent(status)}` : "/demandes";
+    return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
+  }
+
+  async getDashboardStatistics(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/statistics", {}, true);
+  }
+
+  async getDashboardPartnerInfo(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/partner-info", {}, true);
   }
 
   async getMe(accessToken: string): Promise<PartnerAuthResponse> {

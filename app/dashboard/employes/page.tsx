@@ -2,6 +2,7 @@
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
+import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import type { Employee } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import {
@@ -61,11 +62,16 @@ export default function EmployesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
+  
+  // États pour les données Edge Functions (mois en cours)
+  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
+  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // Charger les données des employés
   useEffect(() => {
     if (!loading && session?.partner) {
       loadEmployees();
+      loadCurrentMonthData();
     }
   }, [loading, session?.partner]);
 
@@ -211,6 +217,41 @@ export default function EmployesPage() {
     }
   };
 
+  // Charger les données du mois en cours via Edge Functions
+  const loadCurrentMonthData = async () => {
+    if (!session?.access_token) return;
+
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const dashboardData = await edgeFunctionService.getDashboardData();
+
+      if (!dashboardData.success) {
+        console.error("Erreur Edge Function:", dashboardData.message);
+        toast.error("Erreur lors du chargement des données du mois en cours");
+        return;
+      }
+
+                // Les données sont dans dashboardData.data selon la réponse Edge Function
+                const data = dashboardData.data || dashboardData;
+                setCurrentMonthData(data);
+                
+                // Mettre à jour les données locales avec les données du mois en cours
+                if (data.employees) {
+                    setEmployees(data.employees);
+                    setFilteredEmployees(data.employees.filter((emp: any) => emp.user_id));
+                }
+
+      console.log("Données des employés du mois en cours chargées:", dashboardData);
+      toast.success("Données des employés du mois en cours mises à jour avec succès");
+    } catch (error) {
+      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      toast.error("Erreur lors du chargement des données du mois en cours");
+    } finally {
+      setEdgeFunctionLoading(false);
+    }
+  };
+
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
     if (!loading && !session) {
@@ -262,9 +303,15 @@ export default function EmployesPage() {
     indexOfLastEmployee
   );
 
-  // Calculer les statistiques
-  const totalEmployees = employees.length;
-  const activeEmployees = employees.filter((emp) => emp.actif).length;
+  // Calculer les statistiques - utiliser les données Edge Function en priorité
+  const totalEmployees = currentMonthData?.statistics?.total_employees || 
+    currentMonthData?.partner_info?.employees_count || 
+    employees.length;
+  
+  const activeEmployees = currentMonthData?.statistics?.active_employees || 
+    currentMonthData?.partner_info?.active_employees_count || 
+    employees.filter((emp) => emp.actif).length;
+  
   const newThisMonth = employees.filter((emp) => {
     const createdDate = new Date(emp.created_at || "");
     const now = new Date();
@@ -274,6 +321,7 @@ export default function EmployesPage() {
       createdDate.getFullYear() === now.getFullYear()
     );
   }).length;
+  
   const retentionRate =
     totalEmployees > 0
       ? ((activeEmployees / totalEmployees) * 100).toFixed(1)
@@ -392,7 +440,12 @@ export default function EmployesPage() {
   if (loading || isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">
+            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des employés..."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -419,9 +472,24 @@ export default function EmployesPage() {
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Gestion des employés
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Gestion des employés
+            </h1>
+            {currentMonthData && (
+              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                Données du mois en cours
+              </span>
+            )}
+            <button
+              onClick={loadCurrentMonthData}
+              disabled={edgeFunctionLoading}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+              title="Actualiser les données du mois en cours"
+            >
+              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+            </button>
+          </div>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {session?.partner?.company_name} - {totalEmployees} employés total (
             {filteredEmployees.length} avec compte)
@@ -608,32 +676,32 @@ export default function EmployesPage() {
 
       {/* Tableau des employés */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full  dark:divide-gray-700">
+        <div className="overflow-hidden">
+          <table className="w-full table-fixed dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/4 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/6 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Poste
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Type de contrat
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire net
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire restant
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date d'embauche
                 </th>
-                <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/12 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Statut
                 </th>
-                <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="w-1/12 px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -644,59 +712,65 @@ export default function EmployesPage() {
                   key={employee.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <td className="px-2 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4">
                     <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-10">
-                        <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex-shrink-0 h-8 w-8">
+                        <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
                             {employee.prenom.charAt(0)}
                             {employee.nom.charAt(0)}
                           </span>
                         </div>
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <div className="ml-3 min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                           {employee.prenom} {employee.nom}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                           {employee.email}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
+                  <td className="px-2 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white truncate">
                       {employee.poste}
                     </div>
                     {employee.role && (
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {employee.role}
                       </div>
                     )}
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <td className="px-2 py-4">
+                    <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
                       {employee.type_contrat}
                     </span>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.salaire_net
-                      ? formatSalary(employee.salaire_net)
-                      : "Non défini"}
+                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
+                    <div className="truncate">
+                      {employee.salaire_net
+                        ? formatSalary(employee.salaire_net)
+                        : "Non défini"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    {employee.salaire_restant
-                      ? formatSalary(employee.salaire_restant)
-                      : "Non défini"}
+                  <td className="px-2 py-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                    <div className="truncate">
+                      {employee.salaire_restant
+                        ? formatSalary(employee.salaire_restant)
+                        : "Non défini"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                    {employee.date_embauche
-                      ? formatDate(employee.date_embauche)
-                      : "Non définie"}
+                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
+                    <div className="truncate">
+                      {employee.date_embauche
+                        ? formatDate(employee.date_embauche)
+                        : "Non définie"}
+                    </div>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap">
+                  <td className="px-2 py-4">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${
                         employee.actif
                           ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                           : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
@@ -705,10 +779,10 @@ export default function EmployesPage() {
                       {employee.actif ? "Actif" : "Inactif"}
                     </span>
                   </td>
-                  <td className="px-2 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-2 py-4 text-right text-sm font-medium">
                     <button
                       onClick={() => openViewModal(employee)}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
