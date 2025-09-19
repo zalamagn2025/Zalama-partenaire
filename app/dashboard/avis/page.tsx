@@ -123,8 +123,8 @@ export default function AvisPage() {
       edgeFunctionService.setAccessToken(session.access_token);
       const dashboardData = await edgeFunctionService.getDashboardData();
 
-      if (dashboardData.error) {
-        console.error("Erreur Edge Function:", dashboardData.error);
+      if (!dashboardData.success) {
+        console.error("Erreur Edge Function:", dashboardData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }

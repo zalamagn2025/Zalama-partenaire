@@ -116,8 +116,8 @@ export default function DemandesPage() {
       // Utiliser directement l'endpoint des demandes pour récupérer les données du mois en cours
       const demandesData = await edgeFunctionService.getDashboardDemandes();
 
-      if (demandesData.error) {
-        console.error("Erreur Edge Function:", demandesData.error);
+      if (!demandesData.success) {
+        console.error("Erreur Edge Function:", demandesData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }

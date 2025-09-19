@@ -394,11 +394,13 @@ export default function FinancesPage() {
         totalRevenus: currentMonthData.financial_performance.debloque_mois * 0.06, // Estimation des frais de service
         totalRemboursements: currentMonthData.financial_performance.a_rembourser_mois,
         totalCommissions: currentMonthData.financial_performance.debloque_mois * 0.06,
-        tauxRemboursement: parseFloat(currentMonthData.financial_performance.taux_remboursement),
-        nombreRemboursements: currentMonthData.financial_performance.employes_approuves_periode,
+        balance: parseFloat(currentMonthData.financial_performance.taux_remboursement),
+        pendingTransactions: 0, // À calculer selon vos besoins
+        totalTransactions: currentMonthData.financial_performance.employes_approuves_periode,
         montantMoyen: currentMonthData.financial_performance.debloque_mois / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
-        montantMoyenCommission: (currentMonthData.financial_performance.debloque_mois * 0.06) / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
-        montantMoyenRemboursement: currentMonthData.financial_performance.a_rembourser_mois / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
+        evolutionMensuelle: [], // À calculer selon vos besoins
+        repartitionParType: [], // À calculer selon vos besoins
+        repartitionParStatut: [], // À calculer selon vos besoins
       };
     }
 
@@ -595,8 +597,8 @@ export default function FinancesPage() {
       edgeFunctionService.setAccessToken(session.access_token);
       const dashboardData = await edgeFunctionService.getDashboardData();
 
-      if (dashboardData.error) {
-        console.error("Erreur Edge Function:", dashboardData.error);
+      if (!dashboardData.success) {
+        console.error("Erreur Edge Function:", dashboardData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }

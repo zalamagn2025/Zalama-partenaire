@@ -154,8 +154,8 @@ export default function EntrepriseDashboardPage() {
       edgeFunctionService.setAccessToken(session.access_token);
       const dashboardData = await edgeFunctionService.getDashboardData();
 
-      if (dashboardData.error) {
-        console.error("Erreur Edge Function:", dashboardData.error);
+      if (!dashboardData.success) {
+        console.error("Erreur Edge Function:", dashboardData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }
@@ -382,9 +382,9 @@ export default function EntrepriseDashboardPage() {
   const currentAlerts = currentMonthData?.alerts || alerts;
   const currentAvis = currentMonthData?.avis || avis;
 
-  const activeEmployees = currentEmployees.filter((emp) => emp.actif);
+  const activeEmployees = currentEmployees.filter((emp: any) => emp.actif);
   const totalSalary = activeEmployees.reduce(
-    (sum, emp) => sum + (emp.salaire_net || 0),
+    (sum: number, emp: any) => sum + (emp.salaire_net || 0),
     0
   );
 
@@ -480,12 +480,12 @@ export default function EntrepriseDashboardPage() {
     .reduce((sum, trans) => sum + (trans.montant || 0), 0);
   const balance = totalRecupere - totalRemboursements + totalRevenus;
 
-  const activeAlerts = currentAlerts.filter((alert) => alert.statut !== "Résolue");
+  const activeAlerts = currentAlerts.filter((alert: any) => alert.statut !== "Résolue");
   const averageRating =
     currentAvis.length > 0
-      ? currentAvis.reduce((sum, av) => sum + av.note, 0) / currentAvis.length
+      ? currentAvis.reduce((sum: number, av: any) => sum + av.note, 0) / currentAvis.length
       : 0;
-  const pendingDemandes = currentDemandes.filter((dem) => dem.statut === "En attente");
+  const pendingDemandes = currentDemandes.filter((dem: any) => dem.statut === "En attente");
 
   // Données pour les graphiques - 6 derniers mois + données récentes
   const getLast6Months = () => {
@@ -540,7 +540,7 @@ export default function EntrepriseDashboardPage() {
     ];
     const monthsWithData = new Set<string>();
 
-    currentDemandes.forEach((demande) => {
+    currentDemandes.forEach((demande: any) => {
       const date = new Date(demande.date_creation);
       const key = `${date.getFullYear()}-${date.getMonth()}`;
       monthsWithData.add(key);
@@ -568,7 +568,7 @@ export default function EntrepriseDashboardPage() {
 
   // Utiliser les données Edge Function en priorité pour les graphiques
   const demandesEvolutionData = currentMonthData?.charts?.demandes_evolution || monthsToShow.map(({ month, year, name }) => {
-    const count = currentDemandes.filter((d) => {
+    const count = currentDemandes.filter((d: any) => {
       const demandDate = new Date(d.date_creation);
       return (
         demandDate.getMonth() === month && demandDate.getFullYear() === year
@@ -580,21 +580,21 @@ export default function EntrepriseDashboardPage() {
 
   const montantsEvolutionData = currentMonthData?.charts?.montants_evolution || monthsToShow.map(({ month, year, name }) => {
     const total = currentTransactions
-      .filter((t) => {
+      .filter((t: any) => {
         const transactionDate = new Date(t.date_creation);
         return (
           transactionDate.getMonth() === month &&
           transactionDate.getFullYear() === year
         );
       })
-      .reduce((sum, t) => sum + Number(t.montant_total_remboursement || 0), 0);
+      .reduce((sum: number, t: any) => sum + Number(t.montant_total_remboursement || 0), 0);
 
     return { mois: name, montant: total };
   });
 
   // Utiliser les données Edge Function en priorité pour la répartition par motifs
   const repartitionMotifsData = currentMonthData?.charts?.repartition_motifs || Object.entries(
-    currentDemandes.reduce((acc, demande) => {
+    currentDemandes.reduce((acc: any, demande: any) => {
       acc[demande.type_motif] = (acc[demande.type_motif] || 0) + 1;
       return acc;
     }, {} as Record<string, number>)
@@ -868,7 +868,7 @@ export default function EntrepriseDashboardPage() {
                   dataKey="valeur"
                   paddingAngle={2}
                 >
-                  {repartitionMotifsData.map((entry, index) => (
+                  {repartitionMotifsData.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>

@@ -126,8 +126,8 @@ export default function RemboursementsPage() {
       // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
       const remboursementsData = await edgeFunctionService.getDashboardRemboursements();
 
-      if (remboursementsData.error) {
-        console.error("Erreur Edge Function:", remboursementsData.error);
+      if (!remboursementsData.success) {
+        console.error("Erreur Edge Function:", remboursementsData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }
@@ -735,7 +735,7 @@ export default function RemboursementsPage() {
                   </td>
                 </tr>
               )}
-              {paginatedRemboursements.map((r, idx) => (
+              {paginatedRemboursements.map((r: any, idx: number) => (
                 <tr
                   key={r.id}
                   className="dark:bg-[var(--zalama-card)]  transition-colors"

@@ -173,7 +173,7 @@ class EdgeFunctionService {
     const baseUrl = useDashboardApi ? DASHBOARD_EDGE_FUNCTION_BASE_URL : EDGE_FUNCTION_BASE_URL;
     const url = `${baseUrl}${endpoint}`;
 
-    const defaultHeaders = {
+    const defaultHeaders: Record<string, string> = {
       "Content-Type": "application/json",
     };
 
