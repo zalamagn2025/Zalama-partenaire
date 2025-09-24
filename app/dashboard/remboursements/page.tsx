@@ -100,6 +100,7 @@ export default function RemboursementsPage() {
   // États pour les données Edge Function
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
 
   // Pagination - utiliser les données Edge Function en priorité
   const [currentPage, setCurrentPage] = useState(1);
@@ -278,6 +279,8 @@ export default function RemboursementsPage() {
   useEffect(() => {
     // Charger d'abord les données Edge Function
     loadCurrentMonthData();
+    // Charger les employés pour avoir les salaires
+    fetchEmployees();
   }, [session?.partner]);
 
   // Charger les données de fallback si pas de données Edge Function
@@ -442,14 +445,52 @@ export default function RemboursementsPage() {
     return `${value.toLocaleString()} GNF`;
   };
 
-  // Fonction pour calculer le salaire restant de l'employé en fonction de la position du remboursement
-  const calculateSalaireRestant = (remboursement: Remboursement) => {
-    const salaireNet = Number(remboursement.employee?.salaire_net || 0);
+  // Fonction pour récupérer les employés
+  const fetchEmployees = async () => {
+    if (!session?.partner) return;
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const employeesData = await edgeFunctionService.getDashboardEmployees();
+      if (employeesData.success && employeesData.data) {
+        setEmployees(employeesData.data);
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des employés:", error);
+    }
+  };
 
-    // Trouver la position de ce remboursement dans la liste chronologique
+  // Fonction pour obtenir le salaire net de l'employé
+  const getSalaireNet = (remboursement: any) => {
+    // Pour les données Edge Function, utiliser salaire_disponible de la demande
+    if (remboursement.salaire_disponible) {
+      return Number(remboursement.salaire_disponible);
+    }
+    
+    // Chercher le salaire dans les données des employés
+    if (remboursement.employee?.id && employees.length > 0) {
+      const employee = employees.find(emp => emp.id === remboursement.employee.id);
+      if (employee?.salaire_net) {
+        return Number(employee.salaire_net);
+      }
+    }
+    
+    // Fallback pour les données locales
+    return Number(remboursement.employee?.salaire_net || 0);
+  };
+
+  // Fonction pour calculer le salaire restant de l'employé en fonction de la position du remboursement
+  const calculateSalaireRestant = (remboursement: any) => {
+    const salaireNet = getSalaireNet(remboursement);
+
+    // Pour les données Edge Function, calculer simplement salaire - montant_transaction
+    if (remboursement.montant_transaction) {
+      return Math.max(0, salaireNet - Number(remboursement.montant_transaction));
+    }
+
+    // Fallback pour les données locales
     const tousRemboursements = remboursement.tous_remboursements || [];
     const positionActuelle = tousRemboursements.findIndex(
-      (remb) => remb.id === remboursement.id
+      (remb: any) => remb.id === remboursement.id
     );
 
     // Si ce remboursement n'est pas trouvé, retourner le salaire net
@@ -477,6 +518,16 @@ export default function RemboursementsPage() {
     return montantDemande * 0.065; // 6,5%
   };
 
+  // Fonction pour obtenir les frais de service en toute sécurité
+  const getFraisService = (remboursement: any) => {
+    // Pour les données Edge Function, utiliser frais_service
+    if (remboursement.frais_service) {
+      return Number(remboursement.frais_service);
+    }
+    // Fallback pour les données locales
+    return calculateFraisService(getMontantDemande(remboursement));
+  };
+
   // Fonction pour calculer le montant reçu (avance - frais)
   const calculateMontantRecu = (
     montantDemande: number,
@@ -485,13 +536,38 @@ export default function RemboursementsPage() {
     return montantDemande - fraisService;
   };
 
+  // Fonction pour obtenir le montant reçu en toute sécurité
+  const getMontantRecu = (remboursement: any) => {
+    // Pour les données Edge Function, calculer montant_transaction - frais_service
+    if (remboursement.montant_transaction && remboursement.frais_service) {
+      return Number(remboursement.montant_transaction) - Number(remboursement.frais_service);
+    }
+    // Fallback pour les données locales
+    return calculateMontantRecu(getMontantDemande(remboursement), getFraisService(remboursement));
+  };
+
   // Fonction pour calculer le remboursement dû à ZaLaMa
   const calculateRemboursementDu = (montantDemande: number) => {
     return montantDemande; // Le remboursement dû = montant demandé
   };
 
+  // Fonction pour obtenir le remboursement dû en toute sécurité
+  const getRemboursementDu = (remboursement: any) => {
+    // Pour les données Edge Function, utiliser montant_total_remboursement
+    if (remboursement.montant_total_remboursement) {
+      return Number(remboursement.montant_total_remboursement);
+    }
+    // Fallback pour les données locales
+    return calculateRemboursementDu(getMontantDemande(remboursement));
+  };
+
   // Fonction pour obtenir le montant demandé en toute sécurité
-  const getMontantDemande = (remboursement: Remboursement) => {
+  const getMontantDemande = (remboursement: any) => {
+    // Pour les données Edge Function, utiliser montant_transaction
+    if (remboursement.montant_transaction) {
+      return Number(remboursement.montant_transaction);
+    }
+    // Fallback pour les données locales
     return Number(remboursement.demande_avance?.montant_demande || 0);
   };
 
@@ -745,36 +821,29 @@ export default function RemboursementsPage() {
                       {r.employee?.nom} {r.employee?.prenom}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {gnfFormatter(Number(r.employee?.salaire_net || 0))}
+                      {gnfFormatter(getSalaireNet(r))}
                     </div>
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
                     {gnfFormatter(getMontantDemande(r))}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-500">
-                    {gnfFormatter(calculateFraisService(getMontantDemande(r)))}
+                    {gnfFormatter(getFraisService(r))}
                   </td>
                   <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
-                    {gnfFormatter(
-                      calculateMontantRecu(
-                        getMontantDemande(r),
-                        calculateFraisService(getMontantDemande(r))
-                      )
-                    )}
+                    {gnfFormatter(getMontantRecu(r))}
                   </td>
                   <td className="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400">
-                    {gnfFormatter(
-                      calculateRemboursementDu(getMontantDemande(r))
-                    )}
+                    {gnfFormatter(getRemboursementDu(r))}
                   </td>
                   <td className="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                     {gnfFormatter(calculateSalaireRestant(r))}
                   </td>
                   <td className="px-3 py-2 text-xs text-gray-500">
-                    {r.demande_avance?.date_validation
-                      ? new Date(
-                          r.demande_avance.date_validation
-                        ).toLocaleDateString("fr-FR")
+                    {r.date_transaction_effectuee
+                      ? new Date(r.date_transaction_effectuee).toLocaleDateString("fr-FR")
+                      : r.demande_avance?.date_validation
+                      ? new Date(r.demande_avance.date_validation).toLocaleDateString("fr-FR")
                       : "-"}
                   </td>
                   <td className="px-3 py-2">
@@ -990,9 +1059,7 @@ export default function RemboursementsPage() {
                       Salaire net mensuel
                     </span>
                     <span className="font-medium">
-                      {gnfFormatter(
-                        Number(selectedRemboursement.employee?.salaire_net || 0)
-                      )}
+                      {gnfFormatter(getSalaireNet(selectedRemboursement))}
                     </span>
                   </div>
                 </div>
@@ -1022,11 +1089,7 @@ export default function RemboursementsPage() {
                       Frais de service (6,5%)
                     </div>
                     <div className="text-lg font-bold text-gray-800 dark:text-gray-300">
-                      {gnfFormatter(
-                        calculateFraisService(
-                          getMontantDemande(selectedRemboursement)
-                        )
-                      )}
+                      {gnfFormatter(getFraisService(selectedRemboursement))}
                     </div>
                   </div>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
@@ -1034,14 +1097,7 @@ export default function RemboursementsPage() {
                       Montant reçu par l'employé
                     </div>
                     <div className="text-lg font-bold text-green-800 dark:text-green-300">
-                      {gnfFormatter(
-                        calculateMontantRecu(
-                          getMontantDemande(selectedRemboursement),
-                          calculateFraisService(
-                            getMontantDemande(selectedRemboursement)
-                          )
-                        )
-                      )}
+                      {gnfFormatter(getMontantRecu(selectedRemboursement))}
                     </div>
                   </div>
                   <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
@@ -1049,11 +1105,7 @@ export default function RemboursementsPage() {
                       Dû à ZaLaMa
                     </div>
                     <div className="text-lg font-bold text-red-800 dark:text-red-300">
-                      {gnfFormatter(
-                        calculateRemboursementDu(
-                          getMontantDemande(selectedRemboursement)
-                        )
-                      )}
+                      {gnfFormatter(getRemboursementDu(selectedRemboursement))}
                     </div>
                   </div>
                 </div>
@@ -1175,9 +1227,7 @@ export default function RemboursementsPage() {
                         {selectedRemboursement.tous_remboursements.map(
                           (remb, index) => {
                             // Calculer le salaire restant après ce remboursement
-                            let salaireRestantApres = Number(
-                              selectedRemboursement.employee?.salaire_net || 0
-                            );
+                            let salaireRestantApres = getSalaireNet(selectedRemboursement);
                             for (let i = 0; i <= index; i++) {
                               const rembCourant =
                                 selectedRemboursement.tous_remboursements![i];
@@ -1390,6 +1440,48 @@ export default function RemboursementsPage() {
                         </span>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
                           7336020099
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Informations UBA */}
+                  <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-[var(--zalama-blue)] dark:text-[var(--zalama-blue)] mb-3 flex items-center gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      Informations UBA
+                    </h4>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Nom :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded">
+                          UBA GUINEA AGENCE DE MADINA
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Numéro de compte :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          60021030009258
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Numéro RIB :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-blue)]/10 dark:bg-[var(--zalama-blue)]/20 px-3 py-1 rounded font-mono">
+                          015-002-1030009258-56
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                          Intitulé du compte :
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white bg-[var(--zalama-green)]/10 dark:bg-[var(--zalama-green)]/20 px-3 py-1 rounded">
+                          ZALAMA SARL
                         </span>
                       </div>
                     </div>
