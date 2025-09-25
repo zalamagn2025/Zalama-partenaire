@@ -260,33 +260,62 @@ class EdgeFunctionService {
     return this.makeRequest<DashboardDataResponse>("/dashboard-data", {}, true);
   }
 
-  async getDashboardEmployees(): Promise<PartnerAuthResponse> {
+  async getEmployees(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/employees", {}, true);
   }
 
-  async getDashboardRemboursements(): Promise<PartnerAuthResponse> {
+  async getRemboursements(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/remboursements", {}, true);
   }
 
-  async getDashboardAlerts(): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/alerts", {}, true);
-  }
-
-  async getDashboardAvis(): Promise<PartnerAuthResponse> {
+  async getAvis(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/avis", {}, true);
   }
 
-  async getDashboardDemandes(status?: string): Promise<PartnerAuthResponse> {
+  async getDemandes(status?: string): Promise<PartnerAuthResponse> {
     const endpoint = status ? `/demandes?status=${encodeURIComponent(status)}` : "/demandes";
     return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
   }
 
-  async getDashboardStatistics(): Promise<PartnerAuthResponse> {
+  async getAlerts(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/alerts", {}, true);
+  }
+
+  async getStatistics(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/statistics", {}, true);
   }
 
-  async getDashboardPartnerInfo(): Promise<PartnerAuthResponse> {
+  async getPartnerInfo(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/partner-info", {}, true);
+  }
+
+  // Méthodes de compatibilité (anciennes)
+  async getDashboardEmployees(): Promise<PartnerAuthResponse> {
+    return this.getEmployees();
+  }
+
+  async getDashboardRemboursements(): Promise<PartnerAuthResponse> {
+    return this.getRemboursements();
+  }
+
+  async getDashboardAlerts(): Promise<PartnerAuthResponse> {
+    return this.getAlerts();
+  }
+
+  async getDashboardAvis(): Promise<PartnerAuthResponse> {
+    return this.getAvis();
+  }
+
+  async getDashboardDemandes(status?: string): Promise<PartnerAuthResponse> {
+    return this.getDemandes(status);
+  }
+
+  async getDashboardStatistics(): Promise<PartnerAuthResponse> {
+    return this.getStatistics();
+  }
+
+  async getDashboardPartnerInfo(): Promise<PartnerAuthResponse> {
+    return this.getPartnerInfo();
   }
 
   async getMe(accessToken: string): Promise<PartnerAuthResponse> {

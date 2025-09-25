@@ -1,219 +1,153 @@
 "use client";
-
-import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import StatCard from "@/components/dashboard/StatCard";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import type { Employee } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Users,
-  Calendar,
-  TrendingUp,
-  AlertTriangle,
-  RefreshCw,
-  FileDown,
+  User,
   Search,
   Filter,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Eye,
+  RefreshCw,
+  FileDown,
+  Calendar,
+  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
-
-// Type étendu pour inclure le salaire restant
-type EmployeeWithRemainingSalary = Employee & {
-  salaire_restant?: number;
-  user_id?: string;
-};
-
-// Fonction pour formatter les dates
-const formatDate = (dateString: string) => {
-  return new Date(dateString).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-// Fonction pour formatter les montants
-const formatSalary = (salary: number) => {
-  return `${salary.toLocaleString()} GNF`;
-};
+import type { Employee } from "@/lib/supabase";
 
 export default function EmployesPage() {
-  const { session, loading } = useEdgeAuthContext();
+  const { session, loading } = useEdgeAuth();
   const router = useRouter();
 
-  // États pour la gestion des employés
-  const [employees, setEmployees] = useState<EmployeeWithRemainingSalary[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<
-    EmployeeWithRemainingSalary[]
-  >([]);
+  // États pour les données
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGender, setSelectedGender] = useState<string | null>(null);
-  const [selectedContractType, setSelectedContractType] = useState<
-    string | null
-  >(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] =
-    useState<EmployeeWithRemainingSalary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  
+  // États pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const employeesPerPage = 10;
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalEmployees, setTotalEmployees] = useState(0);
+  
+  // États pour les modales
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
+  const [statistics, setStatistics] = useState<any>(null);
+  const [statisticsLoading, setStatisticsLoading] = useState(false);
 
-  // Charger les données des employés
+  // Charger les employés au montage du composant
   useEffect(() => {
     if (!loading && session?.partner) {
       loadEmployees();
-      loadCurrentMonthData();
+      loadStatistics();
     }
   }, [loading, session?.partner]);
 
-  const loadEmployees = async () => {
-    if (!session?.partner) return;
+  const loadEmployees = async (page: number = 1, filters: any = {}) => {
+    if (!session?.access_token) return;
 
     setIsLoading(true);
     try {
-      // Récupérer TOUS les employés pour les statistiques
-      const { data: allEmployeesData, error: allError } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("partner_id", session.partner.id)
-        .order("created_at", { ascending: false });
+      // Construire les paramètres de requête
+      const queryParams = new URLSearchParams();
+      queryParams.append('limit', employeesPerPage.toString());
+      queryParams.append('offset', ((page - 1) * employeesPerPage).toString());
+      
+      // Ajouter les filtres
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.type_contrat) queryParams.append('type_contrat', filters.type_contrat);
+      if (filters.actif !== null && filters.actif !== undefined) queryParams.append('actif', filters.actif.toString());
 
-      if (allError) {
-        console.error(
-          "Erreur lors du chargement de tous les employés:",
-          allError
-        );
+      const response = await fetch(`/api/proxy/employees?${queryParams.toString()}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const employeesData = await response.json();
+
+      if (!employeesData.success) {
+        console.error("Erreur Edge Function:", employeesData.message);
         toast.error("Erreur lors du chargement des employés");
         return;
       }
 
-      // Récupérer seulement les employés avec user_id non vide pour la liste
-      const { data: employeesWithUserId, error: userError } = await supabase
-        .from("employees")
-        .select("*")
-        .eq("partner_id", session.partner.id)
-        .not("user_id", "is", null)
-        .order("created_at", { ascending: false });
+      const employeesList = employeesData.data?.employees || [];
+      const pagination = employeesData.data?.pagination || {};
+      
+      setEmployees(employeesList);
+      setFilteredEmployees(employeesList);
+      setTotalPages(pagination.total_pages || 0);
+      setTotalEmployees(pagination.total || 0);
 
-      if (userError) {
-        console.error(
-          "Erreur lors du chargement des employés avec user_id:",
-          userError
-        );
-        toast.error("Erreur lors du chargement des employés");
-        return;
-      }
-
-      // Traiter TOUS les employés pour les statistiques
-      const allEmployeesWithRemainingSalary = await Promise.all(
-        (allEmployeesData || []).map(async (employee) => {
-          try {
-            // Récupérer tous les remboursements (payés et en attente) de cet employé
-            const { data: remboursements, error: rembError } = await supabase
-              .from("remboursements")
-              .select("montant_total_remboursement")
-              .eq("employe_id", employee.id)
-              .in("statut", ["PAYE", "EN_ATTENTE"]);
-
-            if (rembError) {
-              console.error("Erreur récupération remboursements:", rembError);
-              return {
-                ...employee,
-                salaire_restant: employee.salaire_net || 0,
-              };
-            }
-
-            // Calculer le salaire restant
-            const totalRemboursements = (remboursements || []).reduce(
-              (sum, remb) => {
-                return sum + Number(remb.montant_total_remboursement || 0);
-              },
-              0
-            );
-
-            const salaireRestant = Math.max(
-              0,
-              (employee.salaire_net || 0) - totalRemboursements
-            );
-
-            return {
-              ...employee,
-              salaire_restant: salaireRestant,
-            };
+      console.log("Employés chargés via proxy:", employeesList);
+      console.log("Pagination:", pagination);
           } catch (error) {
-            console.error("Erreur calcul salaire restant:", error);
-            return {
-              ...employee,
-              salaire_restant: employee.salaire_net || 0,
-            };
-          }
-        })
-      );
-
-      // Traiter seulement les employés avec user_id pour la liste
-      const employeesWithUserIdAndSalary = await Promise.all(
-        (employeesWithUserId || []).map(async (employee) => {
-          try {
-            // Récupérer tous les remboursements (payés et en attente) de cet employé
-            const { data: remboursements, error: rembError } = await supabase
-              .from("remboursements")
-              .select("montant_total_remboursement")
-              .eq("employe_id", employee.id)
-              .in("statut", ["PAYE", "EN_ATTENTE"]);
-
-            if (rembError) {
-              console.error("Erreur récupération remboursements:", rembError);
-              return {
-                ...employee,
-                salaire_restant: employee.salaire_net || 0,
-              };
-            }
-
-            // Calculer le salaire restant
-            const totalRemboursements = (remboursements || []).reduce(
-              (sum, remb) => {
-                return sum + Number(remb.montant_total_remboursement || 0);
-              },
-              0
-            );
-
-            const salaireRestant = Math.max(
-              0,
-              (employee.salaire_net || 0) - totalRemboursements
-            );
-
-            return {
-              ...employee,
-              salaire_restant: salaireRestant,
-            };
-          } catch (error) {
-            console.error("Erreur calcul salaire restant:", error);
-            return {
-              ...employee,
-              salaire_restant: employee.salaire_net || 0,
-            };
-          }
-        })
-      );
-
-      // Stocker tous les employés pour les statistiques
-      setEmployees(allEmployeesWithRemainingSalary);
-      // Stocker seulement les employés avec user_id pour la liste
-      setFilteredEmployees(employeesWithUserIdAndSalary);
-    } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
       toast.error("Erreur lors du chargement des employés");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Charger les statistiques des employés
+  const loadStatistics = async () => {
+    if (!session?.access_token) return;
+
+    setStatisticsLoading(true);
+    try {
+      const response = await fetch('/api/proxy/employees-statistics', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const statisticsData = await response.json();
+
+      if (!statisticsData.success) {
+        console.error("Erreur Edge Function (statistics):", statisticsData.message);
+        return;
+      }
+
+      setStatistics(statisticsData.data);
+      console.log("Statistiques chargées:", statisticsData.data);
+      console.log("Structure des statistiques:", JSON.stringify(statisticsData.data, null, 2));
+    } catch (error) {
+      console.error("Erreur lors du chargement des statistiques:", error);
+    } finally {
+      setStatisticsLoading(false);
     }
   };
 
@@ -223,26 +157,35 @@ export default function EmployesPage() {
 
     setEdgeFunctionLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
-      const dashboardData = await edgeFunctionService.getDashboardData();
+      // Utiliser le proxy pour les données du dashboard
+      const response = await fetch('/api/proxy/employees', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (!dashboardData.success) {
-        console.error("Erreur Edge Function:", dashboardData.message);
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
+      }
+
+      const employeesData = await response.json();
+
+      if (!employeesData.success) {
+        console.error("Erreur Edge Function:", employeesData.message);
         toast.error("Erreur lors du chargement des données du mois en cours");
         return;
       }
 
-                // Les données sont dans dashboardData.data selon la réponse Edge Function
-                const data = dashboardData.data || dashboardData;
-                setCurrentMonthData(data);
+      const employeesList = employeesData.data || [];
+      setCurrentMonthData({ employees: employeesList });
                 
                 // Mettre à jour les données locales avec les données du mois en cours
-                if (data.employees) {
-                    setEmployees(data.employees);
-                    setFilteredEmployees(data.employees.filter((emp: any) => emp.user_id));
-                }
+      setEmployees(employeesList);
+      setFilteredEmployees(employeesList);
 
-      console.log("Données des employés du mois en cours chargées:", dashboardData);
+      console.log("Données des employés du mois en cours chargées:", employeesData);
       toast.success("Données des employés du mois en cours mises à jour avec succès");
     } catch (error) {
       console.error("Erreur lors du chargement des données Edge Functions:", error);
@@ -259,291 +202,164 @@ export default function EmployesPage() {
     }
   }, [loading, session, router]);
 
-  // Filtrer les employés en fonction des critères de recherche
+  // Appliquer les filtres et recharger les données
   useEffect(() => {
-    // Commencer avec les employés qui ont un user_id (déjà filtrés dans loadEmployees)
-    let filtered = employees.filter((employee) => employee.user_id);
-
-    // Filtre par recherche
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (employee) =>
-          employee.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          employee.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          employee.poste.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtre par genre
-    if (selectedGender) {
-      filtered = filtered.filter(
-        (employee) => employee.genre === selectedGender
-      );
-    }
-
-    // Filtre par type de contrat
-    if (selectedContractType) {
-      filtered = filtered.filter(
-        (employee) => employee.type_contrat === selectedContractType
-      );
-    }
-
-    setFilteredEmployees(filtered);
+    const filters = {
+      search: searchTerm || undefined,
+      type_contrat: selectedContractType || undefined,
+      actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+    };
+    
+    loadEmployees(1, filters);
     setCurrentPage(1);
-  }, [employees, searchTerm, selectedGender, selectedContractType]);
+  }, [searchTerm, selectedContractType, selectedStatus]);
+
+  // Les statistiques sont globales et ne changent pas avec les filtres
+
+  // Calculer les statistiques (utiliser les données de l'Edge Function pour les totaux globaux)
+  const activeEmployees = statistics?.statistics?.active_employees || 0;
+  const newThisMonth = statistics?.statistics?.new_this_month || 0;
+  const retentionRate = statistics?.statistics?.activation_rate || 0;
+  const totalEmployeesFromStats = statistics?.statistics?.total_employees || 0;
 
   // Pagination
-  const employeesPerPage = 8;
-  const totalPages = Math.ceil(filteredEmployees.length / employeesPerPage);
-  const indexOfLastEmployee = currentPage * employeesPerPage;
-  const indexOfFirstEmployee = indexOfLastEmployee - employeesPerPage;
-  const currentEmployees = filteredEmployees.slice(
-    indexOfFirstEmployee,
-    indexOfLastEmployee
-  );
+  const currentEmployees = filteredEmployees; // Les données viennent déjà paginées de l'API
 
-  // Calculer les statistiques - utiliser les données Edge Function en priorité
-  const totalEmployees = currentMonthData?.statistics?.total_employees || 
-    currentMonthData?.partner_info?.employees_count || 
-    employees.length;
-  
-  const activeEmployees = currentMonthData?.statistics?.active_employees || 
-    currentMonthData?.partner_info?.active_employees_count || 
-    employees.filter((emp) => emp.actif).length;
-  
-  const newThisMonth = employees.filter((emp) => {
-    const createdDate = new Date(emp.created_at || "");
-    const now = new Date();
-    return (
-      emp.user_id && // Vérifier que l'employé a un user_id
-      createdDate.getMonth() === now.getMonth() &&
-      createdDate.getFullYear() === now.getFullYear()
-    );
-  }).length;
-  
-  const retentionRate =
-    totalEmployees > 0
-      ? ((activeEmployees / totalEmployees) * 100).toFixed(1)
-      : "0";
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    const filters = {
+      search: searchTerm || undefined,
+      type_contrat: selectedContractType || undefined,
+      actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+    };
+    loadEmployees(page, filters);
+  };
 
-  // Ouvrir le modal de visualisation des détails
-  const openViewModal = (employee: EmployeeWithRemainingSalary) => {
+  // Fonctions utilitaires
+  const formatSalary = (salary: number) => {
+    return new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "GNF",
+      minimumFractionDigits: 0,
+    }).format(salary);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("fr-FR");
+  };
+
+  // Gestion des modales
+  const openViewModal = (employee: Employee) => {
     setSelectedEmployee(employee);
     setIsViewModalOpen(true);
   };
 
-  // Fermer le modal de visualisation
   const closeViewModal = () => {
-    setIsViewModalOpen(false);
     setSelectedEmployee(null);
+    setIsViewModalOpen(false);
   };
 
-  // Exporter les données au format CSV
+  // Export CSV
   const handleExportCSV = () => {
-    if (!session?.partner) return;
-
-    // Fonction pour nettoyer les données
-    const cleanData = (data: any) => {
-      if (data === null || data === undefined) return "";
-      return String(data).replace(/"/g, '""').trim();
-    };
-
-    // Fonction pour formater les montants
-    const formatAmount = (amount: number | null | undefined) => {
-      if (!amount) return "0";
-      return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-    };
-
-    // Fonction pour formater les dates
-    const formatDate = (dateString: string | null | undefined) => {
-      if (!dateString) return "";
-      try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("fr-FR");
-      } catch {
-        return "";
-      }
-    };
-
-    // En-têtes
-    const headers = [
-      "ID Employe",
-      "Nom",
-      "Prenom",
-      "Genre",
-      "Email",
-      "Telephone",
-      "Poste",
-      "Role",
-      "Type de contrat",
-      "Salaire net (GNF)",
-      "Salaire restant (GNF)",
-      "Date embauche",
-      "Statut",
-      "Adresse",
-      "Date creation",
-    ];
-
-    // Données
-    const rows = employees.map((employee) => [
-      cleanData(employee.id),
-      cleanData(employee.nom),
-      cleanData(employee.prenom),
-      cleanData(employee.genre),
-      cleanData(employee.email),
-      cleanData(employee.telephone),
-      cleanData(employee.poste),
-      cleanData(employee.role),
-      cleanData(employee.type_contrat),
-      formatAmount(employee.salaire_net),
-      formatAmount(employee.salaire_restant),
-      formatDate(employee.date_embauche),
-      employee.actif ? "Actif" : "Inactif",
-      cleanData(employee.adresse),
-      formatDate(employee.created_at),
-    ]);
-
-    // Créer le contenu CSV
     const csvContent = [
-      headers.join(";"),
-      ...rows.map((row) => row.join(";")),
-    ].join("\n");
+      ["Nom", "Prénom", "Email", "Poste", "Type de contrat", "Salaire net", "Statut"],
+      ...filteredEmployees.map((emp) => [
+        emp.nom,
+        emp.prenom,
+        emp.email || "",
+        emp.poste || "",
+        emp.type_contrat || "",
+        emp.salaire_net?.toString() || "",
+        emp.actif ? "Actif" : "Inactif",
+      ]),
+    ]
+      .map((row) => row.map((field) => `"${field}"`).join(","))
+      .join("\n");
 
-    // Créer le blob avec l'encodage UTF-8 BOM pour Excel
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=utf-8",
-    });
-
-    // Télécharger le fichier
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
-    link.href = url;
-    link.download = `employes_${session.partner.company_name}_${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    link.setAttribute("href", url);
+    link.setAttribute("download", `employes_${new Date().toISOString().split("T")[0]}.csv`);
+    link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    toast.success(`Export CSV réussi - ${employees.length} employés exportés`);
   };
 
-  // Gérer le changement de page
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
-  // Si en cours de chargement, afficher un état de chargement
-  if (loading || isLoading) {
+  if (loading || isLoading || statisticsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des employés..."}
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">
+            {loading ? "Chargement de la session..." : isLoading ? "Chargement des employés..." : "Chargement des statistiques..."}
           </p>
         </div>
       </div>
     );
   }
 
-  // Si pas de partenaire, afficher un message d'erreur
-  if (!session?.partner) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-            Accès non autorisé
-          </h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Vous n'avez pas les permissions nécessaires pour accéder à cette
-            page.
-          </p>
-        </div>
-      </div>
-    );
+  if (!session) {
+    return null;
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Gestion des employés
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <Users className="h-8 w-8 text-blue-600" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Gestion des Employés
             </h1>
-            {currentMonthData && (
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                Données du mois en cours
-              </span>
-            )}
+          </div>
             <button
               onClick={loadCurrentMonthData}
-              disabled={edgeFunctionLoading}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+            className="flex items-center px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
               title="Actualiser les données du mois en cours"
             >
               <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {session?.partner?.company_name} - {totalEmployees} employés total (
-            {filteredEmployees.length} avec compte)
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={loadEmployees}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Actualiser
-          </button>
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            Exporter CSV
-          </button>
-        </div>
+          {session?.partner?.company_name} - {statisticsLoading ? "..." : totalEmployeesFromStats} employés total
+        </p>
       </div>
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total des employés"
-          value={totalEmployees}
+          value={statisticsLoading ? "..." : totalEmployeesFromStats}
           icon={Users}
           color="blue"
         />
         <StatCard
           title="Employés actifs"
-          value={activeEmployees}
-          total={totalEmployees}
+          value={statisticsLoading ? "..." : activeEmployees}
+          total={totalEmployeesFromStats}
           icon={Calendar}
           color="green"
         />
         <StatCard
-          title="Nouveaux ce mois"
-          value={newThisMonth}
+          title="Employés inactifs"
+          value={statisticsLoading ? "..." : (statistics?.statistics?.inactive_employees || 0)}
+          total={totalEmployeesFromStats}
           icon={TrendingUp}
           color="yellow"
         />
         <StatCard
-          title="Taux de rétention"
-          value={`${retentionRate}%`}
+          title="Taux d'activation"
+          value={statisticsLoading ? "..." : `${retentionRate}%`}
           icon={AlertTriangle}
           color="purple"
         />
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20  rounded-lg shadow p-6">
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Recherche */}
           <div className="flex-1">
@@ -554,7 +370,7 @@ export default function EmployesPage() {
                 placeholder="Rechercher un employé..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent  dark:text-white"
+                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
               />
             </div>
           </div>
@@ -598,15 +414,6 @@ export default function EmployesPage() {
                 >
                   Femme
                 </button>
-                {/* <button
-                  onClick={() => {
-                    setSelectedGender("Autre");
-                    setIsGenderDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Autre
-                </button> */}
               </div>
             )}
           </div>
@@ -667,6 +474,49 @@ export default function EmployesPage() {
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
                 >
                   Stage
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Filtre par statut */}
+          <div className="relative">
+            <button
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              {selectedStatus === 'actif' ? 'Actifs' : selectedStatus === 'inactif' ? 'Inactifs' : 'Statut'}
+              <ChevronDown className="w-4 h-4 ml-2" />
+            </button>
+            {isStatusDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                <button
+                  onClick={() => {
+                    setSelectedStatus(null);
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                >
+                  Tous les statuts
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedStatus('actif');
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                >
+                  Actifs
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedStatus('inactif');
+                    setIsStatusDropdownOpen(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
+                >
+                  Inactifs
                 </button>
               </div>
             )}
@@ -817,17 +667,17 @@ export default function EmployesPage() {
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   Affichage de{" "}
                   <span className="font-medium">
-                    {indexOfFirstEmployee + 1}
+                    {((currentPage - 1) * employeesPerPage) + 1}
                   </span>{" "}
                   à{" "}
                   <span className="font-medium">
-                    {Math.min(indexOfLastEmployee, filteredEmployees.length)}
+                    {Math.min(currentPage * employeesPerPage, totalEmployees)}
                   </span>{" "}
                   sur{" "}
                   <span className="font-medium">
-                    {filteredEmployees.length}
+                    {totalEmployees}
                   </span>{" "}
-                  employés avec compte
+                  employés
                 </p>
               </div>
               <div>
@@ -933,7 +783,7 @@ export default function EmployesPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Salaire restant
                   </label>
-                  <p className="mt-1 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  <p className="mt-1 text-sm text-semibold text-emerald-600 dark:text-emerald-400">
                     {selectedEmployee.salaire_restant
                       ? formatSalary(selectedEmployee.salaire_restant)
                       : "Non défini"}
