@@ -92,6 +92,9 @@ export default function DemandesPage() {
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
   
+  // État pour stocker les informations des employés
+  const [employeesData, setEmployeesData] = useState<Map<string, any>>(new Map());
+  
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
@@ -205,6 +208,28 @@ export default function DemandesPage() {
     await loadSalaryDemandsData();
   };
 
+  // Fonction pour charger les informations des employés
+  const loadEmployeesData = async () => {
+    if (!session?.access_token) return;
+    
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const employeesData = await edgeFunctionService.getSalaryDemandsEmployees();
+      
+      if (employeesData.success && employeesData.data) {
+        // Créer une Map pour un accès rapide par ID
+        const employeesMap = new Map();
+        employeesData.data.forEach((employee: any) => {
+          employeesMap.set(employee.id, employee);
+        });
+        setEmployeesData(employeesMap);
+        console.log("✅ Données employés chargées:", employeesMap.size, "employés");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des employés:", error);
+    }
+  };
+
 
   // Charger les périodes d'activité pour les filtres
   const loadActivityPeriods = async () => {
@@ -298,6 +323,8 @@ export default function DemandesPage() {
     loadCurrentMonthData();
     // Charger les données pour les filtres
     loadActivityPeriods();
+    // Charger les données des employés
+    loadEmployeesData();
   }, [session?.partner]);
 
   // Fallback pour les périodes d'activité si elles ne se chargent pas
@@ -359,8 +386,20 @@ export default function DemandesPage() {
         demandeur = employe.display_name || employe.email || `Employé ${d.employe_id}`;
       }
     } else {
-      // Fallback si pas d'infos employé ou objet vide
-      demandeur = `Employé ${d.employe_id}`;
+      // Fallback: chercher dans les données d'employés chargées
+      const employeeFromMap = employeesData.get(d.employe_id);
+      if (employeeFromMap) {
+        const prenom = employeeFromMap.prenom || employeeFromMap.first_name || "";
+        const nom = employeeFromMap.nom || employeeFromMap.last_name || employeeFromMap.name || "";
+        demandeur = `${prenom} ${nom}`.trim();
+        
+        if (!demandeur) {
+          demandeur = employeeFromMap.display_name || employeeFromMap.email || `Employé ${d.employe_id}`;
+        }
+      } else {
+        // Dernier fallback
+        demandeur = `Employé ${d.employe_id}`;
+      }
     }
     
     return {
