@@ -2,11 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, Calendar, RefreshCw } from "lucide-react";
+import { Users, Calendar, RefreshCw, Filter, Loader2 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
 import { toast } from "sonner";
-import { PartnerDataService } from "@/lib/services";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   LineChart,
@@ -20,7 +19,6 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { supabase } from "@/lib/supabase";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -80,11 +78,27 @@ interface RemboursementWithEmployee {
   created_at: string;
   updated_at: string;
   pay_id: string | null;
-  employees?: {
+  employe?: {
     id: string;
-    prenom: string;
     nom: string;
-    poste: string;
+    prenom: string;
+    email: string;
+    telephone: string;
+    partner_id: string;
+  } | null;
+  partenaire?: {
+    id: string;
+    email: string;
+    phone: string;
+    payment_day: number;
+    company_name: string;
+  } | null;
+  transaction?: {
+    id: string;
+    statut: string;
+    date_transaction: string;
+    methode_paiement: string;
+    numero_transaction: string;
   } | null;
 }
 
@@ -120,30 +134,88 @@ export default function FinancesPage() {
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
+  
+  // États pour les filtres de l'edge function
+  const [filters, setFilters] = useState({
+    mois: null as number | null,
+    annee: null as number | null,
+    date_debut: null as string | null,
+    date_fin: null as string | null,
+    status: null as string | null,
+    limit: 50,
+    offset: 0
+  });
+
+  // États pour les mois et années actifs
+  const [activeMonths, setActiveMonths] = useState<number[]>([]);
+  const [activeYears, setActiveYears] = useState<number[]>([]);
 
   // Charger les demandes d'avance de salaire dynamiquement
   useEffect(() => {
-    if (!loading && session?.partner) {
+    if (!loading && session?.partner && session?.access_token) {
       loadSalaryAdvanceData();
-      loadCurrentMonthData();
+      loadFinancesData();
+      loadActivePeriods();
     }
-  }, [loading, session?.partner]);
+  }, [loading, session?.partner, session?.access_token]);
 
-  // Récupère le payment_day du partenaire connecté
+  // Fonction pour charger les mois et années actifs
+  const loadActivePeriods = async () => {
+    if (!session?.access_token) return;
+    
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Récupérer l'évolution mensuelle pour déterminer les mois actifs
+      const evolutionResponse = await edgeFunctionService.getFinancesEvolutionMensuelle();
+      if (evolutionResponse.success && evolutionResponse.data) {
+        const evolutionData = evolutionResponse.data;
+        
+        // Extraire les mois et années actifs
+        const months = new Set<number>();
+        const years = new Set<number>();
+        
+        evolutionData.forEach((item: any) => {
+          if (item.debloque > 0) {
+            // Convertir le nom du mois en numéro
+            const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+            const monthIndex = monthNames.indexOf(item.mois);
+            if (monthIndex !== -1) {
+              months.add(monthIndex + 1); // +1 car les mois commencent à 1
+            }
+          }
+        });
+        
+        // Ajouter les années courantes et précédentes
+        const currentYear = new Date().getFullYear();
+        years.add(currentYear);
+        years.add(currentYear - 1);
+        
+        setActiveMonths(Array.from(months).sort((a, b) => a - b));
+        setActiveYears(Array.from(years).sort((a, b) => b - a));
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des périodes actives:", error);
+    }
+  };
+
+  // Récupère le payment_day du partenaire connecté via Edge Function
   useEffect(() => {
     const fetchPaymentDay = async () => {
-      if (!session?.partner) return;
-      const { data, error } = await supabase
-        .from("partners")
-        .select("payment_day")
-        .eq("id", session.partner.id)
-        .single();
-      if (!error && data && data.payment_day) {
-        setPaymentDay(data.payment_day);
+      if (!session?.partner || !session?.access_token) return;
+      
+      try {
+        edgeFunctionService.setAccessToken(session.access_token);
+        const response = await edgeFunctionService.getPartnerInfo();
+        if (response.success && response.partner_info?.payment_day) {
+          setPaymentDay(response.partner_info.payment_day);
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération du payment_day:", error);
       }
     };
     fetchPaymentDay();
-  }, [session?.partner]);
+  }, [session?.partner, session?.access_token]);
 
   // Calcul de la date limite de remboursement
   const now = new Date();
@@ -164,216 +236,99 @@ export default function FinancesPage() {
       month: "long",
       year: "numeric",
     });
+  } else {
+    // Date par défaut si payment_day n'est pas disponible
+    const dateRemboursement = new Date(now.getFullYear(), now.getMonth() + 1, 25);
+    dateLimite = dateRemboursement.toLocaleDateString("fr-FR", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    });
   }
 
   const loadSalaryAdvanceData = async () => {
+    if (!session?.access_token) return;
+    
     setIsLoading(true);
     try {
-      // 1. Récupérer les demandes avec les employés
-      const { data: demandes, error: demandesError } = await supabase
-        .from("salary_advance_requests")
-        .select(
-          `
-          *,
-          employees!salary_advance_requests_employe_id_fkey (
-            id,
-            nom,
-            prenom,
-            poste
-          )
-        `
-        )
-        .eq("partenaire_id", session?.partner?.id)
-        .order("date_creation", { ascending: false });
-
-      if (demandesError) {
-        console.error(
-          "Erreur lors de la récupération des demandes:",
-          demandesError
-        );
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // 1. Récupérer les statistiques financières via Edge Function
+      const statsResponse = await edgeFunctionService.getFinancesStats();
+      if (!statsResponse.success) {
+        console.error("Erreur lors de la récupération des statistiques:", statsResponse.message);
         return;
       }
-
-      // 2. Récupérer les transactions correspondantes
-      const { data: transactions, error: transactionsError } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("entreprise_id", session?.partner?.id);
-
-      if (transactionsError) {
-        console.error(
-          "Erreur lors de la récupération des transactions:",
-          transactionsError
-        );
+      
+      const statsData = statsResponse.data || {};
+      
+      // 2. Récupérer les demandes via Edge Function
+      const demandesResponse = await edgeFunctionService.getFinancesDemandes();
+      if (!demandesResponse.success) {
+        console.error("Erreur lors de la récupération des demandes:", demandesResponse.message);
         return;
       }
+      
+      const demandes = demandesResponse.data || [];
+      setSalaryRequests(demandes);
 
-      // 3. Créer un map des transactions par demande_avance_id
-      const transactionsMap = new Map();
-      (transactions || []).forEach((transaction) => {
-        if (transaction.demande_avance_id) {
-          transactionsMap.set(transaction.demande_avance_id, transaction);
-        }
-      });
-
-      // 4. Traiter les demandes et ajuster le statut selon les transactions
-      const demandesTraitees = (demandes || []).map((demande) => {
-        const transaction = transactionsMap.get(demande.id);
-
-        // Si la demande est approuvée mais n'a pas de transaction effectuée, la marquer comme rejetée
-        if (
-          demande.statut === "Validé" &&
-          (!transaction || transaction.statut !== "EFFECTUEE")
-        ) {
-          return {
-            ...demande,
-            statut: "Rejeté",
-          };
-        }
-
-        return demande;
-      });
-
-      setSalaryRequests(demandesTraitees);
-
-      // 5. Récupérer tous les remboursements pour l'entreprise
-      const { data: allRemboursements, error: remboursementsError } =
-        await supabase
-          .from("remboursements")
-          .select("*")
-          .eq("partenaire_id", session?.partner?.id);
-
-      if (remboursementsError) {
-        console.error(
-          "Erreur lors de la récupération des remboursements:",
-          remboursementsError
-        );
+      // 3. Récupérer les remboursements via Edge Function
+      const remboursementsResponse = await edgeFunctionService.getFinancesRemboursements();
+      if (!remboursementsResponse.success) {
+        console.error("Erreur lors de la récupération des remboursements:", remboursementsResponse.message);
         return;
       }
+      
+      const allRemboursements = remboursementsResponse.data || [];
 
-      // Calculs selon la nouvelle logique
-      const now = new Date();
-      const thisMonth = now.getMonth();
-      const thisYear = now.getFullYear();
-
-      // Demandes validées ce mois-ci (après traitement avec les transactions)
-      const demandesValideesMois = demandesTraitees.filter((d: any) => {
-        const dVal = d.date_validation ? new Date(d.date_validation) : null;
-        return (
-          dVal &&
-          dVal.getMonth() === thisMonth &&
-          dVal.getFullYear() === thisYear &&
-          d.statut === "Validé" // Seulement les vraies demandes validées
-        );
-      });
-
-      // Demandes rejetées ce mois-ci (après traitement avec les transactions)
-      const demandesRejeteesMois = demandesTraitees.filter((d: any) => {
-        const dVal = d.date_validation ? new Date(d.date_validation) : null;
-        return (
-          dVal &&
-          dVal.getMonth() === thisMonth &&
-          dVal.getFullYear() === thisYear &&
-          d.statut === "Rejeté" // Demandes rejetées après vérification des transactions
-        );
-      });
-
-      // Remboursements effectués ce mois-ci
-      const remboursementsMois = (allRemboursements || []).filter((r: any) => {
-        const rDate = r.date_creation ? new Date(r.date_creation) : null;
-        return (
-          rDate &&
-          rDate.getMonth() === thisMonth &&
-          rDate.getFullYear() === thisYear
-        );
-      });
-
-      // Flux financier = somme de tous les remboursements entre l'entreprise et Zalama
-      const fluxFinance = (allRemboursements || []).reduce(
-        (sum: number, r: any) =>
-          sum + Number(r.montant_total_remboursement || 0),
-        0
-      );
-
-      // Calculer les dates de paiement selon le payment_day
-      const calculatePaymentDates = () => {
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-
-        // Date de paiement du mois courant
-        const paiementMoisCourant = new Date(
-          currentYear,
-          currentMonth,
-          paymentDay || 25
-        );
-
-        let dernierPaiement: Date;
-        let prochainPaiement: Date;
-
-        if (today >= paiementMoisCourant) {
-          // Si on a dépassé ou on est le jour de paiement du mois courant
-          dernierPaiement = paiementMoisCourant;
-          prochainPaiement = new Date(
-            currentYear,
-            currentMonth + 1,
-            paymentDay || 25
-          );
-        } else {
-          // Si on n'a pas encore atteint le jour de paiement du mois courant
-          dernierPaiement = new Date(
-            currentYear,
-            currentMonth - 1,
-            paymentDay || 25
-          );
-          prochainPaiement = paiementMoisCourant;
-        }
-
-        return { dernierPaiement, prochainPaiement };
-      };
-
-      const { dernierPaiement, prochainPaiement } = calculatePaymentDates();
-
-      // Montant débloqué ce mois-ci = somme des montants des demandes validées dans la période de paiement
-      const debloqueMois = demandesTraitees.reduce((sum: number, d: any) => {
-        const dVal = d.date_validation ? new Date(d.date_validation) : null;
-        if (dVal && d.statut === "Validé") {
-          // Vérifier si la demande est dans la période de paiement actuelle
-          if (dVal >= dernierPaiement && dVal < prochainPaiement) {
-            return sum + Number(d.montant_demande || 0);
-          }
-        }
-        return sum;
-      }, 0);
-
-      // Montant à rembourser ce mois-ci = somme des remboursements avec statut EN_ATTENTE
-      const aRembourserMois = (allRemboursements || []).reduce(
-        (sum: number, r: any) => {
-          if (r.statut === "EN_ATTENTE") {
-            return sum + Number(r.montant_total_remboursement || 0);
-          }
-          return sum;
-        },
-        0
-      );
-
-      // Nombre d'employés ayant eu une demande approuvée ce mois-ci = nombre de demandes validées dans la période de paiement
-      const employesApprouves = demandesTraitees.filter((d: any) => {
-        const dVal = d.date_validation ? new Date(d.date_validation) : null;
-        if (dVal && d.statut === "Validé") {
-          // Vérifier si la demande est dans la période de paiement actuelle
-          return dVal >= dernierPaiement && dVal < prochainPaiement;
-        }
-        return false;
-      }).length;
-
+      // Utiliser directement les données de l'Edge Function
       setStats({
-        fluxFinance,
-        debloqueMois,
-        aRembourserMois,
-        dateLimite,
-        nbEmployesApprouves: employesApprouves,
+        fluxFinance: statsData.montant_total || 0,
+        debloqueMois: statsData.montant_total || 0,
+        aRembourserMois: statsData.montant_restant || 0,
+        dateLimite: dateLimite,
+        nbEmployesApprouves: statsData.total_transactions || 0,
       });
+
+      // Mettre à jour les statistiques financières pour les graphiques
+      const newFinancialStats: FinancialStats = {
+        totalDebloque: statsData.montant_total || 0,
+        totalRecupere: statsData.montant_paye || 0,
+        totalRevenus: statsData.montant_total || 0,
+        totalRemboursements: statsData.total_remboursements || 0,
+        totalCommissions: statsData.montant_total - statsData.montant_paye || 0,
+        balance: statsData.balance_wallet || 0,
+        pendingTransactions: statsData.remboursements_en_attente || 0,
+        totalTransactions: statsData.total_transactions || 0,
+        montantMoyen: statsData.montant_moyen || 0,
+        evolutionMensuelle: statsData.evolution_mensuelle || [],
+        repartitionParType: statsData.repartition_par_mois || [],
+        repartitionParStatut: statsData.repartition_par_statut || []
+      };
+      setFinancialStats(newFinancialStats);
+      
+      // Mettre à jour les mois et années actifs si nécessaire
+      if (statsData.evolution_mensuelle && statsData.evolution_mensuelle.length > 0) {
+        const months = new Set<number>();
+        const years = new Set<number>();
+        
+        statsData.evolution_mensuelle.forEach((item: any) => {
+          if (item.debloque > 0) {
+            const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+            const monthIndex = monthNames.indexOf(item.mois);
+            if (monthIndex !== -1) {
+              months.add(monthIndex + 1);
+            }
+          }
+        });
+        
+        const currentYear = new Date().getFullYear();
+        years.add(currentYear);
+        years.add(currentYear - 1);
+        
+        setActiveMonths(Array.from(months).sort((a, b) => a - b));
+        setActiveYears(Array.from(years).sort((a, b) => b - a));
+      }
     } catch (e) {
       console.error("Erreur lors du chargement des données financières:", e);
       toast.error("Erreur lors du chargement des données financières");
@@ -561,98 +516,123 @@ export default function FinancesPage() {
     }));
   };
 
-  const loadFinancialData = async () => {
-    if (!session?.partner) return;
 
-    setIsLoading(true);
-    try {
-      // Utiliser le service pour récupérer les vraies données
-      const partnerService = new PartnerDataService(session.partner.id);
-      const remboursements = await partnerService.getRemboursements();
-
-      setTransactions(remboursements as unknown as RemboursementWithEmployee[]);
-
-      // Calculer les statistiques financières
-      const stats = calculateFinancialStats(
-        remboursements as unknown as RemboursementWithEmployee[]
-      );
-      setFinancialStats(stats);
-    } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données financières:",
-        error
-      );
-      toast.error("Erreur lors du chargement des données financières");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Charger les données du mois en cours via Edge Functions
-  const loadCurrentMonthData = async () => {
+  // Charger les données financières via Edge Functions
+  const loadFinancesData = async (customFilters: any = {}) => {
     if (!session?.access_token) return;
 
     setEdgeFunctionLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      const dashboardData = await edgeFunctionService.getDashboardData();
-
-      if (!dashboardData.success) {
-        console.error("Erreur Edge Function:", dashboardData.message);
-        toast.error("Erreur lors du chargement des données du mois en cours");
+      
+      // Combiner les filtres par défaut avec les filtres personnalisés
+      const activeFilters = { ...filters, ...customFilters };
+      
+      // Nettoyer les filtres (enlever les valeurs null/undefined)
+      const cleanFilters = Object.fromEntries(
+        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+      );
+      
+      console.log("🔄 Chargement des données financières avec filtres:", cleanFilters);
+      
+      // Charger les statistiques financières
+      const statsData = await edgeFunctionService.getFinancesStats(cleanFilters);
+      
+      if (!statsData.success) {
+        console.error("Erreur Edge Function:", statsData.message);
+        toast.error("Erreur lors du chargement des données financières");
         return;
       }
 
-                // Les données sont dans dashboardData.data selon la réponse Edge Function
-                const data = dashboardData.data || dashboardData;
-                setCurrentMonthData(data);
-                
-                // Mettre à jour les données locales avec les données du mois en cours
-                if (data.remboursements) {
-                    setTransactions(data.remboursements);
-                    
-                    // Recalculer les statistiques avec les nouvelles données
-                    const stats = calculateFinancialStats(data.remboursements);
-                    setFinancialStats(stats);
-                }
+      // Les données sont dans statsData.data selon la réponse Edge Function
+      const data = statsData.data || statsData;
+      setCurrentMonthData(data);
+      
+      // Mettre à jour les statistiques financières
+      if (data) {
+        const newFinancialStats: FinancialStats = {
+          totalDebloque: data.montant_total || 0,
+          totalRecupere: data.montant_paye || 0,
+          totalRevenus: data.montant_total || 0,
+          totalRemboursements: data.total_remboursements || 0,
+          totalCommissions: data.montant_total - data.montant_paye || 0,
+          balance: data.balance_wallet || 0,
+          pendingTransactions: data.remboursements_en_attente || 0,
+          totalTransactions: data.total_transactions || 0,
+          montantMoyen: data.montant_moyen || 0,
+          evolutionMensuelle: data.evolution_mensuelle || [],
+          repartitionParType: data.repartition_par_mois || [],
+          repartitionParStatut: data.repartition_par_statut || []
+        };
+        setFinancialStats(newFinancialStats);
+        
+        // Mettre à jour les statistiques principales avec les données Edge Function
+        setStats({
+          fluxFinance: data.montant_total || 0,
+          debloqueMois: data.montant_total || 0, // Utiliser le montant total pour le mois
+          aRembourserMois: data.montant_restant || 0,
+          dateLimite: dateLimite,
+          nbEmployesApprouves: data.total_transactions || 0
+        });
+      }
 
-      console.log("Données financières du mois en cours chargées:", dashboardData);
-      toast.success("Données financières du mois en cours mises à jour avec succès");
+      console.log("✅ Données financières chargées avec succès:", data);
+      toast.success("Données financières mises à jour avec succès");
     } catch (error) {
       console.error("Erreur lors du chargement des données Edge Functions:", error);
-      toast.error("Erreur lors du chargement des données du mois en cours");
+      toast.error("Erreur lors du chargement des données financières");
     } finally {
       setEdgeFunctionLoading(false);
     }
   };
 
+  // Fonction pour appliquer un filtre
+  const applyFilter = (filterKey: string, value: any) => {
+    const newFilters = { ...filters, [filterKey]: value };
+    setFilters(newFilters);
+    
+    // Recharger les données avec les nouveaux filtres
+    loadFinancesData(newFilters);
+  };
+
+  // Fonction pour réinitialiser tous les filtres
+  const resetFilters = () => {
+    const defaultFilters = {
+      mois: null,
+      annee: null,
+      date_debut: null,
+      date_fin: null,
+      status: null,
+      limit: 50,
+      offset: 0
+    };
+    setFilters(defaultFilters);
+    loadFinancesData(defaultFilters);
+  };
+
+
   // Pour l'historique des remboursements, charge les données de remboursements :
   const loadTransactions = async () => {
+    if (!session?.access_token) return;
+    
     try {
-      const { data, error } = await supabase
-        .from("remboursements")
-        .select(
-          `
-          *,
-          employees!remboursements_employe_id_fkey (
-            id,
-            prenom,
-            nom,
-            poste
-          )
-        `
-        )
-        .eq("partenaire_id", session?.partner?.id)
-        .order("date_creation", { ascending: false });
-      if (error) throw error;
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      const response = await edgeFunctionService.getFinancesRemboursements();
+      if (!response.success) {
+        console.error("Erreur lors du chargement des remboursements:", response.message);
+        toast.error("Erreur lors du chargement des remboursements");
+        return;
+      }
 
+      const data = response.data || [];
       console.log("Remboursements chargés:", data);
       console.log("Nombre de remboursements:", data?.length);
 
-      setTransactions(data || []);
+      setTransactions(data);
 
       // Calculer les statistiques financières
-      const stats = calculateFinancialStats(data || []);
+      const stats = calculateFinancialStats(data);
       console.log("Stats calculées:", stats);
       setFinancialStats(stats);
     } catch (e) {
@@ -811,7 +791,7 @@ export default function FinancesPage() {
               </span>
             )}
             <button
-              onClick={loadCurrentMonthData}
+              onClick={() => loadFinancesData()}
               disabled={edgeFunctionLoading}
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               title="Actualiser les données du mois en cours"
@@ -921,43 +901,137 @@ export default function FinancesPage() {
         )}
       </div>
 
-      {/* Filtres */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-3">
-        <div className="flex flex-col lg:flex-row gap-3">
-          {/* Filtre par type */}
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Type de transaction
+      {/* Filtres avancés */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtres avancés
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={resetFilters}
+              className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => loadFinancesData(filters)}
+              disabled={edgeFunctionLoading}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+            >
+              {edgeFunctionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              Actualiser
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
             </label>
             <select
-              value={selectedType || ""}
-              onChange={(e) => setSelectedType(e.target.value || null)}
-              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+              value={filters.mois || ""}
+              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              <option value="">Tous les types</option>
-              <option value="Payé">Payé</option>
-              <option value="En attente">En attente</option>
-              <option value="Annulé">Annulé</option>
+              <option value="">Tous les mois</option>
+              {activeMonths.length > 0 ? (
+                activeMonths.map((month) => (
+                  <option key={month} value={month}>
+                    {new Date(0, month - 1).toLocaleString('fr-FR', { month: 'long' })}
+                  </option>
+                ))
+              ) : (
+                Array.from({ length: 12 }, (_, i) => (
+                  <option key={i + 1} value={i + 1}>
+                    {new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={filters.annee || ""}
+              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les années</option>
+              {activeYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
             </select>
           </div>
 
           {/* Filtre par statut */}
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Statut
             </label>
             <select
-              value={selectedStatus || ""}
-              onChange={(e) => setSelectedStatus(e.target.value || null)}
-              className="w-full px-3 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+              value={filters.status || ""}
+              onChange={(e) => applyFilter('status', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
-              <option value="Payé">Payé</option>
-              <option value="En attente">En attente</option>
-              <option value="Annulé">Annulé</option>
+              <option value="PAYE">Payé</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="ANNULE">Annulé</option>
             </select>
           </div>
+
+          {/* Filtre par période personnalisée */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Période personnalisée
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={filters.date_debut || ""}
+                onChange={(e) => applyFilter('date_debut', e.target.value || null)}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Date début"
+              />
+              <input
+                type="date"
+                value={filters.date_fin || ""}
+                onChange={(e) => applyFilter('date_fin', e.target.value || null)}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Date fin"
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Indicateur de filtres actifs */}
+        {Object.values(filters).some(value => value !== null && value !== undefined && value !== "") && (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+              <Filter className="h-4 w-4" />
+              <span>Filtres actifs :</span>
+              {Object.entries(filters).map(([key, value]) => {
+                if (value === null || value === undefined || value === "") return null;
+                return (
+                  <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
+                    {key}: {value}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tableau des transactions */}
@@ -967,6 +1041,11 @@ export default function FinancesPage() {
             Historique des remboursements ({filteredTransactions.length}{" "}
             remboursements)
           </h3>
+          {filteredTransactions.length !== transactions.length && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {transactions.length} remboursements au total
+            </p>
+          )}
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full dark:divide-gray-700">
@@ -1030,13 +1109,13 @@ export default function FinancesPage() {
                       <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         <div className="flex flex-col">
                           <span>
-                            {transaction.employees
-                              ? `${transaction.employees.prenom} ${transaction.employees.nom}`
+                            {transaction.employe
+                              ? `${transaction.employe.prenom} ${transaction.employe.nom}`
                               : "Non spécifié"}
                           </span>
-                          {transaction.employees?.poste && (
+                          {transaction.employe?.email && (
                             <span className="text-xs text-gray-500 dark:text-gray-400">
-                              {transaction.employees.poste}
+                              {transaction.employe.email}
                             </span>
                           )}
                         </div>

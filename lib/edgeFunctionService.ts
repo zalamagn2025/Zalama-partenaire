@@ -4,6 +4,7 @@
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-auth`;
 const DASHBOARD_EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-dashboard-data`;
+const PARTNER_FINANCES_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-finances`;
 const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
 
 export interface PartnerAuthResponse {
@@ -246,7 +247,8 @@ class EdgeFunctionService {
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {},
-    useDashboardApi: boolean = false
+    useDashboardApi: boolean = false,
+    useFinancesApi: boolean = false
   ): Promise<T> {
     // Utiliser les proxies locaux pour les endpoints salary-demands
     if (endpoint.startsWith('/salary-demands')) {
@@ -254,7 +256,16 @@ class EdgeFunctionService {
       return this.makeLocalRequest<T>(url, options);
     }
     
-    const baseUrl = useDashboardApi ? DASHBOARD_EDGE_FUNCTION_BASE_URL : EDGE_FUNCTION_BASE_URL;
+    // Utiliser les proxies locaux pour les endpoints partner-finances
+    if (useFinancesApi) {
+      const url = `/api/proxy/partner-finances${endpoint}`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+    
+    let baseUrl = EDGE_FUNCTION_BASE_URL;
+    if (useDashboardApi) {
+      baseUrl = DASHBOARD_EDGE_FUNCTION_BASE_URL;
+    }
     const url = `${baseUrl}${endpoint}`;
 
     const defaultHeaders: Record<string, string> = {
@@ -477,6 +488,88 @@ class EdgeFunctionService {
 
   async getDashboardAvis(): Promise<PartnerAuthResponse> {
     return this.getAvis();
+  }
+
+  // ========================================
+  // MÉTHODES POUR L'EDGE FUNCTION PARTNER-FINANCES
+  // ========================================
+
+  async getFinancesStats(filters: {
+    mois?: number;
+    annee?: number;
+    date_debut?: string;
+    date_fin?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<PartnerAuthResponse> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value.toString());
+      }
+    });
+    
+    const queryString = params.toString();
+    const url = queryString ? `/stats?${queryString}` : '/stats';
+    
+    return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
+  }
+
+  async getFinancesRemboursements(filters: {
+    mois?: number;
+    annee?: number;
+    date_debut?: string;
+    date_fin?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<PartnerAuthResponse> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value.toString());
+      }
+    });
+    
+    const queryString = params.toString();
+    const url = queryString ? `/remboursements?${queryString}` : '/remboursements';
+    
+    return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
+  }
+
+  async getFinancesDemandes(filters: {
+    mois?: number;
+    annee?: number;
+    date_debut?: string;
+    date_fin?: string;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<PartnerAuthResponse> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        params.append(key, value.toString());
+      }
+    });
+    
+    const queryString = params.toString();
+    const url = queryString ? `/demandes?${queryString}` : '/demandes';
+    
+    return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
+  }
+
+  async getFinancesEvolutionMensuelle(annee?: number): Promise<PartnerAuthResponse> {
+    const params = new URLSearchParams();
+    if (annee !== undefined && annee !== null) {
+      params.append('annee', annee.toString());
+    }
+    
+    const queryString = params.toString();
+    const url = queryString ? `/evolution-mensuelle?${queryString}` : '/evolution-mensuelle';
+    
+    return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
   }
 
   async getDashboardDemandes(status?: string): Promise<PartnerAuthResponse> {
