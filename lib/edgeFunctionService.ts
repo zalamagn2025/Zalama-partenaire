@@ -5,6 +5,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-auth`;
 const DASHBOARD_EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-dashboard-data`;
 const PARTNER_FINANCES_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-finances`;
+const PARTNER_REIMBURSEMENTS_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-reimbursements`;
 const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
 
 export interface PartnerAuthResponse {
@@ -248,7 +249,9 @@ class EdgeFunctionService {
     endpoint: string,
     options: RequestInit = {},
     useDashboardApi: boolean = false,
-    useFinancesApi: boolean = false
+    useFinancesApi: boolean = false,
+    useReimbursementsApi: boolean = false,
+    filters: any = {}
   ): Promise<T> {
     // Utiliser les proxies locaux pour les endpoints salary-demands
     if (endpoint.startsWith('/salary-demands')) {
@@ -259,6 +262,26 @@ class EdgeFunctionService {
     // Utiliser les proxies locaux pour les endpoints partner-finances
     if (useFinancesApi) {
       const url = `/api/proxy/partner-finances${endpoint}`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+    
+    // Utiliser les proxies locaux pour les endpoints partner-reimbursements
+    if (useReimbursementsApi) {
+      let url = `/api/proxy/partner-reimbursements${endpoint}`;
+      
+      // Ajouter les filtres comme paramètres de requête
+      if (Object.keys(filters).length > 0) {
+        const searchParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== '') {
+            searchParams.append(key, String(value));
+          }
+        });
+        if (searchParams.toString()) {
+          url += `?${searchParams.toString()}`;
+        }
+      }
+      
       return this.makeLocalRequest<T>(url, options);
     }
     
@@ -355,13 +378,7 @@ class EdgeFunctionService {
     return this.makeRequest<DashboardDataResponse>("/dashboard-data", {}, true);
   }
 
-  async getEmployees(): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/employees", {}, true);
-  }
 
-  async getRemboursements(): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/remboursements", {}, true);
-  }
 
   async getAvis(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/avis", {}, true);
@@ -474,13 +491,7 @@ class EdgeFunctionService {
   }
 
   // Méthodes de compatibilité (anciennes)
-  async getDashboardEmployees(): Promise<PartnerAuthResponse> {
-    return this.getEmployees();
-  }
 
-  async getDashboardRemboursements(): Promise<PartnerAuthResponse> {
-    return this.getRemboursements();
-  }
 
   async getDashboardAlerts(): Promise<PartnerAuthResponse> {
     return this.getAlerts();
@@ -830,6 +841,50 @@ class EdgeFunctionService {
       console.error("Erreur lors du rejet de l'inscription:", error);
       throw error instanceof Error ? error : new Error("Erreur de connexion");
     }
+  }
+
+  // 💰 PARTNER REIMBURSEMENTS - Méthodes pour les remboursements
+  async getPartnerRemboursements(filters: any = {}): Promise<any> {
+    return this.makeRequest<any>("/", {
+      method: "GET",
+    }, false, false, true, filters);
+  }
+
+  async getPartnerRemboursementById(id: string): Promise<any> {
+    return this.makeRequest<any>(`/${id}`, {
+      method: "GET",
+    }, false, false, true);
+  }
+
+  async updatePartnerRemboursement(id: string, data: any): Promise<any> {
+    return this.makeRequest<any>(`/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }, false, false, true);
+  }
+
+  async getPartnerRemboursementsStatistics(filters: any = {}): Promise<any> {
+    return this.makeRequest<any>("/statistics", {
+      method: "GET",
+    }, false, false, true, filters);
+  }
+
+  async getPartnerRemboursementsEmployees(): Promise<any> {
+    return this.makeRequest<any>("/employees", {
+      method: "GET",
+    }, false, false, true);
+  }
+
+  async getPartnerRemboursementsActivityPeriods(): Promise<any> {
+    return this.makeRequest<any>("/activity-periods", {
+      method: "GET",
+    }, false, false, true);
+  }
+
+  async getPartnerRemboursementsEcheances(remboursementId: string): Promise<any> {
+    return this.makeRequest<any>("/echeances", {
+      method: "GET",
+    }, false, false, true, { remboursement_id: remboursementId });
   }
 }
 

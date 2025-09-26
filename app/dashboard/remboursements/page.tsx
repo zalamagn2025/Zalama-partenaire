@@ -12,7 +12,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import { supabase } from "@/lib/supabase";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -101,6 +100,25 @@ export default function RemboursementsPage() {
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
+  
+  // États pour les filtres de l'edge function partner-reimbursements
+  const [filters, setFilters] = useState({
+    mois: null as number | null,
+    annee: null as number | null,
+    status: null as string | null,
+    employee_id: null as string | null,
+    categorie: null as string | null,
+    date_debut: null as string | null,
+    date_fin: null as string | null,
+    limit: 50,
+    offset: 0
+  });
+  
+  // États pour les données dynamiques des filtres
+  const [activeMonths, setActiveMonths] = useState<number[]>([]);
+  const [activeYears, setActiveYears] = useState<number[]>([]);
+  const [activeEmployees, setActiveEmployees] = useState<any[]>([]);
+  const [activityPeriods, setActivityPeriods] = useState<any>(null);
 
   // Pagination - utiliser les données Edge Function en priorité
   const [currentPage, setCurrentPage] = useState(1);
@@ -125,7 +143,7 @@ export default function RemboursementsPage() {
       edgeFunctionService.setAccessToken(session.access_token);
       
       // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
-      const remboursementsData = await edgeFunctionService.getDashboardRemboursements();
+      const remboursementsData = await edgeFunctionService.getPartnerRemboursements();
 
       if (!remboursementsData.success) {
         console.error("Erreur Edge Function:", remboursementsData.message);
@@ -133,15 +151,18 @@ export default function RemboursementsPage() {
         return;
       }
 
-      // Les données sont directement dans la réponse selon votre exemple
-      setCurrentMonthData(remboursementsData);
+      // Transformer les données regroupées par employé en liste de remboursements individuels
+      const data = remboursementsData.data || [];
+      const transformedData = transformEdgeFunctionData(data);
+      
+      setCurrentMonthData({ data: transformedData });
       
       // Mettre à jour les données locales avec les données du mois en cours
-      if (remboursementsData.data && Array.isArray(remboursementsData.data)) {
-          setRemboursements(remboursementsData.data);
+      if (transformedData && Array.isArray(transformedData)) {
+          setRemboursements(transformedData);
           
           // Calcul du total en attente (seulement les remboursements en attente)
-          const total = remboursementsData.data
+          const total = transformedData
             .filter((r: any) => r.statut === "EN_ATTENTE")
             .reduce(
               (sum: number, r: any) => sum + Number(r.montant_total_remboursement),
@@ -160,133 +181,156 @@ export default function RemboursementsPage() {
     }
   };
 
-  // Fonction de récupération des remboursements (fallback)
-  const fetchRemboursements = async () => {
-    if (!session?.partner) return;
-    setIsLoading(true);
-    const { data, error } = await supabase
-      .from("remboursements")
-      .select(
-        `
-        id, employe_id, partenaire_id, demande_avance_id, montant_transaction, frais_service, montant_total_remboursement, date_limite_remboursement, statut, date_remboursement_effectue,
-        employee:employe_id (nom, prenom, salaire_net)
-      `
-      )
-      .eq("partenaire_id", session.partner.id)
-      .order("date_limite_remboursement", { ascending: true });
-    if (error) {
-      console.error("Erreur récupération remboursements:", error);
-    }
 
-    // Récupérer les données de demande d'avance pour chaque remboursement
-    const remboursementsAvecDemandes = await Promise.all(
-      (data || []).map(async (r: any) => {
-        try {
-          const { data: demandeData, error: demandeError } = await supabase
-            .from("salary_advance_requests")
-            .select("montant_demande, date_validation")
-            .eq("id", r.demande_avance_id)
-            .single();
+  // Fonction pour transformer les données de l'Edge Function
+  const transformEdgeFunctionData = (edgeData: any[]) => {
+    const transformedRemboursements: any[] = [];
+    
+    edgeData.forEach((employeGroup: any) => {
+      // Pour chaque groupe d'employé, créer un remboursement pour chaque remboursement détaillé
+      employeGroup.remboursements_detailes?.forEach((remboursement: any) => {
+        transformedRemboursements.push({
+          id: remboursement.id,
+          employe_id: employeGroup.employe_id,
+          partenaire_id: employeGroup.partenaire_id,
+          montant_transaction: remboursement.montant_transaction,
+          montant_total_remboursement: remboursement.montant_total_remboursement,
+          frais_service: employeGroup.frais_service_total / employeGroup.nombre_remboursements, // Répartir les frais
+          statut: remboursement.statut,
+          date_creation: remboursement.date_creation,
+          date_limite_remboursement: employeGroup.periode?.fin,
+          employee: employeGroup.employe,
+          partenaire: employeGroup.partenaire,
+          periode: employeGroup.periode,
+          categorie: employeGroup.categorie,
+          salaire_restant: employeGroup.salaire_restant,
+          // Données pour compatibilité avec l'ancien format
+          demande_avance: {
+            montant_demande: remboursement.montant_transaction,
+            date_validation: remboursement.date_creation
+          },
+          tous_remboursements: employeGroup.remboursements_detailes
+        });
+      });
+    });
+    
+    return transformedRemboursements;
+  };
 
-          if (demandeError) {
-            console.error("Erreur récupération demande avance:", demandeError);
-            return {
-              ...r,
-              employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-              demande_avance: null,
-            };
-          }
-
-          return {
-            ...r,
-            employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-            demande_avance: demandeData,
-          };
-        } catch (error) {
-          console.error("Erreur lors de la récupération de la demande:", error);
-          return {
-            ...r,
-            employee: Array.isArray(r.employee) ? r.employee[0] : r.employee,
-            demande_avance: null,
-          };
-        }
-      })
-    );
-
-    // Récupérer tous les remboursements de chaque employé pour calculer le salaire restant
-    const remboursementsAvecTousRemboursements = await Promise.all(
-      remboursementsAvecDemandes.map(async (r: any) => {
-        try {
-          // Récupérer tous les remboursements de cet employé (tous statuts)
-          const { data: tousRemboursements, error: tousRemboursementsError } =
-            await supabase
-              .from("remboursements")
-              .select(
-                `
-              id, montant_total_remboursement, statut, date_creation,
-              demande_avance:demande_avance_id (montant_demande, date_validation)
-            `
-              )
-              .eq("employe_id", r.employe_id)
-              .order("date_creation", { ascending: true });
-
-          if (tousRemboursementsError) {
-            console.error(
-              "Erreur récupération tous remboursements:",
-              tousRemboursementsError
-            );
-            return {
-              ...r,
-              tous_remboursements: [],
-            };
-          }
-
-          return {
-            ...r,
-            tous_remboursements: tousRemboursements || [],
-          };
-        } catch (error) {
-          console.error(
-            "Erreur lors de la récupération de tous les remboursements:",
-            error
-          );
-          return {
-            ...r,
-            tous_remboursements: [],
-          };
-        }
-      })
-    );
-
-    console.log(
-      "Remboursements avec tous remboursements:",
-      remboursementsAvecTousRemboursements
-    );
-    setRemboursements(remboursementsAvecTousRemboursements);
-
-    // Calcul du total en attente (seulement les remboursements en attente)
-    const total = (remboursementsAvecTousRemboursements || [])
-      .filter((r: any) => r.statut === "EN_ATTENTE")
-      .reduce(
-        (sum: number, r: any) => sum + Number(r.montant_total_remboursement),
-        0
+  // Fonction pour charger les remboursements avec l'Edge Function
+  const loadRemboursementsData = async (customFilters: any = {}) => {
+    if (!session?.access_token) return;
+    
+    setEdgeFunctionLoading(true);
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Combiner les filtres par défaut avec les filtres personnalisés
+      const activeFilters = { ...filters, ...customFilters };
+      
+      // Nettoyer les filtres (enlever les valeurs null/undefined)
+      const cleanFilters = Object.fromEntries(
+        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
       );
-    setTotalAttente(total);
-    setIsLoading(false);
+      
+      console.log("🔄 Chargement des remboursements avec filtres:", cleanFilters);
+      
+      // Charger les remboursements
+      const remboursementsData = await edgeFunctionService.getPartnerRemboursements(cleanFilters);
+      
+      if (!remboursementsData.success) {
+        console.error("Erreur Edge Function:", remboursementsData.message);
+        toast.error("Erreur lors du chargement des remboursements");
+        return;
+      }
+
+      const data = remboursementsData.data || [];
+      console.log("Remboursements chargés:", data);
+      
+      // Transformer les données regroupées par employé en liste de remboursements individuels
+      const transformedData = transformEdgeFunctionData(data);
+      console.log("Données transformées:", transformedData);
+      
+      setCurrentMonthData({ data: transformedData });
+      
+    } catch (error) {
+      console.error("Erreur lors du chargement des remboursements:", error);
+      toast.error("Erreur lors du chargement des remboursements");
+    } finally {
+      setEdgeFunctionLoading(false);
+    }
+  };
+
+  // Fonction pour charger les données de filtres dynamiques
+  const loadFilterData = async () => {
+    if (!session?.access_token) return;
+    
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Charger les employés actifs
+      const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
+      if (employeesData.success && employeesData.data) {
+        setActiveEmployees(employeesData.data);
+      }
+      
+      // Charger les périodes d'activité
+      const periodsData = await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
+      if (periodsData.success && periodsData.data) {
+        setActivityPeriods(periodsData.data);
+        setActiveYears(periodsData.data.years || []);
+        setActiveMonths(periodsData.data.months?.map((m: any) => m.numero) || []);
+      }
+      
+    } catch (error) {
+      console.error("Erreur lors du chargement des données de filtres:", error);
+    }
+  };
+
+  // Fonction pour appliquer un filtre
+  const applyFilter = async (filterKey: string, value: any) => {
+    const newFilters = { ...filters, [filterKey]: value };
+    setFilters(newFilters);
+    
+    // Recharger les données avec les nouveaux filtres
+    await loadRemboursementsData(newFilters);
+  };
+
+  // Fonction pour réinitialiser tous les filtres
+  const resetFilters = async () => {
+    const defaultFilters = {
+      mois: null,
+      annee: null,
+      status: null,
+      employee_id: null,
+      categorie: null,
+      date_debut: null,
+      date_fin: null,
+      limit: 50,
+      offset: 0
+    };
+    setFilters(defaultFilters);
+    await loadRemboursementsData(defaultFilters);
   };
 
   // Charger les remboursements au montage
   useEffect(() => {
-    // Charger d'abord les données Edge Function
-    loadCurrentMonthData();
-    // Charger les employés pour avoir les salaires
-    fetchEmployees();
-  }, [session?.partner]);
+    if (!loading && session?.partner) {
+      // Charger d'abord les données Edge Function
+      loadCurrentMonthData();
+      // Charger les données de filtres
+      loadFilterData();
+      // Charger les remboursements avec l'Edge Function
+      loadRemboursementsData();
+      // Charger les employés pour avoir les salaires
+      fetchEmployees();
+    }
+  }, [loading, session?.partner]);
 
   // Charger les données de fallback si pas de données Edge Function
   useEffect(() => {
     if (!currentMonthData && !edgeFunctionLoading) {
-      fetchRemboursements();
+      loadRemboursementsData();
     }
   }, [currentMonthData, edgeFunctionLoading]);
 
@@ -339,7 +383,7 @@ export default function RemboursementsPage() {
         alert(
           `Paiements initiés avec succès pour ${successful.length} remboursement(s). Vérifiez les statuts.`
         );
-        await fetchRemboursements(); // Rafraîchir la liste
+        await loadRemboursementsData(); // Rafraîchir la liste
       }
 
       if (failed.length > 0) {
@@ -395,7 +439,7 @@ export default function RemboursementsPage() {
         alert(
           `Paiement initié pour ${remboursement.employee.nom} ${remboursement.employee.prenom}. Transaction ID: ${data.data?.transactionId}`
         );
-        await fetchRemboursements(); // Rafraîchir la liste
+        await loadRemboursementsData(); // Rafraîchir la liste
       } else {
         console.error("Erreur lors du paiement:", data.error);
         alert(`Erreur: ${data.error}`);
@@ -413,7 +457,7 @@ export default function RemboursementsPage() {
     setIsLoading(true);
     try {
       // Rafraîchir la liste des remboursements
-      await fetchRemboursements();
+      await loadRemboursementsData();
       alert("Statuts mis à jour");
     } catch (error) {
       console.error("Erreur lors du rafraîchissement:", error);
@@ -450,7 +494,7 @@ export default function RemboursementsPage() {
     if (!session?.partner) return;
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      const employeesData = await edgeFunctionService.getDashboardEmployees();
+      const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
       if (employeesData.success && employeesData.data) {
         setEmployees(employeesData.data);
       }
@@ -580,6 +624,11 @@ export default function RemboursementsPage() {
       .filter((r) => r.statut === "EN_ATTENTE")
       .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0);
 
+  // Debug: Log des données pour vérifier
+  console.log("🔍 Debug - currentMonthData:", currentMonthData);
+  console.log("🔍 Debug - remboursements:", remboursements);
+  console.log("🔍 Debug - totalRemboursements:", totalRemboursements);
+
   // Skeleton
   if (isLoading) {
     return (
@@ -687,6 +736,195 @@ export default function RemboursementsPage() {
             </div> */}
           </div>
         </div>
+      </div>
+
+      {/* Filtres avancés */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => loadRemboursementsData(filters)}
+                disabled={edgeFunctionLoading}
+                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {edgeFunctionLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : null}
+                Actualiser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={filters.mois || ""}
+              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les mois</option>
+              {activeMonths.map((month) => (
+                <option key={month} value={month}>
+                  {new Date(0, month - 1).toLocaleString('fr-FR', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={filters.annee || ""}
+              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les années</option>
+              {activeYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={filters.status || ""}
+              onChange={(e) => applyFilter('status', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PAYE">Payé</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="ANNULE">Annulé</option>
+            </select>
+          </div>
+
+          {/* Filtre par employé */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Employé
+            </label>
+            <select
+              value={filters.employee_id || ""}
+              onChange={(e) => applyFilter('employee_id', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les employés</option>
+              {activeEmployees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.nom_complet || `${employee.prenom} ${employee.nom}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par catégorie */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Catégorie
+            </label>
+            <select
+              value={filters.categorie || ""}
+              onChange={(e) => applyFilter('categorie', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les catégories</option>
+              <option value="mono-mois">Mono-mois</option>
+              <option value="multi-mois">Multi-mois</option>
+            </select>
+          </div>
+
+          {/* Filtre par période personnalisée */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Période personnalisée
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={filters.date_debut || ""}
+                onChange={(e) => applyFilter('date_debut', e.target.value || null)}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Date début"
+              />
+              <input
+                type="date"
+                value={filters.date_fin || ""}
+                onChange={(e) => applyFilter('date_fin', e.target.value || null)}
+                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Date fin"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Indicateur de filtres actifs */}
+        {Object.values(filters).some(value => value !== null && value !== undefined && value !== "") && (
+          <div className="px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-t border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+              <span>Filtres actifs :</span>
+              {Object.entries(filters).map(([key, value]) => {
+                if (value === null || value === undefined || value === "") return null;
+                
+                let displayValue = value;
+                if (key === 'mois' && typeof value === 'number') {
+                  displayValue = new Date(0, value - 1).toLocaleString('fr-FR', { month: 'long' });
+                } else if (key === 'status') {
+                  const statusMap: { [key: string]: string } = {
+                    'PAYE': 'Payé',
+                    'EN_ATTENTE': 'En attente',
+                    'EN_RETARD': 'En retard',
+                    'ANNULE': 'Annulé'
+                  };
+                  displayValue = statusMap[value as string] || value;
+                } else if (key === 'categorie') {
+                  const categorieMap: { [key: string]: string } = {
+                    'mono-mois': 'Mono-mois',
+                    'multi-mois': 'Multi-mois'
+                  };
+                  displayValue = categorieMap[value as string] || value;
+                } else if (key === 'employee_id') {
+                  const employee = activeEmployees.find(emp => emp.id === value);
+                  displayValue = employee ? (employee.nom_complet || `${employee.prenom} ${employee.nom}`) : value;
+                }
+                
+                return (
+                  <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
+                    {key}: {displayValue}
+                  </span>
+                );
+              })}
+            </div>
+            {edgeFunctionLoading && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                Mise à jour des données...
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Statistiques détaillées */}
