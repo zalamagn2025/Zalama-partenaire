@@ -76,6 +76,22 @@ export default function DemandesPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDemande, setSelectedDemande] = useState<any>(null);
   
+  // États pour les filtres de l'edge function
+  const [filters, setFilters] = useState({
+    mois: null as number | null,
+    annee: null as number | null,
+    status: null as string | null,
+    type_motif: null as string | null,
+    categorie: null as string | null,
+    statut_remboursement: null as string | null,
+    limit: 50,
+    offset: 0
+  });
+  
+  // États pour les données de filtres
+  const [activityPeriods, setActivityPeriods] = useState<any>(null);
+  const [loadingFilters, setLoadingFilters] = useState(false);
+  
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
@@ -114,7 +130,7 @@ export default function DemandesPage() {
   };
 
   // Charger les données du mois en cours via Edge Functions
-  const loadCurrentMonthData = async () => {
+  const loadSalaryDemandsData = async (customFilters = {}) => {
     if (!session?.access_token) {
       console.log("Pas de token d'accès disponible");
       return;
@@ -125,39 +141,176 @@ export default function DemandesPage() {
     try {
       edgeFunctionService.setAccessToken(session.access_token);
       
-      // Utiliser directement l'endpoint des demandes pour récupérer les données du mois en cours
-      const demandesData = await edgeFunctionService.getSalaryDemands();
+      // Combiner les filtres par défaut avec les filtres personnalisés
+      const activeFilters = { ...filters, ...customFilters };
+      
+      // Nettoyer les filtres (enlever les valeurs null/undefined)
+      const cleanFilters = Object.fromEntries(
+        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+      );
+      
+      console.log("🔄 Chargement des demandes avec filtres:", cleanFilters);
+      
+      // Utiliser l'endpoint des demandes avec filtres
+      const demandesData = await edgeFunctionService.getSalaryDemands(cleanFilters);
 
       if (!demandesData.success) {
         console.error("Erreur Edge Function:", demandesData.message);
-        toast.error("Erreur lors du chargement des données du mois en cours");
+        toast.error("Erreur lors du chargement des données");
         return;
       }
 
-      // Les données sont directement dans la réponse selon votre exemple
       // Stocker les données pour les statistiques
       setCurrentMonthData(demandesData);
       
-      // Mettre à jour les données locales avec les données du mois en cours
+      // Mettre à jour les données locales
       if (demandesData.data && Array.isArray(demandesData.data)) {
+          const firstDemande = demandesData.data[0] as any;
+          console.log("🔍 Première demande brute:", firstDemande);
+          console.log("🔍 Structure employé première demande:", {
+            hasEmploye: !!firstDemande?.employe,
+            employeType: typeof firstDemande?.employe,
+            employeKeys: firstDemande?.employe ? Object.keys(firstDemande.employe) : [],
+            employePrenom: firstDemande?.employe?.prenom,
+            employeNom: firstDemande?.employe?.nom,
+            employeData: firstDemande?.employe,
+            employeStringified: JSON.stringify(firstDemande?.employe)
+          });
+          
+          // Debug pour toutes les demandes
+          demandesData.data.forEach((demande: any, index: number) => {
+            console.log(`🔍 Demande ${index}:`, {
+              employe_id: demande.employe_id,
+              hasEmploye: !!demande.employe,
+              employeKeys: demande.employe ? Object.keys(demande.employe) : [],
+              employePrenom: demande.employe?.prenom,
+              employeNom: demande.employe?.nom
+            });
+          });
+          
           setDemandesAvance(demandesData.data);
       }
       
-      toast.success("Données des demandes du mois en cours mises à jour avec succès");
+      console.log("✅ Données chargées avec succès:", demandesData.data?.length, "demandes");
     } catch (error) {
       console.error("Erreur lors du chargement des données Edge Functions:", error);
-      toast.error("Erreur lors du chargement des données du mois en cours");
+      toast.error("Erreur lors du chargement des données");
     } finally {
       setEdgeFunctionLoading(false);
       setLoading(false);
     }
   };
 
+  const loadCurrentMonthData = async () => {
+    await loadSalaryDemandsData();
+  };
+
+
+  // Charger les périodes d'activité pour les filtres
+  const loadActivityPeriods = async () => {
+    if (!session?.access_token) return;
+    
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      const periodsData = await edgeFunctionService.getSalaryDemandsActivityPeriods();
+      
+      console.log("🔍 Périodes d'activité reçues:", periodsData);
+      
+      if (periodsData.success && periodsData.data) {
+        // Transformer les données pour correspondre au format attendu
+        const transformedData = {
+          mois: periodsData.data.months?.map((m: any) => m.numero) || [],
+          annees: periodsData.data.years || []
+        };
+        setActivityPeriods(transformedData);
+        console.log("✅ Périodes d'activité définies:", transformedData);
+        console.log("📊 Données brutes:", periodsData.data);
+      } else {
+        console.log("❌ Pas de données de périodes d'activité, utilisation du fallback");
+        // Fallback: générer les mois et années disponibles
+        generateFallbackPeriods();
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des périodes d'activité:", error);
+      // Fallback en cas d'erreur
+      generateFallbackPeriods();
+    }
+  };
+
+  // Fonction de fallback pour générer les périodes disponibles
+  const generateFallbackPeriods = () => {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // Générer les 6 derniers mois + mois actuel (comme dans dashboard)
+    const monthsWithData = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(currentYear, currentMonth - i - 1, 1);
+      const monthValue = date.getMonth() + 1;
+      monthsWithData.push(monthValue);
+    }
+    
+    // Générer les années disponibles (année actuelle et précédente)
+    const yearsWithData = [currentYear - 1, currentYear];
+    
+    const fallbackPeriods = {
+      mois: monthsWithData,
+      annees: yearsWithData
+    };
+    
+    console.log("🔄 Périodes de fallback générées:", fallbackPeriods);
+    setActivityPeriods(fallbackPeriods);
+  };
+
+  // Fonction pour appliquer un filtre
+  const applyFilter = (filterKey: string, value: any) => {
+    const newFilters = { ...filters, [filterKey]: value };
+    setFilters(newFilters);
+    
+    // Réinitialiser la pagination
+    setCurrentPage(1);
+    
+    // Recharger les données avec les nouveaux filtres
+    loadSalaryDemandsData(newFilters);
+  };
+
+  // Fonction pour réinitialiser tous les filtres
+  const resetFilters = () => {
+    const defaultFilters = {
+      mois: null,
+      annee: null,
+      status: null,
+      type_motif: null,
+      categorie: null,
+      statut_remboursement: null,
+      limit: 50,
+      offset: 0
+    };
+    setFilters(defaultFilters);
+    setCurrentPage(1);
+    loadSalaryDemandsData(defaultFilters);
+  };
+
   // Charger les demandes au montage
   useEffect(() => {
     // Charger d'abord les données Edge Function
     loadCurrentMonthData();
+    // Charger les données pour les filtres
+    loadActivityPeriods();
   }, [session?.partner]);
+
+  // Fallback pour les périodes d'activité si elles ne se chargent pas
+  useEffect(() => {
+    if (session?.partner && !activityPeriods) {
+      const timer = setTimeout(() => {
+        console.log("⏰ Timeout: génération des périodes de fallback");
+        generateFallbackPeriods();
+      }, 3000); // Attendre 3 secondes avant d'utiliser le fallback
+      
+      return () => clearTimeout(timer);
+    }
+  }, [session?.partner, activityPeriods]);
 
   // Charger les données de fallback si pas de données Edge Function
   useEffect(() => {
@@ -180,16 +333,44 @@ export default function DemandesPage() {
     const demandesDetailes = (d as any).demandes_detailes || [];
     const premiereDemande = demandesDetailes[0] || {};
     
+    // Debug pour voir la structure des données
+    console.log("🔍 Formatage demande:", {
+      id: d.id,
+      employe_id: d.employe_id,
+      hasEmployeData: !!employe,
+      employeType: typeof employe,
+      employeKeys: employe ? Object.keys(employe) : [],
+      employePrenom: employe?.prenom,
+      employeNom: employe?.nom,
+      employeData: employe
+    });
+    
+    // Construire le nom de l'employé de manière plus robuste
+    let demandeur = "Employé inconnu";
+    
+    // Vérifier si l'objet employé existe et a des propriétés
+    if (employe && typeof employe === 'object' && Object.keys(employe).length > 0) {
+      const prenom = employe.prenom || employe.first_name || "";
+      const nom = employe.nom || employe.last_name || employe.name || "";
+      demandeur = `${prenom} ${nom}`.trim();
+      
+      // Si toujours vide, essayer d'autres champs
+      if (!demandeur) {
+        demandeur = employe.display_name || employe.email || `Employé ${d.employe_id}`;
+      }
+    } else {
+      // Fallback si pas d'infos employé ou objet vide
+      demandeur = `Employé ${d.employe_id}`;
+    }
+    
     return {
       ...d,
       type_demande: "Avance sur Salaire",
-      demandeur: employe
-        ? `${employe.prenom || ''} ${employe.nom || ''}`.trim()
-        : `Employé ${d.employe_id}`,
+      demandeur: demandeur,
       date: new Date((d as any).date_creation_premiere || d.date_creation || new Date()).toLocaleDateString("fr-FR"),
       montant: (d as any).montant_total_demande || premiereDemande.montant_demande || d.montant_demande || 0,
       commentaires: 0,
-      poste: employe?.poste || "Non spécifié",
+      poste: employe?.poste || employe?.position || "Non spécifié",
       categorie: (d as any).categorie || (premiereDemande.num_installments === 1 ? "mono-mois" : "multi-mois"),
       statut: (d as any).statut_global || premiereDemande.statut || d.statut || "Non défini",
       type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
@@ -197,12 +378,15 @@ export default function DemandesPage() {
   });
 
 
-  // Filtrer les demandes
+  // Filtrer les demandes (filtrage local pour la recherche textuelle)
   const filteredDemandes = allDemandes.filter((demande) => {
     const matchesSearch =
       !searchTerm ||
       demande.type_demande?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      demande.demandeur?.toLowerCase().includes(searchTerm.toLowerCase());
+      demande.demandeur?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      demande.motif?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      demande.montant?.toString().includes(searchTerm) ||
+      demande.type_motif?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesService =
       !selectedService || demande.type_demande === selectedService;
@@ -592,83 +776,174 @@ export default function DemandesPage() {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
+      {/* Barre de recherche simple */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-4 mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher par nom d'employé, motif, ou montant..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+          />
+        </div>
+      </div>
+
+      {/* Filtres avancés */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Recherche */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Rechercher une demande..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
-              />
-            </div>
-          </div>
-
-          {/* Filtres */}
-          <div className="flex gap-3">
-            {/* Filtre par service */}
-            <div className="relative" ref={filterMenuRef}>
-              <button
-                onClick={() => setShowFilterMenu(!showFilterMenu)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
-              >
-                <Filter className="h-4 w-4" />
-                {selectedService || "Tous les services"}
-              </button>
-
-              {showFilterMenu && (
-                <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-lg z-10">
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        setSelectedService("");
-                        setShowFilterMenu(false);
-                      }}
-                      className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    >
-                      Tous les services
-                    </button>
-                    {serviceTypes.map((service) => (
-                      <button
-                        key={service.id}
-                        onClick={() => {
-                          setSelectedService(service.label);
-                          setShowFilterMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm text-[var(--zalama-text)] hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 rounded transition-colors"
-                      >
-                        <service.icon className="h-4 w-4" />
-                        {service.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Filtre par statut */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filtres avancés
+          </h3>
+          <div className="flex gap-2">
+            <button
+              onClick={resetFilters}
+              className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
             >
-              <option value="" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
-                Tous les statuts
-              </option>
-              <option value="En attente" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">En attente</option>
-              <option value="En attente RH/Responsable" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">
-                En attente RH/Responsable
-              </option>
-              <option value="Validé" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Validé</option>
-              <option value="Rejeté" className="dark:bg-[var(--zalama-card)] text-[var(--zalama-text)]">Rejeté</option>
-            </select>
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => loadSalaryDemandsData(filters)}
+              disabled={edgeFunctionLoading}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+            >
+              {edgeFunctionLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+              Actualiser
+            </button>
           </div>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={filters.mois || ""}
+              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les mois</option>
+              {activityPeriods?.mois?.map((mois: number) => (
+                <option key={mois} value={mois}>
+                  {new Date(0, mois - 1).toLocaleString('fr-FR', { month: 'long' })}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={filters.annee || ""}
+              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les années</option>
+              {activityPeriods?.annees?.map((annee: number) => (
+                <option key={annee} value={annee}>{annee}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={filters.status || ""}
+              onChange={(e) => applyFilter('status', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="En attente RH/Responsable">En attente RH/Responsable</option>
+              <option value="Validé">Validé</option>
+              <option value="Rejeté">Rejeté</option>
+            </select>
+          </div>
+
+          {/* Filtre par catégorie */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Catégorie
+            </label>
+            <select
+              value={filters.categorie || ""}
+              onChange={(e) => applyFilter('categorie', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les catégories</option>
+              <option value="mono-mois">Mono-mois</option>
+              <option value="multi-mois">Multi-mois</option>
+            </select>
+          </div>
+
+
+          {/* Filtre par type de motif */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Type de motif
+            </label>
+            <select
+              value={filters.type_motif || ""}
+              onChange={(e) => applyFilter('type_motif', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les motifs</option>
+              <option value="sante">Santé</option>
+              <option value="education">Éducation</option>
+              <option value="transport">Transport</option>
+              <option value="logement">Logement</option>
+              <option value="alimentation">Alimentation</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          {/* Filtre par statut de remboursement */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut remboursement
+            </label>
+            <select
+              value={filters.statut_remboursement || ""}
+              onChange={(e) => applyFilter('statut_remboursement', e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="PAYE">Payé</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="ANNULE">Annulé</option>
+            </select>
+          </div>
+
+        </div>
+
+        {/* Indicateur de filtres actifs */}
+        {Object.values(filters).some(value => value !== null && value !== undefined && value !== "") && (
+          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
+              <Filter className="h-4 w-4" />
+              <span>Filtres actifs :</span>
+              {Object.entries(filters).map(([key, value]) => {
+                if (value === null || value === undefined || value === "") return null;
+                return (
+                  <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
+                    {key}: {value}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Liste des demandes */}
