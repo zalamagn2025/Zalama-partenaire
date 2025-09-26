@@ -126,7 +126,7 @@ export default function DemandesPage() {
       edgeFunctionService.setAccessToken(session.access_token);
       
       // Utiliser directement l'endpoint des demandes pour récupérer les données du mois en cours
-      const demandesData = await edgeFunctionService.getDashboardDemandes();
+      const demandesData = await edgeFunctionService.getSalaryDemands();
 
       if (!demandesData.success) {
         console.error("Erreur Edge Function:", demandesData.message);
@@ -174,24 +174,28 @@ export default function DemandesPage() {
   }, [demandesAvance.length, edgeFunctionLoading, loading]);
 
   // Formater les demandes
-  const allDemandes = demandesAvance.map((d) => ({
-    ...d,
-    type_demande: "Avance sur Salaire",
-    demandeur: (d as any).employee
-      ? `${(d as any).employee.prenom} ${(d as any).employee.nom}`
-      : d.employees
-      ? `${d.employees.prenom} ${d.employees.nom}`
-      : `Employé ${d.employe_id}`,
-    date: new Date(d.date_creation).toLocaleDateString("fr-FR"),
-    montant: d.montant_demande,
-    commentaires: 0,
-    poste: (d as any).employee?.poste || d.employees?.poste || "Non spécifié",
-  }));
+  const allDemandes = demandesAvance.map((d) => {
+    // Gérer la structure de données de l'edge function
+    const employe = (d as any).employe || (d as any).employee || d.employees;
+    const demandesDetailes = (d as any).demandes_detailes || [];
+    const premiereDemande = demandesDetailes[0] || {};
+    
+    return {
+      ...d,
+      type_demande: "Avance sur Salaire",
+      demandeur: employe
+        ? `${employe.prenom || ''} ${employe.nom || ''}`.trim()
+        : `Employé ${d.employe_id}`,
+      date: new Date((d as any).date_creation_premiere || d.date_creation || new Date()).toLocaleDateString("fr-FR"),
+      montant: (d as any).montant_total_demande || premiereDemande.montant_demande || d.montant_demande || 0,
+      commentaires: 0,
+      poste: employe?.poste || "Non spécifié",
+      categorie: (d as any).categorie || (premiereDemande.num_installments === 1 ? "mono-mois" : "multi-mois"),
+      statut: (d as any).statut_global || premiereDemande.statut || d.statut || "Non défini",
+      type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
+    };
+  });
 
-  // Fonction pour compter le nombre d'avances par employé
-  const getNombreAvances = (employeId: string) => {
-    return allDemandes.filter(d => d.employe_id === employeId).length;
-  };
 
   // Filtrer les demandes
   const filteredDemandes = allDemandes.filter((demande) => {
@@ -710,7 +714,7 @@ export default function DemandesPage() {
                     Nom de l'employé
                   </th>
                   <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Avances
+                    Catégorie
                   </th>
                   <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Montant
@@ -752,13 +756,19 @@ export default function DemandesPage() {
                       </div>
                     </td>
                     <td className="px-2 py-3 text-center">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {getNombreAvances(demande.employe_id)}
-                      </div>
+                      <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                        demande.categorie === "mono-mois"
+                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                          : demande.categorie === "multi-mois"
+                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                      }`}>
+                        {demande.categorie || "N/A"}
+                      </span>
                     </td>
                     <td className="px-2 py-3 text-right">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {demande.montant.toLocaleString()} GNF
+                        {(demande.montant || 0).toLocaleString()} GNF
                       </div>
                     </td>
                     <td className="px-2 py-3">
@@ -774,7 +784,7 @@ export default function DemandesPage() {
                     <td className="px-2 py-3 text-center">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                          demande.statut === "En attente"
+                          demande.statut === "En attente" || demande.statut === "En attente RH/Responsable"
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                             : demande.statut === "Validé"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
@@ -947,10 +957,16 @@ export default function DemandesPage() {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Nombre d'avances :
+                            Catégorie :
                           </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {getNombreAvances(selectedDemande.employe_id)}
+                          <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                            selectedDemande.categorie === "mono-mois"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                              : selectedDemande.categorie === "multi-mois"
+                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                          }`}>
+                            {selectedDemande.categorie || "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">

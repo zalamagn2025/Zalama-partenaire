@@ -165,11 +165,95 @@ class EdgeFunctionService {
     this.accessToken = token;
   }
 
+  private async makeLocalRequest<T>(
+    url: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const defaultHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    // Ajouter le token d'authentification si disponible
+    if (this.accessToken) {
+      defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
+    const config: RequestInit = {
+      ...options,
+      headers: {
+        ...defaultHeaders,
+        ...options.headers,
+      },
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Gestion spécifique des erreurs 401 (non autorisé)
+        if (response.status === 401) {
+          // Vérifier si c'est une erreur de connexion ou de session expirée
+          const errorMessage = data.message || data.error || "";
+          if (
+            errorMessage.toLowerCase().includes("invalid credentials") ||
+            errorMessage.toLowerCase().includes("email") ||
+            errorMessage.toLowerCase().includes("password")
+          ) {
+            throw new Error(
+              "Email ou mot de passe incorrect. Veuillez réessayer."
+            );
+          } else {
+            throw new Error("Session expirée. Veuillez vous reconnecter.");
+          }
+        }
+
+        // Gestion spécifique des erreurs 403 (accès interdit)
+        if (response.status === 403) {
+          throw new Error("Accès non autorisé. Vérifiez vos permissions.");
+        }
+
+        // Gestion spécifique des erreurs 404 (non trouvé)
+        if (response.status === 404) {
+          throw new Error("Ressource non trouvée.");
+        }
+
+        // Gestion spécifique des erreurs 500 (erreur serveur)
+        if (response.status === 500) {
+          throw new Error("Erreur serveur. Veuillez réessayer plus tard.");
+        }
+
+        // Erreur générique avec le message du serveur
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error(`Erreur Proxy Local ${url}:`, error);
+
+      // Si c'est déjà une erreur formatée, la relancer
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      // Sinon, créer une erreur générique
+      throw new Error(`Erreur de connexion au serveur: ${error}`);
+    }
+  }
+
   private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {},
     useDashboardApi: boolean = false
   ): Promise<T> {
+    // Utiliser les proxies locaux pour les endpoints salary-demands
+    if (endpoint.startsWith('/salary-demands')) {
+      const url = `/api/proxy${endpoint}`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+    
     const baseUrl = useDashboardApi ? DASHBOARD_EDGE_FUNCTION_BASE_URL : EDGE_FUNCTION_BASE_URL;
     const url = `${baseUrl}${endpoint}`;
 
@@ -273,7 +357,7 @@ class EdgeFunctionService {
   }
 
   async getDemandes(status?: string): Promise<PartnerAuthResponse> {
-    const endpoint = status ? `/demandes?status=${encodeURIComponent(status)}` : "/demandes";
+    const endpoint = status ? `/salary-demands?status=${encodeURIComponent(status)}` : "/salary-demands";
     return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
   }
 
@@ -283,6 +367,95 @@ class EdgeFunctionService {
 
   async getStatistics(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/statistics", {}, true);
+  }
+
+  // Nouvelles méthodes pour l'edge function partner-salary-demands
+  async getSalaryDemands(filters?: {
+    mois?: number;
+    annee?: number;
+    status?: string;
+    employe_id?: string;
+    type_motif?: string;
+    date_debut?: string;
+    date_fin?: string;
+    categorie?: string;
+    statut_remboursement?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<PartnerAuthResponse> {
+    let endpoint = "/salary-demands";
+    if (filters) {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+    }
+    return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
+  }
+
+  async getSalaryDemandsStatistics(filters?: {
+    mois?: number;
+    annee?: number;
+    status?: string;
+    employe_id?: string;
+    type_motif?: string;
+    date_debut?: string;
+    date_fin?: string;
+    categorie?: string;
+    statut_remboursement?: string;
+  }): Promise<PartnerAuthResponse> {
+    let endpoint = "/salary-demands/statistics";
+    if (filters) {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, value.toString());
+        }
+      });
+      if (params.toString()) {
+        endpoint += `?${params.toString()}`;
+      }
+    }
+    return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
+  }
+
+  async getSalaryDemandsEmployees(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/salary-demands/employees", {}, true);
+  }
+
+  async getSalaryDemandsActivityPeriods(): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/salary-demands/activity-periods", {}, true);
+  }
+
+  async createSalaryDemand(data: {
+    employe_id: string;
+    montant_demande: number;
+    motif: string;
+    type_motif: string;
+    num_installments: number;
+  }): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>("/salary-demands", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }, true);
+  }
+
+  async updateSalaryDemand(id: string, data: {
+    montant_demande?: number;
+    motif?: string;
+    type_motif?: string;
+    commentaire_partenaire?: string;
+    num_installments?: number;
+  }): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>(`/salary-demands/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }, true);
   }
 
   async getPartnerInfo(): Promise<PartnerAuthResponse> {
