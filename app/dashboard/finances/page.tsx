@@ -139,8 +139,6 @@ export default function FinancesPage() {
   const [filters, setFilters] = useState({
     mois: null as number | null,
     annee: null as number | null,
-    date_debut: null as string | null,
-    date_fin: null as string | null,
     status: null as string | null,
     limit: 50,
     offset: 0
@@ -259,7 +257,7 @@ export default function FinancesPage() {
         console.error("Erreur lors de la récupération des statistiques:", statsResponse.message);
         return;
       }
-      
+
       const statsData = statsResponse.data || {};
       
       // 2. Récupérer les demandes via Edge Function
@@ -268,7 +266,7 @@ export default function FinancesPage() {
         console.error("Erreur lors de la récupération des demandes:", demandesResponse.message);
         return;
       }
-      
+
       const demandes = demandesResponse.data || [];
       setSalaryRequests(demandes);
 
@@ -278,7 +276,7 @@ export default function FinancesPage() {
         console.error("Erreur lors de la récupération des remboursements:", remboursementsResponse.message);
         return;
       }
-      
+
       const allRemboursements = remboursementsResponse.data || [];
 
       // Utiliser directement les données de l'Edge Function
@@ -533,7 +531,11 @@ export default function FinancesPage() {
         Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
       );
       
+      // Valider les filtres
+      validateFilters(cleanFilters);
+      
       console.log("🔄 Chargement des données financières avec filtres:", cleanFilters);
+      console.log("📊 URL Edge Function:", `/api/proxy/partner-finances/stats?${new URLSearchParams(cleanFilters as any).toString()}`);
       
       // Charger les statistiques financières
       const statsData = await edgeFunctionService.getFinancesStats(cleanFilters);
@@ -587,28 +589,52 @@ export default function FinancesPage() {
   };
 
   // Fonction pour appliquer un filtre
-  const applyFilter = (filterKey: string, value: any) => {
+  const applyFilter = async (filterKey: string, value: any) => {
     const newFilters = { ...filters, [filterKey]: value };
     setFilters(newFilters);
     
     // Recharger les données avec les nouveaux filtres
-    loadFinancesData(newFilters);
+    await loadFinancesData(newFilters);
+    
+    // Recharger aussi les remboursements avec les nouveaux filtres
+    await loadTransactionsWithFilters(newFilters);
   };
 
   // Fonction pour réinitialiser tous les filtres
-  const resetFilters = () => {
+  const resetFilters = async () => {
     const defaultFilters = {
       mois: null,
       annee: null,
-      date_debut: null,
-      date_fin: null,
       status: null,
       limit: 50,
       offset: 0
     };
     setFilters(defaultFilters);
-    loadFinancesData(defaultFilters);
+    await loadFinancesData(defaultFilters);
+    await loadTransactionsWithFilters(defaultFilters);
   };
+
+  // Fonction pour valider les paramètres de filtres
+  const validateFilters = (filters: any) => {
+    const validParams = ['mois', 'annee', 'status', 'limit', 'offset'];
+    const invalidParams = Object.keys(filters).filter(key => !validParams.includes(key));
+    
+    if (invalidParams.length > 0) {
+      console.warn("⚠️ Paramètres de filtres invalides détectés:", invalidParams);
+    }
+    
+    // Valider les valeurs
+    if (filters.mois && (filters.mois < 1 || filters.mois > 12)) {
+      console.warn("⚠️ Mois invalide:", filters.mois);
+    }
+    
+    if (filters.status && !['PAYE', 'EN_ATTENTE', 'EN_RETARD', 'ANNULE'].includes(filters.status)) {
+      console.warn("⚠️ Statut invalide:", filters.status);
+    }
+    
+    return invalidParams.length === 0;
+  };
+
 
 
   // Pour l'historique des remboursements, charge les données de remboursements :
@@ -638,6 +664,40 @@ export default function FinancesPage() {
     } catch (e) {
       console.error("Erreur lors du chargement des remboursements:", e);
       toast.error("Erreur lors du chargement des remboursements");
+    }
+  };
+
+  // Fonction pour charger les remboursements avec des filtres spécifiques
+  const loadTransactionsWithFilters = async (customFilters: any = {}) => {
+    if (!session?.access_token) return;
+    
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+      
+      // Nettoyer les filtres (enlever les valeurs null/undefined)
+      const cleanFilters = Object.fromEntries(
+        Object.entries(customFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+      );
+      
+      // Valider les filtres
+      validateFilters(cleanFilters);
+      
+      console.log("🔄 Chargement des remboursements avec filtres:", cleanFilters);
+      console.log("📋 URL Edge Function:", `/api/proxy/partner-finances/remboursements?${new URLSearchParams(cleanFilters as any).toString()}`);
+      
+      const response = await edgeFunctionService.getFinancesRemboursements(cleanFilters);
+      if (!response.success) {
+        console.error("Erreur lors du chargement des remboursements filtrés:", response.message);
+        return;
+      }
+
+      const data = response.data || [];
+      console.log("Remboursements filtrés chargés:", data);
+      console.log("Nombre de remboursements filtrés:", data?.length);
+
+      setTransactions(data);
+    } catch (e) {
+      console.error("Erreur lors du chargement des remboursements filtrés:", e);
     }
   };
   useEffect(() => {
@@ -946,9 +1006,9 @@ export default function FinancesPage() {
                 ))
               ) : (
                 Array.from({ length: 12 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}
-                  </option>
+                <option key={i + 1} value={i + 1}>
+                  {new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}
+                </option>
                 ))
               )}
             </select>
@@ -991,28 +1051,6 @@ export default function FinancesPage() {
             </select>
           </div>
 
-          {/* Filtre par période personnalisée */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Période personnalisée
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filters.date_debut || ""}
-                onChange={(e) => applyFilter('date_debut', e.target.value || null)}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Date début"
-              />
-              <input
-                type="date"
-                value={filters.date_fin || ""}
-                onChange={(e) => applyFilter('date_fin', e.target.value || null)}
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Date fin"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Indicateur de filtres actifs */}
@@ -1023,13 +1061,33 @@ export default function FinancesPage() {
               <span>Filtres actifs :</span>
               {Object.entries(filters).map(([key, value]) => {
                 if (value === null || value === undefined || value === "") return null;
+                
+                let displayValue = value;
+                if (key === 'mois' && typeof value === 'number') {
+                  displayValue = new Date(0, value - 1).toLocaleString('fr-FR', { month: 'long' });
+                } else if (key === 'status') {
+                  const statusMap: { [key: string]: string } = {
+                    'PAYE': 'Payé',
+                    'EN_ATTENTE': 'En attente',
+                    'EN_RETARD': 'En retard',
+                    'ANNULE': 'Annulé'
+                  };
+                  displayValue = statusMap[value as string] || value;
+                }
+                
                 return (
                   <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
-                    {key}: {value}
+                    {key}: {displayValue}
                   </span>
                 );
               })}
             </div>
+            {edgeFunctionLoading && (
+              <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                Mise à jour des données...
+              </div>
+            )}
           </div>
         )}
       </div>
