@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-// Utiliser l'edge fonction partner-employee-avis qui contient les avis
-const EDGE_FUNCTION_URL = 'https://mspmrzlqhwpdkkburjiw.supabase.co/functions/v1/partner-employee-avis';
+// Utiliser l'edge fonction partner-employee-avis pour les statistiques
+const EDGE_FUNCTION_URL = 'https://mspmrzlqhwpdkkburjiw.supabase.co/functions/v1/partner-employee-avis/statistics';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const queryParams = new URLSearchParams();
 
-    // Ajouter tous les paramètres de filtrage disponibles
+    // Ajouter tous les paramètres de filtrage disponibles pour les statistiques
     const filters = [
       'mois',
       'annee', 
@@ -27,9 +27,7 @@ export async function GET(request: NextRequest) {
       'approuve',
       'employee_id',
       'date_debut',
-      'date_fin',
-      'limit',
-      'offset'
+      'date_fin'
     ];
 
     filters.forEach(filter => {
@@ -44,8 +42,7 @@ export async function GET(request: NextRequest) {
       ? `${EDGE_FUNCTION_URL}?${queryParams.toString()}`
       : EDGE_FUNCTION_URL;
 
-    console.log('🔄 Proxy Avis - URL:', edgeFunctionUrl);
-    console.log('🔄 Proxy Avis - Params:', Object.fromEntries(queryParams.entries()));
+    console.log('🔄 Proxy Statistics - URL:', edgeFunctionUrl);
 
     // Appeler l'edge fonction
     const response = await fetch(edgeFunctionUrl, {
@@ -58,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Erreur Edge Function Avis:', response.status, errorText);
+      console.error('❌ Erreur Edge Function Statistics:', response.status, errorText);
       return NextResponse.json(
         { 
           success: false, 
@@ -70,11 +67,11 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('✅ Proxy Avis - Response:', data);
+    console.log('✅ Proxy Statistics - Response:', data);
     return NextResponse.json(data);
 
   } catch (error) {
-    console.error('❌ Erreur proxy avis:', error);
+    console.error('Erreur proxy avis statistics:', error);
     return NextResponse.json(
       { 
         success: false, 
