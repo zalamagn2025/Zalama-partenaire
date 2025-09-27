@@ -103,6 +103,25 @@ export default function EntrepriseDashboardPage() {
       });
 
       if (!response.ok) {
+        // Gérer les erreurs d'authentification et de route
+        if (response.status === 401 || response.status === 403) {
+          console.error("❌ Erreur d'authentification:", response.status);
+          toast.error("Session expirée. Redirection vers la connexion...");
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
+          return;
+        }
+        
+        if (response.status === 404) {
+          console.error("❌ Route non trouvée:", response.status);
+          toast.error("Service temporairement indisponible. Redirection vers la connexion...");
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
+          return;
+        }
+        
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
@@ -146,8 +165,23 @@ export default function EntrepriseDashboardPage() {
       }
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
-      setError(error instanceof Error ? error.message : "Erreur inconnue");
-      toast.error("Erreur lors du chargement des données du dashboard");
+      const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      setError(errorMessage);
+      
+      // Vérifier si c'est une erreur d'authentification ou de route
+      if (errorMessage.includes("401") || errorMessage.includes("403")) {
+        toast.error("Session expirée. Redirection vers la connexion...");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      } else if (errorMessage.includes("404")) {
+        toast.error("Service temporairement indisponible. Redirection vers la connexion...");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      } else {
+        toast.error("Erreur lors du chargement des données du dashboard");
+      }
     } finally {
       setIsLoading(false);
     }

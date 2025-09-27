@@ -468,11 +468,11 @@ export default function AvisPage() {
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-        Avis des Salariés
-      </h1>
+              Avis des Salariés
+            </h1>
       <p className="text-[var(--zalama-text)]/70">
-        Entreprise: {session?.partner?.company_name}
-      </p>
+            Entreprise: {session?.partner?.company_name}
+          </p>
 
       {/* Statistiques */}
       <h2 className="text-xl font-bold text-[var(--zalama-text)] mt-2">
@@ -624,7 +624,7 @@ export default function AvisPage() {
                     <option value="2">2 étoiles</option>
                     <option value="1">1 étoile</option>
                   </select>
-                </div>
+                    </div>
 
                 {/* Filtres par type de retour */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -640,7 +640,7 @@ export default function AvisPage() {
                     <option value="positif">Positif</option>
                     <option value="negatif">Négatif</option>
                   </select>
-                </div>
+                        </div>
 
                 {/* Filtres par statut d'approbation */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -656,7 +656,7 @@ export default function AvisPage() {
                     <option value="true">Approuvé</option>
                     <option value="false">En attente</option>
                   </select>
-                </div>
+                      </div>
 
                 {/* Filtres par employé */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -851,7 +851,7 @@ export default function AvisPage() {
                       : "Utilisateur inconnu"}
                   </h3>
                   <p className="text-xs text-[var(--zalama-text)]/60 text-center">
-                    {avis.employee?.poste || "Poste non spécifié"}
+                      {avis.employee?.poste || "Poste non spécifié"}
                   </p>
                 </div>
 

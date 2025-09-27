@@ -40,7 +40,27 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Error from Edge Function (dashboard-data):", data);
+      console.error("Error from Edge Function (dashboard-data):", response.status, data);
+      
+      // Gérer spécifiquement les erreurs 401/403 et 404
+      if (response.status === 401 || response.status === 403) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Token d'authentification invalide ou expiré",
+          error: "AUTHENTICATION_ERROR",
+          details: data 
+        }, { status: response.status });
+      }
+      
+      if (response.status === 404) {
+        return NextResponse.json({ 
+          success: false, 
+          message: "Service temporairement indisponible",
+          error: "SERVICE_UNAVAILABLE",
+          details: data 
+        }, { status: response.status });
+      }
+      
       return NextResponse.json({ 
         success: false, 
         message: data.message || "Error fetching dashboard data from Edge Function", 
@@ -52,9 +72,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("Proxy error (dashboard-data):", error);
+    
+    // Gérer les erreurs de réseau ou de connexion
+    if (error instanceof Error && error.message.includes("fetch")) {
+      return NextResponse.json({ 
+        success: false, 
+        message: "Service temporairement indisponible",
+        error: "NETWORK_ERROR",
+        details: error.message 
+      }, { status: 503 });
+    }
+    
     return NextResponse.json({ 
       success: false, 
       message: "Internal Server Error", 
+      error: "INTERNAL_ERROR",
       details: error instanceof Error ? error.message : String(error) 
     }, { status: 500 });
   }
