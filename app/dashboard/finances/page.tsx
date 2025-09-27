@@ -661,8 +661,28 @@ export default function FinancesPage() {
       const stats = calculateFinancialStats(data);
       console.log("Stats calculées:", stats);
       setFinancialStats(stats);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Erreur lors du chargement des remboursements:", e);
+      
+      // Gérer les erreurs d'authentification et serveur
+      if (e.message && (
+        e.message.includes("Erreur serveur") ||
+        e.message.includes("500") ||
+        e.message.includes("401") ||
+        e.message.includes("403") ||
+        e.message.includes("404") ||
+        e.message.includes("503")
+      )) {
+        console.error("❌ Erreur serveur détectée, déconnexion...");
+        window.dispatchEvent(new CustomEvent('session-error', { 
+          detail: { 
+            message: e.message,
+            status: e.status || 500
+          } 
+        }));
+        return;
+      }
+      
       toast.error("Erreur lors du chargement des remboursements");
     }
   };
@@ -696,8 +716,27 @@ export default function FinancesPage() {
       console.log("Nombre de remboursements filtrés:", data?.length);
 
       setTransactions(data);
-    } catch (e) {
+    } catch (e: any) {
       console.error("Erreur lors du chargement des remboursements filtrés:", e);
+      
+      // Gérer les erreurs d'authentification et serveur
+      if (e.message && (
+        e.message.includes("Erreur serveur") ||
+        e.message.includes("500") ||
+        e.message.includes("401") ||
+        e.message.includes("403") ||
+        e.message.includes("404") ||
+        e.message.includes("503")
+      )) {
+        console.error("❌ Erreur serveur détectée, déconnexion...");
+        window.dispatchEvent(new CustomEvent('session-error', { 
+          detail: { 
+            message: e.message,
+            status: e.status || 500
+          } 
+        }));
+        return;
+      }
     }
   };
   useEffect(() => {
@@ -1053,41 +1092,11 @@ export default function FinancesPage() {
 
         </div>
 
-        {/* Indicateur de filtres actifs */}
-        {Object.values(filters).some(value => value !== null && value !== undefined && value !== "") && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
-              <Filter className="h-4 w-4" />
-              <span>Filtres actifs :</span>
-              {Object.entries(filters).map(([key, value]) => {
-                if (value === null || value === undefined || value === "") return null;
-                
-                let displayValue = value;
-                if (key === 'mois' && typeof value === 'number') {
-                  displayValue = new Date(0, value - 1).toLocaleString('fr-FR', { month: 'long' });
-                } else if (key === 'status') {
-                  const statusMap: { [key: string]: string } = {
-                    'PAYE': 'Payé',
-                    'EN_ATTENTE': 'En attente',
-                    'EN_RETARD': 'En retard',
-                    'ANNULE': 'Annulé'
-                  };
-                  displayValue = statusMap[value as string] || value;
-                }
-                
-                return (
-                  <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
-                    {key}: {displayValue}
-                  </span>
-                );
-              })}
-            </div>
-            {edgeFunctionLoading && (
-              <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                Mise à jour des données...
-              </div>
-            )}
+        {/* Indicateur de filtres actifs supprimé */}
+        {edgeFunctionLoading && (
+          <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
           </div>
         )}
       </div>

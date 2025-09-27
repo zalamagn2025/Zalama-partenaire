@@ -35,10 +35,18 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastRefreshRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
+  const isLoggingOutRef = useRef<boolean>(false);
 
   // Fonction de déconnexion avec redirection
   const logoutWithRedirect = useCallback(async () => {
+    // Éviter les déconnexions multiples
+    if (isLoggingOutRef.current) {
+      console.log("🚪 Déconnexion déjà en cours, ignorée");
+      return;
+    }
+
     try {
+      isLoggingOutRef.current = true;
       console.log("🚪 Déconnexion automatique en cours...");
 
       // Arrêter le refresh automatique
@@ -54,12 +62,18 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
 
       console.log("✅ Déconnexion terminée, redirection vers /login");
 
-      // Rediriger vers la page de connexion
-      router.push("/login");
+      // Rediriger vers la page de connexion seulement si on n'y est pas déjà
+      if (window.location.pathname !== "/login") {
+        router.push("/login");
+      }
     } catch (error) {
       console.error("❌ Erreur lors de la déconnexion:", error);
-      // Forcer la redirection même en cas d'erreur
-      router.push("/login");
+      // Forcer la redirection même en cas d'erreur, seulement si nécessaire
+      if (window.location.pathname !== "/login") {
+        router.push("/login");
+      }
+    } finally {
+      isLoggingOutRef.current = false;
     }
   }, [router]);
 
@@ -205,18 +219,26 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
     const errorMessage = error.message || error.toString() || "";
     const errorStatus = error.status || error.code;
 
-    // Erreurs liées aux tokens expirés
+    // Erreurs liées aux tokens expirés et erreurs serveur
     const tokenExpiredPatterns = [
       "token",
       "unauthorized",
       "Session expirée",
       "401",
       "403",
+      "404",
+      "500",
+      "503",
       "refresh token expired",
       "access token expired",
       "invalid token",
       "expired",
       "authentication failed",
+      "not found",
+      "service unavailable",
+      "internal server error",
+      "erreur serveur",
+      "server error",
     ];
 
     // Vérifier les patterns dans le message d'erreur
@@ -225,7 +247,7 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
     );
 
     // Vérifier les codes d'erreur HTTP
-    const hasTokenStatus = errorStatus === 401 || errorStatus === 403;
+    const hasTokenStatus = errorStatus === 401 || errorStatus === 403 || errorStatus === 404 || errorStatus === 500 || errorStatus === 503;
 
     return hasTokenError || hasTokenStatus;
   }, []);

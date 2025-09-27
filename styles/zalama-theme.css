@@ -216,6 +216,101 @@ span{
   font-size: 12px;
 }
 
+/* Styles pour les filtres */
+.filter-container {
+  background: var(--zalama-card);
+  border: 1px solid var(--zalama-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 12px 0 var(--zalama-shadow);
+}
+
+.filter-header {
+  background: var(--zalama-bg-lighter);
+  color: var(--zalama-text);
+  border-bottom: 1px solid var(--zalama-border);
+  padding: 0.75rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.filter-header:hover {
+  background: var(--zalama-bg-light);
+}
+
+.filter-content {
+  padding: 1rem;
+  background: var(--zalama-card);
+}
+
+.filter-input {
+  background: var(--zalama-bg-light);
+  border: 1px solid var(--zalama-border);
+  color: var(--zalama-text);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: var(--zalama-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-select {
+  background: var(--zalama-bg-light);
+  border: 1px solid var(--zalama-border);
+  color: var(--zalama-text);
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--zalama-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.filter-button {
+  background: var(--zalama-blue);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.filter-button:hover {
+  background: var(--zalama-blue-accent);
+}
+
+.filter-button-secondary {
+  background: var(--zalama-bg-light);
+  color: var(--zalama-text);
+  border: 1px solid var(--zalama-border);
+  border-radius: 0.375rem;
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.filter-button-secondary:hover {
+  background: var(--zalama-bg-lighter);
+  border-color: var(--zalama-blue);
+}
+
+.filter-label {
+  color: var(--zalama-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
 /* Media queries pour la responsivité */
 @media (max-width: 1200px) {
   :root {

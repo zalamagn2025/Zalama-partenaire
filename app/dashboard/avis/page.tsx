@@ -735,62 +735,7 @@ export default function AvisPage() {
       </div>
 
       {/* Affichage des filtres actifs */}
-      {Object.values(filters).some(v => v !== null && v !== undefined && v !== 50 && v !== 0) && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          <span className="text-sm text-[var(--zalama-text)]/70">Filtres actifs:</span>
-          {filters.mois && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Mois: {activityPeriods?.months.find(m => m.value === filters.mois)?.label}
-              <button onClick={() => updateFilter('mois', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.annee && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Année: {filters.annee}
-              {filters.mois && filters.annee === new Date().getFullYear() && (
-                <span className="text-xs opacity-75">(auto)</span>
-              )}
-              <button onClick={() => updateFilter('annee', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.note && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Note: {filters.note} étoiles
-              <button onClick={() => updateFilter('note', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.type_retour && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Type: {filters.type_retour}
-              <button onClick={() => updateFilter('type_retour', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.approuve !== null && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Statut: {filters.approuve ? 'Approuvé' : 'En attente'}
-              <button onClick={() => updateFilter('approuve', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.employee_id && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Employé: {employees.find(e => e.id === filters.employee_id)?.nom_complet}
-              <button onClick={() => updateFilter('employee_id', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.date_debut && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Depuis: {new Date(filters.date_debut).toLocaleDateString('fr-FR')}
-              <button onClick={() => updateFilter('date_debut', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-          {filters.date_fin && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-              Jusqu'à: {new Date(filters.date_fin).toLocaleDateString('fr-FR')}
-              <button onClick={() => updateFilter('date_fin', null)} className="ml-1 hover:text-blue-600">×</button>
-            </span>
-          )}
-        </div>
-      )}
+      {/* Filtres actifs supprimés */}
 
       {/* Indicateur de filtrage */}
       {isFiltering && (

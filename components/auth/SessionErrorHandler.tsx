@@ -23,11 +23,19 @@ export default function SessionErrorHandler({
       "Session expirée",
       "401",
       "403",
+      "404",
+      "500",
+      "503",
       "refresh token expired",
       "access token expired",
       "invalid token",
       "expired",
       "authentication failed",
+      "not found",
+      "service unavailable",
+      "internal server error",
+      "erreur serveur",
+      "server error",
     ];
 
     return tokenExpiredPatterns.some((pattern) =>
@@ -38,14 +46,22 @@ export default function SessionErrorHandler({
   // Fonction de déconnexion avec redirection
   const handleTokenExpired = async () => {
     try {
-      console.log("🔑 Token expiré détecté, déconnexion automatique");
-      toast.error("Session expirée. Veuillez vous reconnecter.");
+      console.log("🔑 Erreur d'authentification détectée, déconnexion automatique");
+      toast.error("Session expirée. Redirection vers la connexion...");
+      
+      // Nettoyer immédiatement la session
       await logout();
-      router.push("/login");
+      
+      // Redirection immédiate sans délai
+      if (window.location.pathname !== "/login") {
+        router.push("/login");
+      }
     } catch (error) {
       console.error("Erreur lors de la déconnexion automatique:", error);
       // Forcer la redirection même en cas d'erreur
-      router.push("/login");
+      if (window.location.pathname !== "/login") {
+        router.push("/login");
+      }
     }
   };
 
@@ -72,9 +88,9 @@ export default function SessionErrorHandler({
     const handleFetchError = (event: Event) => {
       const target = event.target as any;
       if (target && target.status) {
-        if (target.status === 401 || target.status === 403) {
+        if (target.status === 401 || target.status === 403 || target.status === 404 || target.status === 500 || target.status === 503) {
           console.log(
-            "🔑 Erreur d'authentification détectée dans une requête fetch"
+            "🔑 Erreur serveur détectée dans une requête fetch"
           );
           handleTokenExpired();
         }

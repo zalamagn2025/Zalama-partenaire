@@ -120,8 +120,28 @@ export default function DemandesPage() {
       const demandes = await partnerService.getSalaryAdvanceRequests();
 
       setDemandesAvance(demandes);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors du chargement des demandes:", error);
+      
+      // Gérer les erreurs d'authentification et serveur
+      if (error.message && (
+        error.message.includes("Erreur serveur") ||
+        error.message.includes("500") ||
+        error.message.includes("401") ||
+        error.message.includes("403") ||
+        error.message.includes("404") ||
+        error.message.includes("503")
+      )) {
+        console.error("❌ Erreur serveur détectée, déconnexion...");
+        window.dispatchEvent(new CustomEvent('session-error', { 
+          detail: { 
+            message: error.message,
+            status: error.status || 500
+          } 
+        }));
+        return;
+      }
+      
       toast.error("Erreur lors du chargement des demandes");
     } finally {
       if (showTableLoader) {
@@ -195,8 +215,28 @@ export default function DemandesPage() {
       }
       
       console.log("✅ Données chargées avec succès:", demandesData.data?.length, "demandes");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur lors du chargement des données Edge Functions:", error);
+      
+      // Gérer les erreurs d'authentification et serveur
+      if (error.message && (
+        error.message.includes("Erreur serveur") ||
+        error.message.includes("500") ||
+        error.message.includes("401") ||
+        error.message.includes("403") ||
+        error.message.includes("404") ||
+        error.message.includes("503")
+      )) {
+        console.error("❌ Erreur serveur détectée, déconnexion...");
+        window.dispatchEvent(new CustomEvent('session-error', { 
+          detail: { 
+            message: error.message,
+            status: error.status || 500
+          } 
+        }));
+        return;
+      }
+      
       toast.error("Erreur lors du chargement des données");
     } finally {
       setEdgeFunctionLoading(false);
@@ -967,22 +1007,6 @@ export default function DemandesPage() {
         </div>
 
         {/* Indicateur de filtres actifs */}
-        {Object.values(filters).some(value => value !== null && value !== undefined && value !== "") && (
-          <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-            <div className="flex items-center gap-2 text-sm text-blue-800 dark:text-blue-200">
-              <Filter className="h-4 w-4" />
-              <span>Filtres actifs :</span>
-              {Object.entries(filters).map(([key, value]) => {
-                if (value === null || value === undefined || value === "") return null;
-                return (
-                  <span key={key} className="px-2 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md text-xs">
-                    {key}: {value}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Liste des demandes */}

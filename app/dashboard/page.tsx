@@ -61,7 +61,7 @@ export default function EntrepriseDashboardPage() {
   const router = useRouter();
 
   // États pour les données Edge Function
-  const [dashboardData, setDashboardData] = useState<DashboardDataResponse | null>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -104,21 +104,15 @@ export default function EntrepriseDashboardPage() {
 
       if (!response.ok) {
         // Gérer les erreurs d'authentification et de route
-        if (response.status === 401 || response.status === 403) {
-          console.error("❌ Erreur d'authentification:", response.status);
-          toast.error("Session expirée. Redirection vers la connexion...");
-          setTimeout(() => {
-            router.push("/login");
-          }, 2000);
-          return;
-        }
-        
-        if (response.status === 404) {
-          console.error("❌ Route non trouvée:", response.status);
-          toast.error("Service temporairement indisponible. Redirection vers la connexion...");
-          setTimeout(() => {
-            router.push("/login");
-          }, 2000);
+        if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 500 || response.status === 503) {
+          console.error("❌ Erreur serveur:", response.status);
+          // Déclencher immédiatement la déconnexion sans délai
+          window.dispatchEvent(new CustomEvent('session-error', { 
+            detail: { 
+              message: `Erreur ${response.status}: ${response.status === 401 ? 'Non autorisé' : response.status === 403 ? 'Accès interdit' : response.status === 404 ? 'Service non trouvé' : response.status === 500 ? 'Erreur serveur interne' : 'Service indisponible'}`,
+              status: response.status
+            } 
+          }));
           return;
         }
         
@@ -211,16 +205,28 @@ export default function EntrepriseDashboardPage() {
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
     if (!loading && !session) {
+      console.log("🔄 Pas de session, redirection vers /login");
       router.push("/login");
     }
   }, [loading, session, router]);
 
+  // Gérer les erreurs de session
+  useEffect(() => {
+    if (error && (error.includes("Session expirée") || error.includes("401") || error.includes("403"))) {
+      console.log("🔑 Erreur d'authentification détectée, déconnexion...");
+      // Déclencher un événement personnalisé pour que le SessionErrorHandler gère la déconnexion
+      window.dispatchEvent(new CustomEvent('session-error', { 
+        detail: { message: error } 
+      }));
+    }
+  }, [error]);
+
   // Utiliser les données Edge Function directement
-  const statistics = dashboardData?.data?.statistics;
-  const financialPerformance = dashboardData?.data?.financial_performance;
-  const charts = dashboardData?.data?.charts;
-  const partnerInfo = dashboardData?.data?.partner_info;
-  const filters = dashboardData?.data?.filters;
+  const statistics = dashboardData?.statistics;
+  const financialPerformance = dashboardData?.financial_performance;
+  const charts = dashboardData?.charts;
+  const partnerInfo = dashboardData?.partner_info;
+  const filters = dashboardData?.filters;
 
   // Afficher un message de bienvenue
   useEffect(() => {
@@ -688,7 +694,7 @@ export default function EntrepriseDashboardPage() {
         {/* Remboursements récents */}
         <RemboursementsRecents 
           compact={true} 
-          remboursements={dashboardData?.data?.remboursements}
+          remboursements={dashboardData?.remboursements}
           isLoading={isLoading}
         />
       </div>
