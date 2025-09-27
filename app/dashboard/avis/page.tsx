@@ -98,10 +98,9 @@ export default function AvisPage() {
   const [avis, setAvis] = useState<AvisWithEmployee[]>([]);
   const [filteredAvis, setFilteredAvis] = useState<AvisWithEmployee[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFiltering, setIsFiltering] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const filterMenuRef = useRef<HTMLDivElement>(null);
@@ -136,17 +135,19 @@ export default function AvisPage() {
   // Créer la référence en dehors des hooks
   const hasFinishedLoading = React.useRef(false);
 
-  // Charger les données initiales
+  // Charger les données initiales (employés et périodes)
   useEffect(() => {
     if (!loading && session?.access_token) {
       loadInitialData();
     }
   }, [loading, session?.access_token]);
 
-  // Charger les avis quand les filtres changent
+  // Charger les avis et statistiques quand les filtres changent
   useEffect(() => {
     if (session?.access_token) {
+      console.log('🔄 useEffect déclenché - Filtres actuels:', filters);
       loadAvisData();
+      loadStatistics();
     }
   }, [filters, session?.access_token]);
 
@@ -179,8 +180,7 @@ export default function AvisPage() {
         }
       }
 
-      // Charger les avis et statistiques
-      await Promise.all([loadAvisData(), loadStatistics()]);
+      // Les avis et statistiques seront chargés par le useEffect des filtres
     } catch (error) {
       console.error("Erreur lors du chargement des données initiales:", error);
       toast.error("Erreur lors du chargement des données");
@@ -192,6 +192,7 @@ export default function AvisPage() {
   const loadAvisData = async () => {
     if (!session?.access_token) return;
 
+    setIsFiltering(true);
     try {
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
@@ -203,6 +204,8 @@ export default function AvisPage() {
       const url = queryParams.toString() 
         ? `/api/proxy/avis?${queryParams.toString()}`
         : '/api/proxy/avis';
+
+      console.log('🔄 Chargement avis avec filtres:', Object.fromEntries(queryParams.entries()));
 
       const response = await fetch(url, {
         method: 'GET',
@@ -229,10 +232,20 @@ export default function AvisPage() {
       setFilteredAvis(avisList);
       setPagination(avisData.data?.pagination || { limit: 50, offset: 0, total: 0 });
 
-      console.log("Avis chargés via proxy:", avisList);
+      console.log("✅ Avis chargés via proxy:", avisList.length, "avis");
+      console.log("📊 Pagination:", avisData.data?.pagination);
+      console.log("🔍 Filtres appliqués:", avisData.data?.filters);
+      
+      // Vérifier les dates des avis pour confirmer le filtrage
+      if (avisList.length > 0) {
+        const dates = avisList.map((avis: any) => new Date(avis.date_avis).toLocaleDateString('fr-FR'));
+        console.log("📅 Dates des avis chargés:", dates.slice(0, 5));
+      }
     } catch (error) {
       console.error("Erreur lors du chargement des avis:", error);
       toast.error("Erreur lors du chargement des avis");
+    } finally {
+      setIsFiltering(false);
     }
   };
 
@@ -251,6 +264,8 @@ export default function AvisPage() {
         ? `/api/proxy/avis/statistics?${queryParams.toString()}`
         : '/api/proxy/avis/statistics';
 
+      console.log('📊 Chargement statistiques avec filtres:', Object.fromEntries(queryParams.entries()));
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
@@ -267,7 +282,7 @@ export default function AvisPage() {
 
       if (statsData.success) {
         setStatistics(statsData.data.statistics);
-        console.log("Statistiques chargées:", statsData.data.statistics);
+        console.log("✅ Statistiques chargées:", statsData.data.statistics);
       }
     } catch (error) {
       console.error("Erreur lors du chargement des statistiques:", error);
@@ -275,6 +290,7 @@ export default function AvisPage() {
   };
 
   const updateFilter = (key: string, value: any) => {
+    console.log(`🔧 Mise à jour filtre: ${key} = ${value}`);
     setFilters(prev => ({
       ...prev,
       [key]: value,
@@ -284,6 +300,7 @@ export default function AvisPage() {
   };
 
   const clearFilters = () => {
+    console.log('🧹 Réinitialisation de tous les filtres');
     setFilters({
       mois: null,
       annee: null,
@@ -323,25 +340,19 @@ export default function AvisPage() {
     };
   }, []);
 
-  // Filtrer les avis
+  // Filtrer les avis côté client (seulement pour la recherche textuelle)
   useEffect(() => {
-    let filtered = avis;
-
-    // Filtre par recherche
     if (searchTerm) {
-      filtered = filtered.filter((avi) =>
+      const filtered = avis.filter((avi) =>
         avi.commentaire?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+      setFilteredAvis(filtered);
+    } else {
+      // Si pas de recherche, utiliser directement les données du serveur
+      setFilteredAvis(avis);
     }
-
-    // Filtre par note
-    if (ratingFilter) {
-      filtered = filtered.filter((avi) => avi.note === ratingFilter);
-    }
-
-    setFilteredAvis(filtered);
     setCurrentPage(1);
-  }, [avis, searchTerm, ratingFilter]);
+  }, [avis, searchTerm]);
 
   // Pagination
   const totalPages = Math.ceil(pagination.total / itemsPerPage);
@@ -755,6 +766,16 @@ export default function AvisPage() {
         </div>
       )}
 
+      {/* Indicateur de filtrage */}
+      {isFiltering && (
+        <div className="flex items-center justify-center py-4">
+          <div className="flex items-center gap-2 text-[var(--zalama-text)]/70">
+            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-[var(--zalama-blue)]"></div>
+            <span className="text-sm">Application des filtres...</span>
+          </div>
+        </div>
+      )}
+
       {/* Liste des avis */}
       <div className="space-y-4 mt-2">
         {filteredAvis.length === 0 ? (
@@ -771,8 +792,7 @@ export default function AvisPage() {
               <button
                 onClick={() => {
                   setSearchTerm("");
-                  setSelectedCategory(null);
-                  setRatingFilter(null);
+                  clearFilters();
                   setCurrentPage(1);
                 }}
                 className="mt-4 px-4 py-2 bg-[var(--zalama-blue)] text-white rounded-md"

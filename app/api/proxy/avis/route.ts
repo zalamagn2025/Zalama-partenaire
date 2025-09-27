@@ -70,7 +70,12 @@ export async function GET(request: NextRequest) {
     }
 
     const data = await response.json();
-    console.log('✅ Proxy Avis - Response:', data);
+    console.log('✅ Proxy Avis - Response:', {
+      success: data.success,
+      avisCount: data.data?.avis?.length || 0,
+      pagination: data.data?.pagination,
+      filters: data.data?.filters
+    });
     return NextResponse.json(data);
 
   } catch (error) {
