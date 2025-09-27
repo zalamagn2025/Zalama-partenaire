@@ -5,7 +5,7 @@ import DocumentsRapports from "@/components/dashboard/DocumentsRapports";
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { PartnerDataService } from "@/lib/services";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
+import { edgeFunctionService, type DashboardDataResponse } from "@/lib/edgeFunctionService";
 import type { Alert, Employee, SalaryAdvanceRequest } from "@/lib/supabase";
 import { supabase } from "@/lib/supabase";
 import {
@@ -61,7 +61,7 @@ export default function EntrepriseDashboardPage() {
   const router = useRouter();
 
   // États pour les données Edge Function
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [dashboardData, setDashboardData] = useState<DashboardDataResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -216,11 +216,11 @@ export default function EntrepriseDashboardPage() {
   }, [loading, session, router]);
 
   // Utiliser les données Edge Function directement
-  const statistics = dashboardData?.statistics;
-  const financialPerformance = dashboardData?.financial_performance;
-  const charts = dashboardData?.charts;
-  const partnerInfo = dashboardData?.partner_info;
-  const filters = dashboardData?.filters;
+  const statistics = dashboardData?.data?.statistics;
+  const financialPerformance = dashboardData?.data?.financial_performance;
+  const charts = dashboardData?.data?.charts;
+  const partnerInfo = dashboardData?.data?.partner_info;
+  const filters = dashboardData?.data?.filters;
 
   // Afficher un message de bienvenue
   useEffect(() => {
@@ -475,7 +475,7 @@ export default function EntrepriseDashboardPage() {
               : new Date().getFullYear()}
           </span>
           <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">
-            {partnerInfo?.status === "approved" ? "Compte actif" : "En attente"}
+            Compte actif
           </span>
         </div>
       </div>
@@ -688,7 +688,7 @@ export default function EntrepriseDashboardPage() {
         {/* Remboursements récents */}
         <RemboursementsRecents 
           compact={true} 
-          remboursements={dashboardData?.remboursements}
+          remboursements={dashboardData?.data?.remboursements}
           isLoading={isLoading}
         />
       </div>

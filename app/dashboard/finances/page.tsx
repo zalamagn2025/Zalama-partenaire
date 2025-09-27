@@ -204,9 +204,9 @@ export default function FinancesPage() {
       
       try {
         edgeFunctionService.setAccessToken(session.access_token);
-        const response = await edgeFunctionService.getPartnerInfo();
-        if (response.success && response.partner_info?.payment_day) {
-          setPaymentDay(response.partner_info.payment_day);
+        const response = await edgeFunctionService.getDashboardData();
+        if (response.success && response.data?.partner_info?.payment_day) {
+          setPaymentDay(response.data.partner_info.payment_day);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération du payment_day:", error);
@@ -774,10 +774,10 @@ export default function FinancesPage() {
         [
           transaction.id,
           formatDate(transaction.date_creation),
-          transaction.employees
-            ? `${transaction.employees.prenom} ${transaction.employees.nom}`
+          transaction.employe
+            ? `${transaction.employe.prenom} ${transaction.employe.nom}`
             : "Non spécifié",
-          transaction.employees?.poste || "Non spécifié",
+          "Non spécifié",
           transaction.montant_total_remboursement,
           transaction.methode_remboursement || "Remboursement",
           transaction.methode_remboursement || "",

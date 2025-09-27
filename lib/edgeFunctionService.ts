@@ -613,7 +613,7 @@ class EdgeFunctionService {
   }
 
   // 🏢 Informations du partenaire
-  async getPartnerInfo(accessToken: string): Promise<PartnerAuthResponse> {
+  async getPartnerInfoWithToken(accessToken: string): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/partner-info", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -654,7 +654,7 @@ class EdgeFunctionService {
   }
 
   // 📊 Statistiques
-  async getStatistics(accessToken: string): Promise<PartnerAuthResponse> {
+  async getStatisticsWithToken(accessToken: string): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/statistics", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -672,7 +672,7 @@ class EdgeFunctionService {
   }
 
   // 📋 Demandes
-  async getDemandes(accessToken: string): Promise<PartnerAuthResponse> {
+  async getDemandesWithToken(accessToken: string): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/demandes", {
       headers: {
         Authorization: `Bearer ${accessToken}`,

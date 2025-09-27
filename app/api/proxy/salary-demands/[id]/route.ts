@@ -4,11 +4,11 @@ const SUPABASE_FUNCTION_URL = process.env.NEXT_PUBLIC_SUPABASE_URL + "/functions
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const accessToken = request.headers.get("Authorization");
-    const demandId = params.id;
+    const { id: demandId } = await params;
     
     if (!accessToken) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
