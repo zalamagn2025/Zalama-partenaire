@@ -291,11 +291,29 @@ export default function AvisPage() {
 
   const updateFilter = (key: string, value: any) => {
     console.log(`🔧 Mise à jour filtre: ${key} = ${value}`);
-    setFilters(prev => ({
-      ...prev,
-      [key]: value,
-      offset: 0 // Reset pagination when filters change
-    }));
+    
+    setFilters(prev => {
+      const newFilters = {
+        ...prev,
+        [key]: value,
+        offset: 0 // Reset pagination when filters change
+      };
+
+      // Si on sélectionne un mois sans année, utiliser l'année en cours
+      if (key === 'mois' && value !== null && prev.annee === null) {
+        const currentYear = new Date().getFullYear();
+        newFilters.annee = currentYear;
+        console.log(`📅 Année automatique définie: ${currentYear}`);
+      }
+
+      // Si on sélectionne une année sans mois, réinitialiser le mois
+      if (key === 'annee' && value !== null && prev.mois !== null) {
+        // Garder le mois sélectionné, juste mettre à jour l'année
+        console.log(`📅 Année mise à jour: ${value}, mois conservé: ${prev.mois}`);
+      }
+
+      return newFilters;
+    });
     setCurrentPage(1);
   };
 
@@ -555,6 +573,11 @@ export default function AvisPage() {
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
                   <h3 className="text-sm font-medium text-[var(--zalama-text)] mb-2">
                     Période
+                    {filters.mois && !filters.annee && (
+                      <span className="text-xs text-blue-600 dark:text-blue-400 ml-2">
+                        (année en cours automatique)
+                      </span>
+                    )}
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     <select
@@ -724,6 +747,9 @@ export default function AvisPage() {
           {filters.annee && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full text-xs">
               Année: {filters.annee}
+              {filters.mois && filters.annee === new Date().getFullYear() && (
+                <span className="text-xs opacity-75">(auto)</span>
+              )}
               <button onClick={() => updateFilter('annee', null)} className="ml-1 hover:text-blue-600">×</button>
             </span>
           )}
