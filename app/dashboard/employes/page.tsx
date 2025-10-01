@@ -32,10 +32,8 @@ export default function EmployesPage() {
   
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedGender, setSelectedGender] = useState<string | null>(null);
   const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [isGenderDropdownOpen, setIsGenderDropdownOpen] = useState(false);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
   
@@ -375,48 +373,6 @@ export default function EmployesPage() {
             </div>
           </div>
 
-          {/* Filtre par genre */}
-          <div className="relative">
-            <button
-              onClick={() => setIsGenderDropdownOpen(!isGenderDropdownOpen)}
-              className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {selectedGender || "Genre"}
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </button>
-            {isGenderDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                <button
-                  onClick={() => {
-                    setSelectedGender(null);
-                    setIsGenderDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Tous les genres
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedGender("Homme");
-                    setIsGenderDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Homme
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedGender("Femme");
-                    setIsGenderDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Femme
-                </button>
-              </div>
-            )}
-          </div>
 
           {/* Filtre par type de contrat */}
           <div className="relative">
@@ -543,9 +499,6 @@ export default function EmployesPage() {
                   Salaire net
                 </th>
                 <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Salaire restant
-                </th>
-                <th className="w-1/8 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date d'embauche
                 </th>
                 <th className="w-1/12 px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -601,13 +554,6 @@ export default function EmployesPage() {
                     <div className="truncate">
                       {employee.salaire_net
                         ? formatSalary(employee.salaire_net)
-                        : "Non défini"}
-                    </div>
-                  </td>
-                  <td className="px-2 py-4 text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    <div className="truncate">
-                      {employee.salaire_restant
-                        ? formatSalary(employee.salaire_restant)
                         : "Non défini"}
                     </div>
                   </td>
@@ -731,14 +677,6 @@ export default function EmployesPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Genre
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.genre}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Email
                   </label>
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
@@ -776,16 +714,6 @@ export default function EmployesPage() {
                   <p className="mt-1 text-sm text-gray-900 dark:text-white">
                     {selectedEmployee.salaire_net
                       ? formatSalary(selectedEmployee.salaire_net)
-                      : "Non défini"}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Salaire restant
-                  </label>
-                  <p className="mt-1 text-sm text-semibold text-emerald-600 dark:text-emerald-400">
-                    {selectedEmployee.salaire_restant
-                      ? formatSalary(selectedEmployee.salaire_restant)
                       : "Non défini"}
                   </p>
                 </div>

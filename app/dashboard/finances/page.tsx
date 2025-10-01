@@ -1033,7 +1033,18 @@ export default function FinancesPage() {
             </label>
             <select
               value={filters.mois || ""}
-              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) => {
+                const mois = e.target.value ? parseInt(e.target.value) : null;
+                // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                if (mois && !filters.annee) {
+                  const newFilters = { ...filters, mois, annee: new Date().getFullYear() };
+                  setFilters(newFilters);
+                  loadFinancesData(newFilters);
+                  loadTransactionsWithFilters(newFilters);
+                } else {
+                  applyFilter('mois', mois);
+                }
+              }}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les mois</option>
