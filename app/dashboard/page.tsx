@@ -372,7 +372,14 @@ export default function EntrepriseDashboardPage() {
               <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Mois</label>
               <select
                 value={selectedMonth || ""}
-                onChange={(e) => setSelectedMonth(e.target.value ? parseInt(e.target.value) : null)}
+                onChange={(e) => {
+                  const month = e.target.value ? parseInt(e.target.value) : null;
+                  setSelectedMonth(month);
+                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                  if (month && !selectedYear) {
+                    setSelectedYear(new Date().getFullYear());
+                  }
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 <option value="">Mois en cours</option>
@@ -521,9 +528,6 @@ export default function EntrepriseDashboardPage() {
             Performance financière
           </h2>
           <div className="flex items-center gap-2">
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-              Données Edge Function
-            </span>
             <button
               onClick={() => loadDashboardData()}
               disabled={isLoading}
