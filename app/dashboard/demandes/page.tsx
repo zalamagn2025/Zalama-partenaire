@@ -444,6 +444,7 @@ export default function DemandesPage() {
     
     return {
       ...d,
+      id: premiereDemande.id || d.id, // ✅ Utiliser l'ID de la première demande détaillée
       type_demande: "Avance sur Salaire",
       demandeur: demandeur,
       date: new Date((d as any).date_creation_premiere || d.date_creation || new Date()).toLocaleDateString("fr-FR"),
@@ -555,24 +556,31 @@ export default function DemandesPage() {
         "Traitement de l'approbation... (8 secondes)"
       );
 
-      const result = await edgeFunctionService.approveRequest(
-        session.access_token,
-        {
+      // Utiliser le nouveau proxy partner-approval
+      const response = await fetch('/api/proxy/partner-approval', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           requestId: requestId,
           action: "approve",
           approverId: session.admin?.id || session.user?.id,
-          approverRole: approverRole as "rh" | "responsable",
-          reason: "Demande approuvée par le service RH",
-        }
-      );
+          approverRole: approverRole,
+          reason: "Demande approuvée par le service RH"
+        })
+      });
+
+      const result = await response.json();
 
       // Fermer le toast de chargement
       toast.dismiss(loadingToast);
 
       if (result.success) {
         toast.success("Demande approuvée avec succès");
-        // Recharger les demandes avec un délai de 8 secondes pour montrer le loading complet
-        await loadDemandes(true, 8000);
+        // Recharger immédiatement les demandes pour avoir les données à jour
+        await loadSalaryDemandsData(filters);
       } else {
         throw new Error(result.message || "Erreur lors de l'approbation");
       }
@@ -603,24 +611,31 @@ export default function DemandesPage() {
       // Afficher un toast de chargement
       const loadingToast = toast.loading("Traitement du rejet... (8 secondes)");
 
-      const result = await edgeFunctionService.rejectRequest(
-        session.access_token,
-        {
+      // Utiliser le nouveau proxy partner-approval
+      const response = await fetch('/api/proxy/partner-approval', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
           requestId: requestId,
           action: "reject",
           approverId: session.admin?.id || session.user?.id,
-          approverRole: approverRole as "rh" | "responsable",
-          reason: "Demande rejetée par le service RH",
-        }
-      );
+          approverRole: approverRole,
+          reason: "Demande rejetée par le service RH"
+        })
+      });
+
+      const result = await response.json();
 
       // Fermer le toast de chargement
       toast.dismiss(loadingToast);
 
       if (result.success) {
         toast.success("Demande rejetée avec succès");
-        // Recharger les demandes avec un délai de 8 secondes pour montrer le loading complet
-        await loadDemandes(true, 8000);
+        // Recharger immédiatement les demandes pour avoir les données à jour
+        await loadSalaryDemandsData(filters);
       } else {
         throw new Error(result.message || "Erreur lors du rejet");
       }
