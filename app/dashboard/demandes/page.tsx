@@ -1265,7 +1265,7 @@ export default function DemandesPage() {
 
       {/* Modal de détails de la demande */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
+        <DialogContent className="max-w-6xl max-h-[90vh]" style={{ width: '90vw', maxWidth: '1200px' }}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <FileText className="w-6 h-6 text-[var(--zalama-green)]" />
@@ -1293,16 +1293,28 @@ export default function DemandesPage() {
                             Nom complet :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.demandeur}
+                            {selectedDemande.employe ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}` : selectedDemande.demandeur || "N/A"}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center py-2">
+                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Poste :
+                            Téléphone :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.poste}
+                            {selectedDemande.employe ? selectedDemande.employe.telephone : "N/A"}
                           </span>
+                        </div>
+                        <div className="py-2">
+                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-2">
+                            Numéro de réception :
+                          </span>
+                          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                            <p className="text-sm text-gray-900 dark:text-white font-mono break-all">
+                              {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].pay_id 
+                                ? selectedDemande.demandes_detailes[0].pay_id 
+                                : "N/A"}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1336,16 +1348,16 @@ export default function DemandesPage() {
                           </span>
                           <span
                             className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                              selectedDemande.statut === "En attente"
+                              (selectedDemande.statut_global || selectedDemande.statut) === "En attente"
                                 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                : selectedDemande.statut === "Validé"
+                                : (selectedDemande.statut_global || selectedDemande.statut) === "Validé"
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                : selectedDemande.statut === "Rejeté"
+                                : (selectedDemande.statut_global || selectedDemande.statut) === "Rejeté"
                                 ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                                 : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                             }`}
                           >
-                            {selectedDemande.statut}
+                            {selectedDemande.statut_global || selectedDemande.statut}
                           </span>
                         </div>
                       </div>
@@ -1367,7 +1379,9 @@ export default function DemandesPage() {
                             Montant demandé :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.montant.toLocaleString()} GNF
+                            {selectedDemande.montant_total_demande 
+                              ? selectedDemande.montant_total_demande.toLocaleString() 
+                              : selectedDemande.montant ? selectedDemande.montant.toLocaleString() : "0"} GNF
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2">
@@ -1375,7 +1389,9 @@ export default function DemandesPage() {
                             Date de création :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.date}
+                            {selectedDemande.date_creation_premiere 
+                              ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR") 
+                              : selectedDemande.date || "N/A"}
                           </span>
                         </div>
                       </div>
@@ -1384,10 +1400,12 @@ export default function DemandesPage() {
                       <div className="space-y-3">
                         <div className="flex justify-between items-center py-2">
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Date de mise à jour :
+                            Date de validation :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.updated_at ? new Date(selectedDemande.updated_at).toLocaleDateString("fr-FR") : "N/A"}
+                            {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].date_validation 
+                              ? new Date(selectedDemande.demandes_detailes[0].date_validation).toLocaleDateString("fr-FR") 
+                              : selectedDemande.updated_at ? new Date(selectedDemande.updated_at).toLocaleDateString("fr-FR") : "N/A"}
                           </span>
                         </div>
                       </div>
@@ -1408,16 +1426,20 @@ export default function DemandesPage() {
                           Type de motif :
                         </span>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {selectedDemande.type_motif || "Autre"}
+                          {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].type_motif 
+                            ? selectedDemande.demandes_detailes[0].type_motif 
+                            : selectedDemande.type_motif || "Autre"}
                         </span>
                       </div>
-                      <div className="py-2">
+                        <div className="py-2">
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-2">
                           Description du motif :
                         </span>
                         <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                           <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
-                            {selectedDemande.motif || "Aucune description fournie"}
+                            {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].motif 
+                              ? selectedDemande.demandes_detailes[0].motif 
+                              : selectedDemande.motif || "Aucune description fournie"}
                           </p>
                         </div>
                       </div>
@@ -1428,15 +1450,6 @@ export default function DemandesPage() {
             </div>
           )}
 
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setShowDetailsModal(false)}
-              className="flex items-center gap-2 border-[var(--zalama-border)] hover:bg-[var(--zalama-green)]/10 dark:hover:bg-[var(--zalama-green)]/20"
-            >
-              Fermer
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

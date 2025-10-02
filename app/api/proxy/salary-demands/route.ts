@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const params = new URLSearchParams();
     
     // Gestion spéciale pour éviter le bug de l'edge function avec mois=8 + limit/offset
-    const hasMois8 = filters.mois === '8' || filters.mois === 8;
+    const hasMois8 = filters.mois === '8';
     const hasLimitOffset = filters.limit || filters.offset;
     
     Object.entries(filters).forEach(([key, value]) => {
