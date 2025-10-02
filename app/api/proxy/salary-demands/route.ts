@@ -30,8 +30,17 @@ export async function GET(request: NextRequest) {
     let url = SUPABASE_FUNCTION_URL;
     const params = new URLSearchParams();
     
+    // Gestion spéciale pour éviter le bug de l'edge function avec mois=8 + limit/offset
+    const hasMois8 = filters.mois === '8' || filters.mois === 8;
+    const hasLimitOffset = filters.limit || filters.offset;
+    
     Object.entries(filters).forEach(([key, value]) => {
       if (value) {
+        // Si c'est mois=8 et qu'on a limit/offset, on ignore limit/offset pour éviter le bug
+        if (hasMois8 && hasLimitOffset && (key === 'limit' || key === 'offset')) {
+          console.log(`⚠️ Ignoring ${key}=${value} for mois=8 to avoid edge function bug`);
+          return;
+        }
         params.append(key, value);
       }
     });
@@ -42,6 +51,9 @@ export async function GET(request: NextRequest) {
 
     console.log("🔄 Proxy Salary Demands - URL:", url);
     console.log("🔄 Proxy Salary Demands - Filters:", filters);
+    console.log("🔄 Proxy Salary Demands - SearchParams:", Object.fromEntries(searchParams.entries()));
+    console.log("🔄 Proxy Salary Demands - Mois value:", searchParams.get('mois'), "Type:", typeof searchParams.get('mois'));
+    console.log("🔄 Proxy Salary Demands - Authorization header:", accessToken ? "Present" : "Missing");
 
     const response = await fetch(url, {
       method: "GET",
@@ -63,6 +75,10 @@ export async function GET(request: NextRequest) {
     }
 
     console.log("✅ Proxy Salary Demands - Response:", data);
+    console.log("✅ Proxy Salary Demands - Data length:", data.data?.length);
+    console.log("✅ Proxy Salary Demands - Total:", data.total);
+    console.log("✅ Proxy Salary Demands - Filtres appliqués:", data.filtres_appliques);
+    console.log("✅ Proxy Salary Demands - Response status:", response.status);
     return NextResponse.json(data, { status: 200 });
   } catch (error) {
     console.error("Proxy error (salary-demands):", error);
