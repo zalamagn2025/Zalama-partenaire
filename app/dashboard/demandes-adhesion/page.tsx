@@ -268,43 +268,39 @@ export default function DemandesAdhesionPage() {
       </div>
 
       {/* Filtres et recherche */}
-      <Card className="dark:bg-[var(--zalama-card)]">
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Recherche */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher un employé..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-
-            {/* Filtre par statut */}
-            <div>
-              <select
-                id="status-filter"
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as any)}
-                className="w-full mt-1 px-3 py-2 border border-gray-300 bg-[var(--zalama-card)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">Tous les employés</option>
-                <option value="active">Employés actifs</option>
-                <option value="inactive">Employés inactifs</option>
-              </select>
-            </div>
-
-            {/* Statistiques */}
-            <div className="flex items-center justify-end">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                {filteredEmployees.length} sur {employees.length} employés
-              </div>
-            </div>
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-sm p-4">
+        <div className="flex items-center gap-4">
+          {/* Recherche */}
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
+            <Input
+              placeholder="Rechercher un employé..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
+            />
           </div>
-        </CardContent>
-      </Card>
+
+          {/* Filtre par statut */}
+          <div className="min-w-[200px]">
+            <select
+              id="status-filter"
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as any)}
+              className="w-full px-3 py-2 border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] focus:border-[var(--zalama-blue)]"
+            >
+              <option value="all">Tous les employés</option>
+              <option value="active">Employés actifs</option>
+              <option value="inactive">Employés inactifs</option>
+            </select>
+          </div>
+
+          {/* Statistiques */}
+          <div className="text-sm text-[var(--zalama-text-secondary)] whitespace-nowrap">
+            {filteredEmployees.length} sur {employees.length} employés
+          </div>
+        </div>
+      </div>
 
       {/* Liste des employés */}
       {filteredEmployees.length === 0 ? (
@@ -320,9 +316,9 @@ export default function DemandesAdhesionPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="dark:bg-[var(--zalama-card)]">
+        <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
           <CardHeader>
-            <CardTitle className="text-lg">
+            <CardTitle className="text-lg text-[var(--zalama-text)]">
               Liste des employés sans compte
             </CardTitle>
           </CardHeader>
@@ -331,7 +327,7 @@ export default function DemandesAdhesionPage() {
               {filteredEmployees.map((employee) => (
                 <div
                   key={employee.id}
-                  className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-4 border border-[var(--zalama-border)] rounded-lg hover:bg-[var(--zalama-bg-light)] transition-colors cursor-pointer"
                   onClick={() => handleViewDetails(employee)}
                 >
                   <div className="flex items-center gap-4">
