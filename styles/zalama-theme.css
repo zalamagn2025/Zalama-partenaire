@@ -325,139 +325,356 @@ input[class*="border-gray-600"] {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-select[class*="border-gray-300"]:focus,
-input[class*="border-gray-300"]:focus,
-select[class*="border-gray-600"]:focus,
-input[class*="border-gray-600"]:focus {
+/* Override pour tous les éléments gray dans l'application */
+.text-gray-900,
+.text-gray-800,
+.text-gray-700,
+.text-gray-600,
+.text-gray-500,
+.text-gray-400,
+.text-gray-300,
+.text-gray-200,
+.text-gray-100 {
+  color: var(--zalama-text) !important;
+}
+
+.text-gray-600,
+.text-gray-500,
+.text-gray-400 {
+  color: var(--zalama-text-secondary) !important;
+}
+
+.bg-gray-50,
+.bg-gray-100,
+.bg-gray-200,
+.bg-gray-300,
+.bg-gray-400,
+.bg-gray-500,
+.bg-gray-600,
+.bg-gray-700,
+.bg-gray-800,
+.bg-gray-900 {
+  background: var(--zalama-bg-light) !important;
+}
+
+.bg-gray-50,
+.bg-gray-100 {
+  background: var(--zalama-bg-lighter) !important;
+}
+
+.bg-gray-800,
+.bg-gray-900 {
+  background: var(--zalama-bg-darker) !important;
+}
+
+.border-gray-200,
+.border-gray-300,
+.border-gray-400,
+.border-gray-500,
+.border-gray-600,
+.border-gray-700,
+.border-gray-800,
+.border-gray-900 {
+  border-color: var(--zalama-border) !important;
+}
+
+/* Styles pour les formulaires larges - Réduction de la largeur */
+.max-w-2xl,
+.max-w-3xl,
+.max-w-4xl,
+.max-w-5xl,
+.max-w-6xl,
+.max-w-7xl {
+  max-width: 600px !important;
+}
+
+/* Styles pour les modales larges */
+.max-w-md,
+.max-w-lg,
+.max-w-xl {
+  max-width: 500px !important;
+}
+
+/* Styles pour les inputs de formulaires */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  background: var(--zalama-bg-light) !important;
+  border: 1px solid var(--zalama-border) !important;
+  color: var(--zalama-text) !important;
+  border-radius: 0.375rem !important;
+  padding: 0.75rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
   outline: none !important;
   border-color: var(--zalama-blue) !important;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
-/* Labels des filtres */
-label[class*="text-gray-700"],
-label[class*="text-gray-300"] {
+/* Styles pour les labels de formulaires */
+label {
   color: var(--zalama-text-secondary) !important;
-  font-size: 0.875rem;
-  font-weight: 500;
-  margin-bottom: 0.25rem;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 0.25rem !important;
 }
 
-/* Boutons de filtres */
-button[class*="border-gray-300"],
-button[class*="border-gray-600"] {
-  background: var(--zalama-bg-light) !important;
-  color: var(--zalama-text) !important;
-  border: 1px solid var(--zalama-border) !important;
-  border-radius: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-button[class*="border-gray-300"]:hover,
-button[class*="border-gray-600"]:hover {
-  background: var(--zalama-bg-lighter) !important;
-  border-color: var(--zalama-blue) !important;
-}
-
-/* Boutons bleus des filtres */
-button[class*="bg-blue-600"],
-button[class*="bg-blue-700"] {
+/* Styles pour les boutons de formulaires */
+button[class*="bg-blue-"],
+button[class*="bg-indigo-"],
+button[class*="bg-purple-"] {
   background: var(--zalama-blue) !important;
   color: white !important;
   border: none !important;
-  border-radius: 0.375rem;
-  padding: 0.5rem 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
+  border-radius: 0.375rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease !important;
 }
 
-button[class*="bg-blue-600"]:hover,
-button[class*="bg-blue-700"]:hover {
+button[class*="bg-blue-"]:hover,
+button[class*="bg-indigo-"]:hover,
+button[class*="bg-purple-"]:hover {
   background: var(--zalama-blue-accent) !important;
 }
 
-/* Inputs de recherche */
-input[placeholder*="Rechercher"],
-input[placeholder*="rechercher"] {
+/* Styles pour les boutons secondaires */
+button[class*="bg-gray-"],
+button[class*="bg-slate-"] {
   background: var(--zalama-bg-light) !important;
-  border: 1px solid var(--zalama-border) !important;
   color: var(--zalama-text) !important;
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem 0.5rem 2.5rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--zalama-border) !important;
+  border-radius: 0.375rem !important;
+  padding: 0.75rem 1.5rem !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease, border-color 0.2s ease !important;
 }
 
-input[placeholder*="Rechercher"]:focus,
-input[placeholder*="rechercher"]:focus {
-  outline: none !important;
+button[class*="bg-gray-"]:hover,
+button[class*="bg-slate-"]:hover {
+  background: var(--zalama-bg-lighter) !important;
   border-color: var(--zalama-blue) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
 }
 
-/* Containers de filtres */
-div[class*="bg-white"] {
+/* Styles pour les divs de formulaires */
+div[class*="bg-white"],
+div[class*="bg-gray-50"],
+div[class*="bg-gray-100"] {
   background: var(--zalama-card) !important;
   border: 1px solid var(--zalama-border) !important;
-  border-radius: 0.5rem;
-  box-shadow: 0 2px 12px 0 var(--zalama-shadow);
+  border-radius: 0.5rem !important;
+  box-shadow: 0 2px 12px 0 var(--zalama-shadow) !important;
 }
 
-/* Headers de sections de filtres */
-h3[class*="text-gray-900"],
-h3[class*="text-gray-700"] {
+/* Styles pour les headers de formulaires */
+h1[class*="text-gray-"],
+h2[class*="text-gray-"],
+h3[class*="text-gray-"],
+h4[class*="text-gray-"],
+h5[class*="text-gray-"],
+h6[class*="text-gray-"] {
   color: var(--zalama-text) !important;
-  font-weight: 600;
 }
 
-/* Textes des filtres */
-span[class*="text-gray-600"],
-span[class*="text-gray-400"],
-span[class*="text-gray-500"] {
+/* Styles pour les paragraphes */
+p[class*="text-gray-"] {
   color: var(--zalama-text-secondary) !important;
 }
 
-/* Hover states pour les filtres */
-button:hover[class*="hover:bg-gray-50"],
-button:hover[class*="hover:bg-gray-700"] {
-  background: var(--zalama-bg-lighter) !important;
+/* Styles pour les spans */
+span[class*="text-gray-"] {
+  color: var(--zalama-text-secondary) !important;
 }
 
-/* Focus states pour les inputs de date */
-input[type="date"] {
-  background: var(--zalama-bg-light) !important;
-  border: 1px solid var(--zalama-border) !important;
+/* Styles pour les divs de contenu */
+div[class*="text-gray-"] {
   color: var(--zalama-text) !important;
-  border-radius: 0.375rem;
-  padding: 0.5rem 0.75rem;
 }
 
-input[type="date"]:focus {
-  outline: none !important;
-  border-color: var(--zalama-blue) !important;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-}
-
-/* Styles pour les menus déroulants de filtres */
-div[class*="absolute top-full"] {
+/* Styles pour les tables */
+table[class*="bg-white"],
+table[class*="bg-gray-"] {
   background: var(--zalama-card) !important;
   border: 1px solid var(--zalama-border) !important;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 20px 0 var(--zalama-shadow);
+  border-radius: 0.5rem !important;
 }
 
-/* Indicateurs de chargement des filtres */
-div[class*="animate-spin"] {
+th[class*="bg-gray-"],
+td[class*="bg-gray-"] {
+  background: var(--zalama-bg-light) !important;
+  color: var(--zalama-text) !important;
+  border-color: var(--zalama-border) !important;
+}
+
+/* Styles pour les modales */
+div[class*="modal"],
+div[class*="Modal"] {
+  background: var(--zalama-card) !important;
+  border: 1px solid var(--zalama-border) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 20px 0 var(--zalama-shadow) !important;
+}
+
+/* Styles pour les overlays de modales */
+div[class*="overlay"],
+div[class*="Overlay"] {
+  background: rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Styles pour les notifications */
+div[class*="notification"],
+div[class*="alert"],
+div[class*="toast"] {
+  background: var(--zalama-card) !important;
+  border: 1px solid var(--zalama-border) !important;
+  color: var(--zalama-text) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 2px 12px 0 var(--zalama-shadow) !important;
+}
+
+/* Styles spécifiques pour les sections du dashboard principal */
+/* Sections "Période actuelle", "Jour de paiement", "Statut" */
+.bg-gray-50.dark\\:bg-gray-800 {
+  background: var(--zalama-bg-lighter) !important;
+  border: 1px solid var(--zalama-border) !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 2px 8px 0 var(--zalama-shadow) !important;
+}
+
+/* Textes dans les sections du dashboard */
+.text-gray-500.dark\\:text-gray-400 {
+  color: var(--zalama-text-secondary) !important;
+}
+
+.text-gray-900.dark\\:text-white {
+  color: var(--zalama-text) !important;
+}
+
+/* Styles pour les boutons de filtres du dashboard */
+.bg-blue-100.hover\\:bg-blue-200.dark\\:bg-blue-900.dark\\:hover\\:bg-blue-800 {
+  background: var(--zalama-bg-lighter) !important;
+  color: var(--zalama-blue) !important;
+  border: 1px solid var(--zalama-blue) !important;
+}
+
+.bg-blue-100.hover\\:bg-blue-200.dark\\:bg-blue-900.dark\\:hover\\:bg-blue-800:hover {
+  background: var(--zalama-blue) !important;
+  color: white !important;
+}
+
+/* Styles pour les boutons d'actualisation */
+.hover\\:bg-gray-100.dark\\:hover\\:bg-gray-800 {
+  background: transparent !important;
+  color: var(--zalama-text-secondary) !important;
+}
+
+.hover\\:bg-gray-100.dark\\:hover\\:bg-gray-800:hover {
+  background: var(--zalama-bg-light) !important;
+  color: var(--zalama-text) !important;
+}
+
+/* Styles pour les indicateurs de chargement */
+.text-gray-500 {
+  color: var(--zalama-text-secondary) !important;
+}
+
+/* Styles pour les badges de statut */
+.bg-green-900.text-green-400 {
+  background: var(--zalama-success) !important;
+  color: white !important;
+  border: 1px solid var(--zalama-success) !important;
+}
+
+/* Styles pour les textes bleus */
+.text-blue-400 {
+  color: var(--zalama-blue) !important;
+}
+
+/* Styles pour les barres de progression */
+.bg-gray-700 {
+  background: var(--zalama-bg-light) !important;
+  border: 1px solid var(--zalama-border) !important;
+}
+
+.bg-yellow-400 {
+  background: var(--zalama-warning) !important;
+}
+
+/* Styles pour les cartes de performance financière */
+.bg-\\[var\\(--zalama-card\\)\\] {
+  background: var(--zalama-card) !important;
+  border: 1px solid var(--zalama-border) !important;
+}
+
+/* Styles pour les headers de sections */
+.text-gray-600.dark\\:text-white {
+  color: var(--zalama-text) !important;
+}
+
+/* Styles pour les boutons de réessai */
+.bg-blue-600.hover\\:bg-blue-700 {
+  background: var(--zalama-blue) !important;
+}
+
+.bg-blue-600.hover\\:bg-blue-700:hover {
+  background: var(--zalama-blue-accent) !important;
+}
+
+/* Styles pour les boutons gris */
+.bg-gray-600.hover\\:bg-gray-700 {
+  background: var(--zalama-bg-light) !important;
+  color: var(--zalama-text) !important;
+  border: 1px solid var(--zalama-border) !important;
+}
+
+.bg-gray-600.hover\\:bg-gray-700:hover {
+  background: var(--zalama-bg-lighter) !important;
   border-color: var(--zalama-blue) !important;
 }
 
-/* Textes d'indicateur de filtres actifs */
-span[class*="text-blue-600"],
-span[class*="text-blue-400"] {
+/* Styles pour les selects et inputs du dashboard */
+.border-gray-300.dark\\:border-gray-600 {
+  border-color: var(--zalama-border) !important;
+}
+
+.bg-white.dark\\:bg-gray-800 {
+  background: var(--zalama-bg-light) !important;
+}
+
+.text-gray-900.dark\\:text-white {
+  color: var(--zalama-text) !important;
+}
+
+/* Styles pour les labels des filtres */
+.text-gray-500.dark\\:text-gray-400 {
+  color: var(--zalama-text-secondary) !important;
+}
+
+/* Styles pour les badges de filtres actifs */
+.bg-blue-100.text-blue-800.dark\\:bg-blue-900.dark\\:text-blue-300 {
+  background: var(--zalama-bg-lighter) !important;
   color: var(--zalama-blue) !important;
+  border: 1px solid var(--zalama-blue) !important;
 }
 
 /* Media queries pour la responsivité */

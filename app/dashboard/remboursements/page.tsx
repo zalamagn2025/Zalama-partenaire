@@ -95,15 +95,17 @@ export default function RemboursementsPage() {
     useState<Remboursement | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showFinancialInfoModal, setShowFinancialInfoModal] = useState(false);
-  const [selectedEmployeeDetails, setSelectedEmployeeDetails] = useState<any>(null);
-  const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] = useState(false);
-  
+  const [selectedEmployeeDetails, setSelectedEmployeeDetails] =
+    useState<any>(null);
+  const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] =
+    useState(false);
+
   // États pour les données Edge Function
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
-  
+
   // États pour les filtres de l'edge function partner-reimbursements
   const [filters, setFilters] = useState({
     mois: null as number | null,
@@ -114,9 +116,9 @@ export default function RemboursementsPage() {
     date_debut: null as string | null,
     date_fin: null as string | null,
     limit: 50,
-    offset: 0
+    offset: 0,
   });
-  
+
   // États pour les données dynamiques des filtres
   const [activeMonths, setActiveMonths] = useState<number[]>([]);
   const [activeYears, setActiveYears] = useState<number[]>([]);
@@ -144,9 +146,10 @@ export default function RemboursementsPage() {
     setIsLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
-      const remboursementsData = await edgeFunctionService.getPartnerRemboursements();
+      const remboursementsData =
+        await edgeFunctionService.getPartnerRemboursements();
 
       if (!remboursementsData.success) {
         console.error("Erreur Edge Function:", remboursementsData.message);
@@ -156,26 +159,32 @@ export default function RemboursementsPage() {
 
       // Garder les données originales de l'Edge Function (regroupées par employé)
       const data = remboursementsData.data || [];
-      
+
       setCurrentMonthData({ data: data });
-      
+
       // Mettre à jour les données locales avec les données du mois en cours
       if (data && Array.isArray(data)) {
-          setRemboursements(data);
-          
-          // Calcul du total en attente (seulement les remboursements en attente)
-          const total = data
-            .filter((r: any) => r.statut_global === "EN_ATTENTE")
-            .reduce(
-              (sum: number, r: any) => sum + Number(r.montant_total_remboursement),
-              0
-            );
-          setTotalAttente(total);
+        setRemboursements(data);
+
+        // Calcul du total en attente (seulement les remboursements en attente)
+        const total = data
+          .filter((r: any) => r.statut_global === "EN_ATTENTE")
+          .reduce(
+            (sum: number, r: any) =>
+              sum + Number(r.montant_total_remboursement),
+            0
+          );
+        setTotalAttente(total);
       }
-      
-      toast.success("Données des remboursements du mois en cours mises à jour avec succès");
+
+      toast.success(
+        "Données des remboursements du mois en cours mises à jour avec succès"
+      );
     } catch (error) {
-      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      console.error(
+        "Erreur lors du chargement des données Edge Functions:",
+        error
+      );
       toast.error("Erreur lors du chargement des données du mois en cours");
     } finally {
       setEdgeFunctionLoading(false);
@@ -183,11 +192,10 @@ export default function RemboursementsPage() {
     }
   };
 
-
   // Fonction pour transformer les données de l'Edge Function
   const transformEdgeFunctionData = (edgeData: any[]) => {
     const transformedRemboursements: any[] = [];
-    
+
     edgeData.forEach((employeGroup: any) => {
       // Pour chaque groupe d'employé, créer un remboursement pour chaque remboursement détaillé
       employeGroup.remboursements_detailes?.forEach((remboursement: any) => {
@@ -196,8 +204,11 @@ export default function RemboursementsPage() {
           employe_id: employeGroup.employe_id,
           partenaire_id: employeGroup.partenaire_id,
           montant_transaction: remboursement.montant_transaction,
-          montant_total_remboursement: remboursement.montant_total_remboursement,
-          frais_service: employeGroup.frais_service_total / employeGroup.nombre_remboursements, // Répartir les frais
+          montant_total_remboursement:
+            remboursement.montant_total_remboursement,
+          frais_service:
+            employeGroup.frais_service_total /
+            employeGroup.nombre_remboursements, // Répartir les frais
           statut: remboursement.statut,
           date_creation: remboursement.date_creation,
           date_limite_remboursement: employeGroup.periode?.fin,
@@ -209,37 +220,43 @@ export default function RemboursementsPage() {
           // Données pour compatibilité avec l'ancien format
           demande_avance: {
             montant_demande: remboursement.montant_transaction,
-            date_validation: remboursement.date_creation
+            date_validation: remboursement.date_creation,
           },
-          tous_remboursements: employeGroup.remboursements_detailes
+          tous_remboursements: employeGroup.remboursements_detailes,
         });
       });
     });
-    
+
     return transformedRemboursements;
   };
 
   // Fonction pour charger les remboursements avec l'Edge Function
   const loadRemboursementsData = async (customFilters: any = {}) => {
     if (!session?.access_token) return;
-    
+
     setEdgeFunctionLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
-      
+
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+        Object.entries(activeFilters).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== ""
+        )
       );
-      
-      console.log("🔄 Chargement des remboursements avec filtres:", cleanFilters);
-      
+
+      console.log(
+        "🔄 Chargement des remboursements avec filtres:",
+        cleanFilters
+      );
+
       // Charger les remboursements
-      const remboursementsData = await edgeFunctionService.getPartnerRemboursements(cleanFilters);
-      
+      const remboursementsData =
+        await edgeFunctionService.getPartnerRemboursements(cleanFilters);
+
       if (!remboursementsData.success) {
         console.error("Erreur Edge Function:", remboursementsData.message);
         toast.error("Erreur lors du chargement des remboursements");
@@ -248,10 +265,9 @@ export default function RemboursementsPage() {
 
       const data = remboursementsData.data || [];
       console.log("Remboursements chargés:", data);
-      
+
       // Garder les données originales de l'Edge Function (regroupées par employé)
       setCurrentMonthData({ data: data });
-      
     } catch (error) {
       console.error("Erreur lors du chargement des remboursements:", error);
       toast.error("Erreur lors du chargement des remboursements");
@@ -263,24 +279,27 @@ export default function RemboursementsPage() {
   // Fonction pour charger les données de filtres dynamiques
   const loadFilterData = async () => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Charger les employés actifs
-      const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
+      const employeesData =
+        await edgeFunctionService.getPartnerRemboursementsEmployees();
       if (employeesData.success && employeesData.data) {
         setActiveEmployees(employeesData.data);
       }
-      
+
       // Charger les périodes d'activité
-      const periodsData = await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
+      const periodsData =
+        await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
       if (periodsData.success && periodsData.data) {
         setActivityPeriods(periodsData.data);
         setActiveYears(periodsData.data.years || []);
-        setActiveMonths(periodsData.data.months?.map((m: any) => m.numero) || []);
+        setActiveMonths(
+          periodsData.data.months?.map((m: any) => m.numero) || []
+        );
       }
-      
     } catch (error) {
       console.error("Erreur lors du chargement des données de filtres:", error);
     }
@@ -290,7 +309,7 @@ export default function RemboursementsPage() {
   const applyFilter = async (filterKey: string, value: any) => {
     const newFilters = { ...filters, [filterKey]: value };
     setFilters(newFilters);
-    
+
     // Recharger les données avec les nouveaux filtres
     await loadRemboursementsData(newFilters);
     // Recharger les statistiques avec les nouveaux filtres
@@ -308,7 +327,7 @@ export default function RemboursementsPage() {
       date_debut: null,
       date_fin: null,
       limit: 50,
-      offset: 0
+      offset: 0,
     };
     setFilters(defaultFilters);
     await loadRemboursementsData(defaultFilters);
@@ -479,20 +498,25 @@ export default function RemboursementsPage() {
   // Fonction pour charger les statistiques depuis l'Edge Function
   const loadStatistics = async (customFilters: any = {}) => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
-      
+
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined)
+        Object.entries(activeFilters).filter(
+          ([_, value]) => value !== null && value !== undefined
+        )
       );
-      
-      const statisticsData = await edgeFunctionService.getPartnerRemboursementsStatistics(cleanFilters);
-      
+
+      const statisticsData =
+        await edgeFunctionService.getPartnerRemboursementsStatistics(
+          cleanFilters
+        );
+
       if (statisticsData.success && statisticsData.data) {
         setStatistics(statisticsData.data);
         console.log("📊 Statistiques chargées:", statisticsData.data);
@@ -504,7 +528,7 @@ export default function RemboursementsPage() {
 
   // Données pour les graphiques - utiliser les données Edge Function en priorité
   const dataForCharts = currentMonthData?.data || remboursements;
-  
+
   const stats = dataForCharts.reduce((acc: any, r: any) => {
     acc[r.statut] = (acc[r.statut] || 0) + 1;
     return acc;
@@ -529,7 +553,8 @@ export default function RemboursementsPage() {
     if (!session?.partner) return;
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
+      const employeesData =
+        await edgeFunctionService.getPartnerRemboursementsEmployees();
       if (employeesData.success && employeesData.data) {
         setEmployees(employeesData.data);
       }
@@ -544,15 +569,17 @@ export default function RemboursementsPage() {
     if (remboursement.salaire_disponible) {
       return Number(remboursement.salaire_disponible);
     }
-    
+
     // Chercher le salaire dans les données des employés
     if (remboursement.employee?.id && employees.length > 0) {
-      const employee = employees.find(emp => emp.id === remboursement.employee.id);
+      const employee = employees.find(
+        (emp) => emp.id === remboursement.employee.id
+      );
       if (employee?.salaire_net) {
         return Number(employee.salaire_net);
       }
     }
-    
+
     // Fallback pour les données locales
     return Number(remboursement.employee?.salaire_net || 0);
   };
@@ -563,7 +590,10 @@ export default function RemboursementsPage() {
 
     // Pour les données Edge Function, calculer simplement salaire - montant_transaction
     if (remboursement.montant_transaction) {
-      return Math.max(0, salaireNet - Number(remboursement.montant_transaction));
+      return Math.max(
+        0,
+        salaireNet - Number(remboursement.montant_transaction)
+      );
     }
 
     // Fallback pour les données locales
@@ -619,10 +649,16 @@ export default function RemboursementsPage() {
   const getMontantRecu = (remboursement: any) => {
     // Pour les données Edge Function, calculer montant_transaction - frais_service
     if (remboursement.montant_transaction && remboursement.frais_service) {
-      return Number(remboursement.montant_transaction) - Number(remboursement.frais_service);
+      return (
+        Number(remboursement.montant_transaction) -
+        Number(remboursement.frais_service)
+      );
     }
     // Fallback pour les données locales
-    return calculateMontantRecu(getMontantDemande(remboursement), getFraisService(remboursement));
+    return calculateMontantRecu(
+      getMontantDemande(remboursement),
+      getFraisService(remboursement)
+    );
   };
 
   // Fonction pour calculer le remboursement dû à ZaLaMa
@@ -651,14 +687,19 @@ export default function RemboursementsPage() {
   };
 
   // Total des remboursements en attente - utiliser les statistiques Edge Function en priorité
-  const totalRemboursements = statistics?.montant_restant || 
-    (currentMonthData?.data ? 
-      currentMonthData.data
-        .filter((r: any) => r.statut_global === "EN_ATTENTE")
-        .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement), 0) :
-      remboursements
-        .filter((r) => r.statut === "EN_ATTENTE")
-        .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0));
+  const totalRemboursements =
+    statistics?.montant_restant ||
+    (currentMonthData?.data
+      ? currentMonthData.data
+          .filter((r: any) => r.statut_global === "EN_ATTENTE")
+          .reduce(
+            (sum: number, r: any) =>
+              sum + Number(r.montant_total_remboursement),
+            0
+          )
+      : remboursements
+          .filter((r) => r.statut === "EN_ATTENTE")
+          .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0));
 
   // Debug: Log des données pour vérifier
   console.log("🔍 Debug - currentMonthData:", currentMonthData);
@@ -673,7 +714,9 @@ export default function RemboursementsPage() {
           <div className="text-center">
             <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des remboursements..."}
+              {edgeFunctionLoading
+                ? "Chargement des données du mois en cours..."
+                : "Chargement des remboursements..."}
             </p>
           </div>
         </div>
@@ -716,7 +759,11 @@ export default function RemboursementsPage() {
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 title="Actualiser les données du mois en cours"
               >
-                <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 text-gray-500 ${
+                    edgeFunctionLoading ? "animate-spin" : ""
+                  }`}
+                />
               </button>
             </div>
             <div>
@@ -798,7 +845,9 @@ export default function RemboursementsPage() {
                 disabled={edgeFunctionLoading}
                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
               >
-                {edgeFunctionLoading ? <RefreshCw className="h-3 w-3 animate-spin" /> : null}
+                {edgeFunctionLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
                 Actualiser
               </button>
             </div>
@@ -813,13 +862,20 @@ export default function RemboursementsPage() {
             </label>
             <select
               value={filters.mois || ""}
-              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                applyFilter(
+                  "mois",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les mois</option>
               {activeMonths.map((month) => (
                 <option key={month} value={month}>
-                  {new Date(0, month - 1).toLocaleString('fr-FR', { month: 'long' })}
+                  {new Date(0, month - 1).toLocaleString("fr-FR", {
+                    month: "long",
+                  })}
                 </option>
               ))}
             </select>
@@ -832,7 +888,12 @@ export default function RemboursementsPage() {
             </label>
             <select
               value={filters.annee || ""}
-              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                applyFilter(
+                  "annee",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Toutes les années</option>
@@ -851,7 +912,7 @@ export default function RemboursementsPage() {
             </label>
             <select
               value={filters.status || ""}
-              onChange={(e) => applyFilter('status', e.target.value || null)}
+              onChange={(e) => applyFilter("status", e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
@@ -869,7 +930,9 @@ export default function RemboursementsPage() {
             </label>
             <select
               value={filters.employee_id || ""}
-              onChange={(e) => applyFilter('employee_id', e.target.value || null)}
+              onChange={(e) =>
+                applyFilter("employee_id", e.target.value || null)
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les employés</option>
@@ -888,7 +951,7 @@ export default function RemboursementsPage() {
             </label>
             <select
               value={filters.categorie || ""}
-              onChange={(e) => applyFilter('categorie', e.target.value || null)}
+              onChange={(e) => applyFilter("categorie", e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Toutes les catégories</option>
@@ -906,14 +969,18 @@ export default function RemboursementsPage() {
               <input
                 type="date"
                 value={filters.date_debut || ""}
-                onChange={(e) => applyFilter('date_debut', e.target.value || null)}
+                onChange={(e) =>
+                  applyFilter("date_debut", e.target.value || null)
+                }
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Date début"
               />
               <input
                 type="date"
                 value={filters.date_fin || ""}
-                onChange={(e) => applyFilter('date_fin', e.target.value || null)}
+                onChange={(e) =>
+                  applyFilter("date_fin", e.target.value || null)
+                }
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Date fin"
               />
@@ -957,7 +1024,10 @@ export default function RemboursementsPage() {
                 Total remboursements
               </div>
               <div className="text-lg font-bold text-gray-900 dark:text-white">
-                {statistics?.total_remboursements || (currentMonthData?.data ? currentMonthData.data.length : remboursements.length)}
+                {statistics?.total_remboursements ||
+                  (currentMonthData?.data
+                    ? currentMonthData.data.length
+                    : remboursements.length)}
               </div>
             </div>
           </div>
@@ -972,9 +1042,13 @@ export default function RemboursementsPage() {
                 En attente
               </div>
               <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
-                {statistics?.remboursements_en_attente || (currentMonthData?.data ? 
-                  currentMonthData.data.filter((r: any) => r.statut_global === "EN_ATTENTE").length :
-                  remboursements.filter((r) => r.statut === "EN_ATTENTE").length)}
+                {statistics?.remboursements_en_attente ||
+                  (currentMonthData?.data
+                    ? currentMonthData.data.filter(
+                        (r: any) => r.statut_global === "EN_ATTENTE"
+                      ).length
+                    : remboursements.filter((r) => r.statut === "EN_ATTENTE")
+                        .length)}
               </div>
             </div>
           </div>
@@ -989,9 +1063,12 @@ export default function RemboursementsPage() {
                 Payés
               </div>
               <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                {statistics?.remboursements_payes || (currentMonthData?.data ? 
-                  currentMonthData.data.filter((r: any) => r.statut_global === "PAYE").length :
-                  remboursements.filter((r) => r.statut === "PAYE").length)}
+                {statistics?.remboursements_payes ||
+                  (currentMonthData?.data
+                    ? currentMonthData.data.filter(
+                        (r: any) => r.statut_global === "PAYE"
+                      ).length
+                    : remboursements.filter((r) => r.statut === "PAYE").length)}
               </div>
             </div>
           </div>
@@ -1086,15 +1163,17 @@ export default function RemboursementsPage() {
                     </div>
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      employeeData.statut_global === 'EN_ATTENTE' 
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                        : employeeData.statut_global === 'PAYE'
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                        : employeeData.statut_global === 'EN_RETARD'
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-                    }`}>
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        employeeData.statut_global === "EN_ATTENTE"
+                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                          : employeeData.statut_global === "PAYE"
+                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                          : employeeData.statut_global === "EN_RETARD"
+                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                          : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                      }`}
+                    >
                       {employeeData.statut_global}
                     </span>
                   </td>
@@ -1121,8 +1200,8 @@ export default function RemboursementsPage() {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500 dark:text-gray-400">
               {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, dataForPagination.length)} sur{" "}
-              {dataForPagination.length} employé(s)
+              {Math.min(currentPage * itemsPerPage, dataForPagination.length)}{" "}
+              sur {dataForPagination.length} employé(s)
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -1446,7 +1525,9 @@ export default function RemboursementsPage() {
                         {selectedRemboursement.tous_remboursements.map(
                           (remb, index) => {
                             // Calculer le salaire restant après ce remboursement
-                            let salaireRestantApres = getSalaireNet(selectedRemboursement);
+                            let salaireRestantApres = getSalaireNet(
+                              selectedRemboursement
+                            );
                             for (let i = 0; i <= index; i++) {
                               const rembCourant =
                                 selectedRemboursement.tous_remboursements![i];
@@ -1763,15 +1844,20 @@ export default function RemboursementsPage() {
       </Dialog>
 
       {/* Modal des détails d'un employé */}
-      <Dialog open={showEmployeeDetailsModal} onOpenChange={setShowEmployeeDetailsModal}>
-        <DialogContent 
+      <Dialog
+        open={showEmployeeDetailsModal}
+        onOpenChange={setShowEmployeeDetailsModal}
+      >
+        <DialogContent
           className="max-w-6xl w-[90vw] max-h-[90vh] overflow-y-auto"
-          style={{ width: '90vw', maxWidth: '1200px' }}
+          style={{ width: "90vw", maxWidth: "1200px" }}
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              Détails des remboursements - {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom}
+              Détails des remboursements -{" "}
+              {selectedEmployeeDetails?.employe?.prenom}{" "}
+              {selectedEmployeeDetails?.employe?.nom}
             </DialogTitle>
             <DialogDescription>
               Liste complète des remboursements individuels pour cet employé
@@ -1787,27 +1873,38 @@ export default function RemboursementsPage() {
                 </h4>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Nom complet:</span>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Nom complet:
+                    </span>
                     <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.prenom} {selectedEmployeeDetails.employe?.nom}
+                      {selectedEmployeeDetails.employe?.prenom}{" "}
+                      {selectedEmployeeDetails.employe?.nom}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Email:</span>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Email:
+                    </span>
                     <p className="text-sm text-gray-900 dark:text-white">
                       {selectedEmployeeDetails.employe?.email}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Téléphone:</span>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Téléphone:
+                    </span>
                     <p className="text-sm text-gray-900 dark:text-white">
                       {selectedEmployeeDetails.employe?.telephone}
                     </p>
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Salaire net:</span>
+                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      Salaire net:
+                    </span>
                     <p className="text-sm text-gray-900 dark:text-white">
-                      {gnfFormatter(selectedEmployeeDetails.employe?.salaire_net)}
+                      {gnfFormatter(
+                        selectedEmployeeDetails.employe?.salaire_net
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1823,25 +1920,37 @@ export default function RemboursementsPage() {
                     <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                       {selectedEmployeeDetails.nombre_remboursements}
                     </div>
-                    <div className="text-sm text-blue-700 dark:text-blue-300">Remboursements</div>
+                    <div className="text-sm text-blue-700 dark:text-blue-300">
+                      Remboursements
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {gnfFormatter(selectedEmployeeDetails.montant_total_remboursement)}
+                      {gnfFormatter(
+                        selectedEmployeeDetails.montant_total_remboursement
+                      )}
                     </div>
-                    <div className="text-sm text-red-700 dark:text-red-300">Total à rembourser</div>
+                    <div className="text-sm text-red-700 dark:text-red-300">
+                      Total à rembourser
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                      {gnfFormatter(selectedEmployeeDetails.frais_service_total)}
+                      {gnfFormatter(
+                        selectedEmployeeDetails.frais_service_total
+                      )}
                     </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">Frais service</div>
+                    <div className="text-sm text-gray-700 dark:text-gray-300">
+                      Frais service
+                    </div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
                       {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
                     </div>
-                    <div className="text-sm text-emerald-700 dark:text-emerald-300">Salaire restant</div>
+                    <div className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Salaire restant
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1865,96 +1974,127 @@ export default function RemboursementsPage() {
                   Remboursements individuels
                 </h4>
                 <div className="space-y-6">
-                  {selectedEmployeeDetails.remboursements_detailes?.map((remb: any, index: number) => (
-                    <div
-                      key={remb.id}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8"
-                    >
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 dark:text-blue-400">
-                            {index + 1}
+                  {selectedEmployeeDetails.remboursements_detailes?.map(
+                    (remb: any, index: number) => (
+                      <div
+                        key={remb.id}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 dark:text-blue-400">
+                              {index + 1}
+                            </div>
+                            <span className="font-medium text-gray-900 dark:text-white">
+                              Remboursement #{index + 1}
+                            </span>
                           </div>
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            Remboursement #{index + 1}
+                          <span className="font-bold text-lg text-red-600 dark:text-red-400">
+                            {gnfFormatter(remb.montant_total_remboursement)}
                           </span>
                         </div>
-                        <span className="font-bold text-lg text-red-600 dark:text-red-400">
-                          {gnfFormatter(remb.montant_total_remboursement)}
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-sm">
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Montant demandé:</span>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {gnfFormatter(remb.montant_transaction)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Frais service (6,5%):</span>
-                          <p className="font-medium text-gray-900 dark:text-white">
-                            {gnfFormatter(remb.montant_transaction * 0.065)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Montant reçu:</span>
-                          <p className="font-medium text-emerald-600 dark:text-emerald-400">
-                            {gnfFormatter(remb.montant_transaction - (remb.montant_transaction * 0.065))}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Remboursement dû:</span>
-                          <p className="font-medium text-red-600 dark:text-red-400">
-                            {gnfFormatter(remb.montant_total_remboursement)}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Date avance:</span>
-                          <p className="text-gray-900 dark:text-white">
-                            {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-gray-500 dark:text-gray-400">Statut:</span>
-                          <p>
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              remb.statut === 'EN_ATTENTE' 
-                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-                                : remb.statut === 'PAYE'
-                                ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                : remb.statut === 'EN_RETARD'
-                                ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                                : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
-                            }`}>
-                              {remb.statut}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-sm">
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Montant demandé:
                             </span>
-                          </p>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {gnfFormatter(remb.montant_transaction)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Frais service (6,5%):
+                            </span>
+                            <p className="font-medium text-gray-900 dark:text-white">
+                              {gnfFormatter(remb.montant_transaction * 0.065)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Montant reçu:
+                            </span>
+                            <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                              {gnfFormatter(
+                                remb.montant_transaction -
+                                  remb.montant_transaction * 0.065
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Remboursement dû:
+                            </span>
+                            <p className="font-medium text-red-600 dark:text-red-400">
+                              {gnfFormatter(remb.montant_total_remboursement)}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Date avance:
+                            </span>
+                            <p className="text-gray-900 dark:text-white">
+                              {new Date(remb.date_creation).toLocaleDateString(
+                                "fr-FR"
+                              )}
+                            </p>
+                          </div>
+                          <div>
+                            <span className="text-gray-500 dark:text-gray-400">
+                              Statut:
+                            </span>
+                            <p>
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  remb.statut === "EN_ATTENTE"
+                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                                    : remb.statut === "PAYE"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                    : remb.statut === "EN_RETARD"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
+                                }`}
+                              >
+                                {remb.statut}
+                              </span>
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-6">
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Catégorie:</span>
-                              <span className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                selectedEmployeeDetails.categorie === 'mono-mois'
-                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
-                                  : 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300'
-                              }`}>
-                                {selectedEmployeeDetails.categorie === 'mono-mois' ? 'Mono-mois' : 'Multi-mois'}
-                              </span>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 dark:text-gray-400">Pay ID:</span>
-                              <span className="ml-2 text-gray-900 dark:text-white">
-                                {remb.pay_id || "Non défini"}
-                              </span>
+                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-6">
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Catégorie:
+                                </span>
+                                <span
+                                  className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    selectedEmployeeDetails.categorie ===
+                                    "mono-mois"
+                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
+                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
+                                  }`}
+                                >
+                                  {selectedEmployeeDetails.categorie ===
+                                  "mono-mois"
+                                    ? "Mono-mois"
+                                    : "Multi-mois"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  Pay ID:
+                                </span>
+                                <span className="ml-2 text-gray-900 dark:text-white">
+                                  {remb.pay_id || "Non défini"}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             </div>

@@ -98,7 +98,7 @@ export default function EntrepriseSidebar() {
 
   return (
     <aside
-      className={`sidebar fixed top-0 left-0 h-full bg-gray-100 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-30 ${
+      className={`sidebar fixed top-0 left-0 h-full bg-gray-700 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-30 ${
         collapsed ? "w-16" : "w-64"
       }`}
       style={{
@@ -142,15 +142,26 @@ export default function EntrepriseSidebar() {
       <nav className="mt-6 px-2 h-[calc(100vh-4.5rem-6rem)] overflow-y-auto">
         <ul className="space-y-2">
           {navItems.map((item) => {
-            const isActive = pathname?.startsWith(item.href);
+            // Logique simple et fiable pour détecter l'élément actif
+            let isActive = false;
+
+            if (item.href === "/dashboard") {
+              // Pour le dashboard principal, match exact
+              isActive = pathname === "/dashboard";
+            } else {
+              // Pour les autres pages, match exact ou avec sous-pages
+              isActive =
+                pathname === item.href || pathname?.startsWith(item.href + "/");
+            }
+
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${
                     isActive
-                      ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                      ? "bg-[var(--zalama-bg-lighter)] text-[var(--zalama-blue)] border-l-4 border-[var(--zalama-blue)] shadow-sm"
+                      : "text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] hover:text-[var(--zalama-blue)]"
                   }`}
                 >
                   <item.icon
