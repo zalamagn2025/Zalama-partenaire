@@ -1,23 +1,20 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users,
-  User,
   Search,
   Filter,
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   RefreshCw,
-  FileDown,
   Calendar,
   TrendingUp,
   AlertTriangle,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import type { Employee } from "@/lib/supabase";
 
@@ -29,24 +26,28 @@ export default function EmployesPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
+  const [selectedContractType, setSelectedContractType] = useState<
+    string | null
+  >(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  
+
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
   const employeesPerPage = 10;
   const [totalPages, setTotalPages] = useState(0);
   const [totalEmployees, setTotalEmployees] = useState(0);
-  
+
   // États pour les modales
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
+
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
@@ -68,21 +69,26 @@ export default function EmployesPage() {
     try {
       // Construire les paramètres de requête
       const queryParams = new URLSearchParams();
-      queryParams.append('limit', employeesPerPage.toString());
-      queryParams.append('offset', ((page - 1) * employeesPerPage).toString());
-      
-      // Ajouter les filtres
-      if (filters.search) queryParams.append('search', filters.search);
-      if (filters.type_contrat) queryParams.append('type_contrat', filters.type_contrat);
-      if (filters.actif !== null && filters.actif !== undefined) queryParams.append('actif', filters.actif.toString());
+      queryParams.append("limit", employeesPerPage.toString());
+      queryParams.append("offset", ((page - 1) * employeesPerPage).toString());
 
-      const response = await fetch(`/api/proxy/employees?${queryParams.toString()}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // Ajouter les filtres
+      if (filters.search) queryParams.append("search", filters.search);
+      if (filters.type_contrat)
+        queryParams.append("type_contrat", filters.type_contrat);
+      if (filters.actif !== null && filters.actif !== undefined)
+        queryParams.append("actif", filters.actif.toString());
+
+      const response = await fetch(
+        `/api/proxy/employees?${queryParams.toString()}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
@@ -98,7 +104,7 @@ export default function EmployesPage() {
 
       const employeesList = employeesData.data?.employees || [];
       const pagination = employeesData.data?.pagination || {};
-      
+
       setEmployees(employeesList);
       setFilteredEmployees(employeesList);
       setTotalPages(pagination.total_pages || 0);
@@ -106,7 +112,7 @@ export default function EmployesPage() {
 
       console.log("Employés chargés via proxy:", employeesList);
       console.log("Pagination:", pagination);
-          } catch (error) {
+    } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
       toast.error("Erreur lors du chargement des employés");
     } finally {
@@ -120,11 +126,11 @@ export default function EmployesPage() {
 
     setStatisticsLoading(true);
     try {
-      const response = await fetch('/api/proxy/employees-statistics', {
-        method: 'GET',
+      const response = await fetch("/api/proxy/employees-statistics", {
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -135,13 +141,19 @@ export default function EmployesPage() {
       const statisticsData = await response.json();
 
       if (!statisticsData.success) {
-        console.error("Erreur Edge Function (statistics):", statisticsData.message);
+        console.error(
+          "Erreur Edge Function (statistics):",
+          statisticsData.message
+        );
         return;
       }
 
       setStatistics(statisticsData.data);
       console.log("Statistiques chargées:", statisticsData.data);
-      console.log("Structure des statistiques:", JSON.stringify(statisticsData.data, null, 2));
+      console.log(
+        "Structure des statistiques:",
+        JSON.stringify(statisticsData.data, null, 2)
+      );
     } catch (error) {
       console.error("Erreur lors du chargement des statistiques:", error);
     } finally {
@@ -156,11 +168,11 @@ export default function EmployesPage() {
     setEdgeFunctionLoading(true);
     try {
       // Utiliser le proxy pour les données du dashboard
-      const response = await fetch('/api/proxy/employees', {
-        method: 'GET',
+      const response = await fetch("/api/proxy/employees", {
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -178,15 +190,23 @@ export default function EmployesPage() {
 
       const employeesList = employeesData.data || [];
       setCurrentMonthData({ employees: employeesList });
-                
-                // Mettre à jour les données locales avec les données du mois en cours
+
+      // Mettre à jour les données locales avec les données du mois en cours
       setEmployees(employeesList);
       setFilteredEmployees(employeesList);
 
-      console.log("Données des employés du mois en cours chargées:", employeesData);
-      toast.success("Données des employés du mois en cours mises à jour avec succès");
+      console.log(
+        "Données des employés du mois en cours chargées:",
+        employeesData
+      );
+      toast.success(
+        "Données des employés du mois en cours mises à jour avec succès"
+      );
     } catch (error) {
-      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      console.error(
+        "Erreur lors du chargement des données Edge Functions:",
+        error
+      );
       toast.error("Erreur lors du chargement des données du mois en cours");
     } finally {
       setEdgeFunctionLoading(false);
@@ -205,9 +225,14 @@ export default function EmployesPage() {
     const filters = {
       search: searchTerm || undefined,
       type_contrat: selectedContractType || undefined,
-      actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+      actif:
+        selectedStatus === "actif"
+          ? true
+          : selectedStatus === "inactif"
+          ? false
+          : undefined,
     };
-    
+
     loadEmployees(1, filters);
     setCurrentPage(1);
   }, [searchTerm, selectedContractType, selectedStatus]);
@@ -228,7 +253,12 @@ export default function EmployesPage() {
     const filters = {
       search: searchTerm || undefined,
       type_contrat: selectedContractType || undefined,
-      actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+      actif:
+        selectedStatus === "actif"
+          ? true
+          : selectedStatus === "inactif"
+          ? false
+          : undefined,
     };
     loadEmployees(page, filters);
   };
@@ -260,7 +290,15 @@ export default function EmployesPage() {
   // Export CSV
   const handleExportCSV = () => {
     const csvContent = [
-      ["Nom", "Prénom", "Email", "Poste", "Type de contrat", "Salaire net", "Statut"],
+      [
+        "Nom",
+        "Prénom",
+        "Email",
+        "Poste",
+        "Type de contrat",
+        "Salaire net",
+        "Statut",
+      ],
       ...filteredEmployees.map((emp) => [
         emp.nom,
         emp.prenom,
@@ -278,7 +316,10 @@ export default function EmployesPage() {
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
     link.setAttribute("href", url);
-    link.setAttribute("download", `employes_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `employes_${new Date().toISOString().split("T")[0]}.csv`
+    );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
@@ -287,14 +328,16 @@ export default function EmployesPage() {
 
   if (loading || isLoading || statisticsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">
-            {loading ? "Chargement de la session..." : isLoading ? "Chargement des employés..." : "Chargement des statistiques..."}
-          </p>
-        </div>
-      </div>
+      <LoadingSpinner
+        fullScreen={true}
+        message={
+          loading
+            ? "Chargement de la session..."
+            : isLoading
+            ? "Chargement des employés..."
+            : "Chargement des statistiques..."
+        }
+      />
     );
   }
 
@@ -313,16 +356,21 @@ export default function EmployesPage() {
               Gestion des Employés
             </h1>
           </div>
-            <button
-              onClick={loadCurrentMonthData}
+          <button
+            onClick={loadCurrentMonthData}
             className="flex items-center px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-              title="Actualiser les données du mois en cours"
-            >
-              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
-            </button>
-          </div>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-          {session?.partner?.company_name} - {statisticsLoading ? "..." : totalEmployeesFromStats} employés total
+            title="Actualiser les données du mois en cours"
+          >
+            <RefreshCw
+              className={`h-4 w-4 text-gray-500 ${
+                edgeFunctionLoading ? "animate-spin" : ""
+              }`}
+            />
+          </button>
+        </div>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
+          {session?.partner?.company_name} -{" "}
+          {statisticsLoading ? "..." : totalEmployeesFromStats} employés total
         </p>
       </div>
 
@@ -343,7 +391,11 @@ export default function EmployesPage() {
         />
         <StatCard
           title="Employés inactifs"
-          value={statisticsLoading ? "..." : (statistics?.statistics?.inactive_employees || 0)}
+          value={
+            statisticsLoading
+              ? "..."
+              : statistics?.statistics?.inactive_employees || 0
+          }
           total={totalEmployeesFromStats}
           icon={TrendingUp}
           color="yellow"
@@ -372,7 +424,6 @@ export default function EmployesPage() {
               />
             </div>
           </div>
-
 
           {/* Filtre par type de contrat */}
           <div className="relative">
@@ -442,7 +493,11 @@ export default function EmployesPage() {
               className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
             >
               <Filter className="w-4 h-4 mr-2" />
-              {selectedStatus === 'actif' ? 'Actifs' : selectedStatus === 'inactif' ? 'Inactifs' : 'Statut'}
+              {selectedStatus === "actif"
+                ? "Actifs"
+                : selectedStatus === "inactif"
+                ? "Inactifs"
+                : "Statut"}
               <ChevronDown className="w-4 h-4 ml-2" />
             </button>
             {isStatusDropdownOpen && (
@@ -458,7 +513,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedStatus('actif');
+                    setSelectedStatus("actif");
                     setIsStatusDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -467,7 +522,7 @@ export default function EmployesPage() {
                 </button>
                 <button
                   onClick={() => {
-                    setSelectedStatus('inactif');
+                    setSelectedStatus("inactif");
                     setIsStatusDropdownOpen(false);
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
@@ -613,16 +668,13 @@ export default function EmployesPage() {
                 <p className="text-sm text-gray-700 dark:text-gray-300">
                   Affichage de{" "}
                   <span className="font-medium">
-                    {((currentPage - 1) * employeesPerPage) + 1}
+                    {(currentPage - 1) * employeesPerPage + 1}
                   </span>{" "}
                   à{" "}
                   <span className="font-medium">
                     {Math.min(currentPage * employeesPerPage, totalEmployees)}
                   </span>{" "}
-                  sur{" "}
-                  <span className="font-medium">
-                    {totalEmployees}
-                  </span>{" "}
+                  sur <span className="font-medium">{totalEmployees}</span>{" "}
                   employés
                 </p>
               </div>

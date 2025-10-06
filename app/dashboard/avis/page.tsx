@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import {
   LineChart,
@@ -116,7 +117,7 @@ export default function AvisPage() {
     date_debut: null as string | null,
     date_fin: null as string | null,
     limit: 50,
-    offset: 0
+    offset: 0,
   });
 
   // États pour les données supplémentaires
@@ -129,7 +130,7 @@ export default function AvisPage() {
   const [pagination, setPagination] = useState({
     limit: 50,
     offset: 0,
-    total: 0
+    total: 0,
   });
 
   // Créer la référence en dehors des hooks
@@ -145,7 +146,7 @@ export default function AvisPage() {
   // Charger les avis et statistiques quand les filtres changent
   useEffect(() => {
     if (session?.access_token) {
-      console.log('🔄 useEffect déclenché - Filtres actuels:', filters);
+      console.log("🔄 useEffect déclenché - Filtres actuels:", filters);
       loadAvisData();
       loadStatistics();
     }
@@ -158,12 +159,12 @@ export default function AvisPage() {
     try {
       // Charger les employés et périodes d'activité en parallèle
       const [employeesResponse, periodsResponse] = await Promise.all([
-        fetch('/api/proxy/avis/employees-list', {
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
+        fetch("/api/proxy/avis/employees-list", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
         }),
-        fetch('/api/proxy/avis/activity-periods', {
-          headers: { 'Authorization': `Bearer ${session.access_token}` }
-        })
+        fetch("/api/proxy/avis/activity-periods", {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }),
       ]);
 
       if (employeesResponse.ok) {
@@ -201,17 +202,20 @@ export default function AvisPage() {
         }
       });
 
-      const url = queryParams.toString() 
+      const url = queryParams.toString()
         ? `/api/proxy/avis?${queryParams.toString()}`
-        : '/api/proxy/avis';
+        : "/api/proxy/avis";
 
-      console.log('🔄 Chargement avis avec filtres:', Object.fromEntries(queryParams.entries()));
+      console.log(
+        "🔄 Chargement avis avec filtres:",
+        Object.fromEntries(queryParams.entries())
+      );
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -230,15 +234,19 @@ export default function AvisPage() {
       const avisList = avisData.data?.avis || [];
       setAvis(avisList);
       setFilteredAvis(avisList);
-      setPagination(avisData.data?.pagination || { limit: 50, offset: 0, total: 0 });
+      setPagination(
+        avisData.data?.pagination || { limit: 50, offset: 0, total: 0 }
+      );
 
       console.log("✅ Avis chargés via proxy:", avisList.length, "avis");
       console.log("📊 Pagination:", avisData.data?.pagination);
       console.log("🔍 Filtres appliqués:", avisData.data?.filters);
-      
+
       // Vérifier les dates des avis pour confirmer le filtrage
       if (avisList.length > 0) {
-        const dates = avisList.map((avis: any) => new Date(avis.date_avis).toLocaleDateString('fr-FR'));
+        const dates = avisList.map((avis: any) =>
+          new Date(avis.date_avis).toLocaleDateString("fr-FR")
+        );
         console.log("📅 Dates des avis chargés:", dates.slice(0, 5));
       }
     } catch (error) {
@@ -255,22 +263,30 @@ export default function AvisPage() {
     try {
       const queryParams = new URLSearchParams();
       Object.entries(filters).forEach(([key, value]) => {
-        if (value !== null && value !== undefined && key !== 'limit' && key !== 'offset') {
+        if (
+          value !== null &&
+          value !== undefined &&
+          key !== "limit" &&
+          key !== "offset"
+        ) {
           queryParams.append(key, value.toString());
         }
       });
 
-      const url = queryParams.toString() 
+      const url = queryParams.toString()
         ? `/api/proxy/avis/statistics?${queryParams.toString()}`
-        : '/api/proxy/avis/statistics';
+        : "/api/proxy/avis/statistics";
 
-      console.log('📊 Chargement statistiques avec filtres:', Object.fromEntries(queryParams.entries()));
+      console.log(
+        "📊 Chargement statistiques avec filtres:",
+        Object.fromEntries(queryParams.entries())
+      );
 
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
       });
 
@@ -291,25 +307,27 @@ export default function AvisPage() {
 
   const updateFilter = (key: string, value: any) => {
     console.log(`🔧 Mise à jour filtre: ${key} = ${value}`);
-    
-    setFilters(prev => {
+
+    setFilters((prev) => {
       const newFilters = {
         ...prev,
         [key]: value,
-        offset: 0 // Reset pagination when filters change
+        offset: 0, // Reset pagination when filters change
       };
 
       // Si on sélectionne un mois sans année, utiliser l'année en cours
-      if (key === 'mois' && value !== null && prev.annee === null) {
+      if (key === "mois" && value !== null && prev.annee === null) {
         const currentYear = new Date().getFullYear();
         newFilters.annee = currentYear;
         console.log(`📅 Année automatique définie: ${currentYear}`);
       }
 
       // Si on sélectionne une année sans mois, réinitialiser le mois
-      if (key === 'annee' && value !== null && prev.mois !== null) {
+      if (key === "annee" && value !== null && prev.mois !== null) {
         // Garder le mois sélectionné, juste mettre à jour l'année
-        console.log(`📅 Année mise à jour: ${value}, mois conservé: ${prev.mois}`);
+        console.log(
+          `📅 Année mise à jour: ${value}, mois conservé: ${prev.mois}`
+        );
       }
 
       return newFilters;
@@ -318,7 +336,7 @@ export default function AvisPage() {
   };
 
   const clearFilters = () => {
-    console.log('🧹 Réinitialisation de tous les filtres');
+    console.log("🧹 Réinitialisation de tous les filtres");
     setFilters({
       mois: null,
       annee: null,
@@ -329,7 +347,7 @@ export default function AvisPage() {
       date_debut: null,
       date_fin: null,
       limit: 50,
-      offset: 0
+      offset: 0,
     });
     setCurrentPage(1);
   };
@@ -383,96 +401,102 @@ export default function AvisPage() {
     if (pageNumber > 0 && pageNumber <= totalPages) {
       setCurrentPage(pageNumber);
       const newOffset = (pageNumber - 1) * itemsPerPage;
-      updateFilter('offset', newOffset);
+      updateFilter("offset", newOffset);
       // Scroll vers le haut de la page
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   // Utiliser les statistiques de l'edge fonction si disponibles, sinon calculer localement
-  const stats = statistics ? [
-    {
-      title: "Total avis",
-      value: statistics.total_avis || 0,
-      icon: MessageSquare,
-      color: "blue" as const,
-    },
-    {
-      title: "Note moyenne",
-      value: `${(statistics.note_moyenne || 0).toFixed(1)}/5`,
-      icon: Star,
-      color: "yellow" as const,
-    },
-    {
-      title: "Taux de satisfaction",
-      value: `${(statistics.taux_satisfaction || 0).toFixed(0)}%`,
-      icon: ThumbsUp,
-      color: "green" as const,
-    },
-    {
-      title: "Taux d'approbation",
-      value: `${(statistics.taux_approbation || 0).toFixed(0)}%`,
-      icon: BarChart2,
-      color: "purple" as const,
-    },
-  ] : [
-    {
-      title: "Total avis",
-      value: filteredAvis.length,
-      icon: MessageSquare,
-      color: "blue" as const,
-    },
-    {
-      title: "Note moyenne",
-      value: filteredAvis.length > 0 
-        ? `${(filteredAvis.reduce((sum, av) => sum + av.note, 0) / filteredAvis.length).toFixed(1)}/5`
-        : "0.0/5",
-      icon: Star,
-      color: "yellow" as const,
-    },
-    {
-      title: "Taux de satisfaction",
-      value: filteredAvis.length > 0
-        ? `${((filteredAvis.filter((av) => av.note >= 4).length / filteredAvis.length) * 100).toFixed(0)}%`
-        : "0%",
-      icon: ThumbsUp,
-      color: "green" as const,
-    },
-    {
-      title: "Avis ce mois",
-      value: filteredAvis.filter((av) => {
-        const avisDate = new Date(av.date_avis);
-        const now = new Date();
-        return (
-          avisDate.getMonth() === now.getMonth() &&
-          avisDate.getFullYear() === now.getFullYear()
-        );
-      }).length,
-      icon: BarChart2,
-      color: "purple" as const,
-    },
-  ];
+  const stats = statistics
+    ? [
+        {
+          title: "Total avis",
+          value: statistics.total_avis || 0,
+          icon: MessageSquare,
+          color: "blue" as const,
+        },
+        {
+          title: "Note moyenne",
+          value: `${(statistics.note_moyenne || 0).toFixed(1)}/5`,
+          icon: Star,
+          color: "yellow" as const,
+        },
+        {
+          title: "Taux de satisfaction",
+          value: `${(statistics.taux_satisfaction || 0).toFixed(0)}%`,
+          icon: ThumbsUp,
+          color: "green" as const,
+        },
+        {
+          title: "Taux d'approbation",
+          value: `${(statistics.taux_approbation || 0).toFixed(0)}%`,
+          icon: BarChart2,
+          color: "purple" as const,
+        },
+      ]
+    : [
+        {
+          title: "Total avis",
+          value: filteredAvis.length,
+          icon: MessageSquare,
+          color: "blue" as const,
+        },
+        {
+          title: "Note moyenne",
+          value:
+            filteredAvis.length > 0
+              ? `${(
+                  filteredAvis.reduce((sum, av) => sum + av.note, 0) /
+                  filteredAvis.length
+                ).toFixed(1)}/5`
+              : "0.0/5",
+          icon: Star,
+          color: "yellow" as const,
+        },
+        {
+          title: "Taux de satisfaction",
+          value:
+            filteredAvis.length > 0
+              ? `${(
+                  (filteredAvis.filter((av) => av.note >= 4).length /
+                    filteredAvis.length) *
+                  100
+                ).toFixed(0)}%`
+              : "0%",
+          icon: ThumbsUp,
+          color: "green" as const,
+        },
+        {
+          title: "Avis ce mois",
+          value: filteredAvis.filter((av) => {
+            const avisDate = new Date(av.date_avis);
+            const now = new Date();
+            return (
+              avisDate.getMonth() === now.getMonth() &&
+              avisDate.getFullYear() === now.getFullYear()
+            );
+          }).length,
+          icon: BarChart2,
+          color: "purple" as const,
+        },
+      ];
 
   // Afficher un indicateur de chargement pendant la vérification de l'authentification
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">
-          Chargement des avis...
-        </p>
-      </div>
+      <LoadingSpinner fullScreen={true} message="Chargement des avis..." />
     );
   }
 
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-              Avis des Salariés
-            </h1>
+        Avis des Salariés
+      </h1>
       <p className="text-[var(--zalama-text)]/70">
-            Entreprise: {session?.partner?.company_name}
-          </p>
+        Entreprise: {session?.partner?.company_name}
+      </p>
 
       {/* Statistiques */}
       <h2 className="text-xl font-bold text-[var(--zalama-text)] mt-2">
@@ -552,14 +576,19 @@ export default function AvisPage() {
             <button
               onClick={() => setShowFilterMenu(!showFilterMenu)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
-                Object.values(filters).some(v => v !== null && v !== undefined && v !== 50 && v !== 0)
+                Object.values(filters).some(
+                  (v) => v !== null && v !== undefined && v !== 50 && v !== 0
+                )
                   ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                   : "border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
               }`}
             >
               <Filter className="h-4 w-4" />
               <span>
-                Filtres {Object.values(filters).some(v => v !== null && v !== undefined && v !== 50 && v !== 0) && "(actifs)"}
+                Filtres{" "}
+                {Object.values(filters).some(
+                  (v) => v !== null && v !== undefined && v !== 50 && v !== 0
+                ) && "(actifs)"}
               </span>
             </button>
 
@@ -581,8 +610,13 @@ export default function AvisPage() {
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
                     <select
-                      value={filters.mois || ''}
-                      onChange={(e) => updateFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+                      value={filters.mois || ""}
+                      onChange={(e) =>
+                        updateFilter(
+                          "mois",
+                          e.target.value ? parseInt(e.target.value) : null
+                        )
+                      }
                       className="px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                     >
                       <option value="">Tous les mois</option>
@@ -593,8 +627,13 @@ export default function AvisPage() {
                       ))}
                     </select>
                     <select
-                      value={filters.annee || ''}
-                      onChange={(e) => updateFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+                      value={filters.annee || ""}
+                      onChange={(e) =>
+                        updateFilter(
+                          "annee",
+                          e.target.value ? parseInt(e.target.value) : null
+                        )
+                      }
                       className="px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                     >
                       <option value="">Toutes les années</option>
@@ -613,8 +652,13 @@ export default function AvisPage() {
                     Note
                   </h3>
                   <select
-                    value={filters.note || ''}
-                    onChange={(e) => updateFilter('note', e.target.value ? parseInt(e.target.value) : null)}
+                    value={filters.note || ""}
+                    onChange={(e) =>
+                      updateFilter(
+                        "note",
+                        e.target.value ? parseInt(e.target.value) : null
+                      )
+                    }
                     className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                   >
                     <option value="">Toutes les notes</option>
@@ -624,7 +668,7 @@ export default function AvisPage() {
                     <option value="2">2 étoiles</option>
                     <option value="1">1 étoile</option>
                   </select>
-                    </div>
+                </div>
 
                 {/* Filtres par type de retour */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -632,15 +676,17 @@ export default function AvisPage() {
                     Type de retour
                   </h3>
                   <select
-                    value={filters.type_retour || ''}
-                    onChange={(e) => updateFilter('type_retour', e.target.value || null)}
+                    value={filters.type_retour || ""}
+                    onChange={(e) =>
+                      updateFilter("type_retour", e.target.value || null)
+                    }
                     className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                   >
                     <option value="">Tous les types</option>
                     <option value="positif">Positif</option>
                     <option value="negatif">Négatif</option>
                   </select>
-                        </div>
+                </div>
 
                 {/* Filtres par statut d'approbation */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -648,15 +694,24 @@ export default function AvisPage() {
                     Statut d'approbation
                   </h3>
                   <select
-                    value={filters.approuve === null ? '' : filters.approuve.toString()}
-                    onChange={(e) => updateFilter('approuve', e.target.value === '' ? null : e.target.value === 'true')}
+                    value={
+                      filters.approuve === null
+                        ? ""
+                        : filters.approuve.toString()
+                    }
+                    onChange={(e) =>
+                      updateFilter(
+                        "approuve",
+                        e.target.value === "" ? null : e.target.value === "true"
+                      )
+                    }
                     className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                   >
                     <option value="">Tous les statuts</option>
                     <option value="true">Approuvé</option>
                     <option value="false">En attente</option>
                   </select>
-                      </div>
+                </div>
 
                 {/* Filtres par employé */}
                 <div className="p-3 border-b border-[var(--zalama-border)] bg-[var(--zalama-bg-light)]/30">
@@ -664,8 +719,10 @@ export default function AvisPage() {
                     Employé
                   </h3>
                   <select
-                    value={filters.employee_id || ''}
-                    onChange={(e) => updateFilter('employee_id', e.target.value || null)}
+                    value={filters.employee_id || ""}
+                    onChange={(e) =>
+                      updateFilter("employee_id", e.target.value || null)
+                    }
                     className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                   >
                     <option value="">Tous les employés</option>
@@ -685,15 +742,19 @@ export default function AvisPage() {
                   <div className="space-y-2">
                     <input
                       type="date"
-                      value={filters.date_debut || ''}
-                      onChange={(e) => updateFilter('date_debut', e.target.value || null)}
+                      value={filters.date_debut || ""}
+                      onChange={(e) =>
+                        updateFilter("date_debut", e.target.value || null)
+                      }
                       className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                       placeholder="Date de début"
                     />
                     <input
                       type="date"
-                      value={filters.date_fin || ''}
-                      onChange={(e) => updateFilter('date_fin', e.target.value || null)}
+                      value={filters.date_fin || ""}
+                      onChange={(e) =>
+                        updateFilter("date_fin", e.target.value || null)
+                      }
                       className="w-full px-2 py-1 text-sm rounded border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)]"
                       placeholder="Date de fin"
                     />
@@ -720,7 +781,7 @@ export default function AvisPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             onClick={loadInitialData}
             className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]/80 transition-colors"
           >
@@ -796,7 +857,7 @@ export default function AvisPage() {
                       : "Utilisateur inconnu"}
                   </h3>
                   <p className="text-xs text-[var(--zalama-text)]/60 text-center">
-                      {avis.employee?.poste || "Poste non spécifié"}
+                    {avis.employee?.poste || "Poste non spécifié"}
                   </p>
                 </div>
 

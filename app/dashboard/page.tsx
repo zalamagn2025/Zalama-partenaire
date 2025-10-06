@@ -1,17 +1,10 @@
 "use client";
 
 import StatCard from "@/components/dashboard/StatCard";
-import DocumentsRapports from "@/components/dashboard/DocumentsRapports";
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { PartnerDataService } from "@/lib/services";
-import { edgeFunctionService, type DashboardDataResponse } from "@/lib/edgeFunctionService";
-import type { Alert, Employee, SalaryAdvanceRequest } from "@/lib/supabase";
-import { supabase } from "@/lib/supabase";
 import {
-  BarChart2,
   ClipboardList,
-  CreditCard,
   FileText,
   RefreshCw,
   Star,
@@ -38,6 +31,7 @@ import {
   YAxis,
 } from "recharts";
 import { toast } from "sonner";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -64,12 +58,14 @@ export default function EntrepriseDashboardPage() {
   const [dashboardData, setDashboardData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // États pour les filtres
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [availableMonths, setAvailableMonths] = useState<Array<{value: number, label: string}>>([]);
+  const [availableMonths, setAvailableMonths] = useState<
+    Array<{ value: number; label: string }>
+  >([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   // Charger les données du dashboard via Edge Function
@@ -78,90 +74,115 @@ export default function EntrepriseDashboardPage() {
 
     setIsLoading(true);
     setError(null);
-    
+
     try {
       // Construire l'URL avec les paramètres de filtrage
-      let url = '/api/proxy/dashboard-data';
+      let url = "/api/proxy/dashboard-data";
       const params = new URLSearchParams();
-      
-      if (month !== undefined) params.append('month', month.toString());
-      if (year !== undefined) params.append('year', year.toString());
-      
+
+      if (month !== undefined) params.append("month", month.toString());
+      if (year !== undefined) params.append("year", year.toString());
+
       if (params.toString()) {
-        url += '?' + params.toString();
+        url += "?" + params.toString();
       }
 
       console.log("🔄 Chargement des données dashboard:", url);
 
       // Utiliser le proxy pour les données du dashboard
       const response = await fetch(url, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
         },
       });
 
       if (!response.ok) {
         // Gérer les erreurs d'authentification et de route
-        if (response.status === 401 || response.status === 403 || response.status === 404 || response.status === 500 || response.status === 503) {
+        if (
+          response.status === 401 ||
+          response.status === 403 ||
+          response.status === 404 ||
+          response.status === 500 ||
+          response.status === 503
+        ) {
           console.error("❌ Erreur serveur:", response.status);
           // Déclencher immédiatement la déconnexion sans délai
-          window.dispatchEvent(new CustomEvent('session-error', { 
-            detail: { 
-              message: `Erreur ${response.status}: ${response.status === 401 ? 'Non autorisé' : response.status === 403 ? 'Accès interdit' : response.status === 404 ? 'Service non trouvé' : response.status === 500 ? 'Erreur serveur interne' : 'Service indisponible'}`,
-              status: response.status
-            } 
-          }));
+          window.dispatchEvent(
+            new CustomEvent("session-error", {
+              detail: {
+                message: `Erreur ${response.status}: ${
+                  response.status === 401
+                    ? "Non autorisé"
+                    : response.status === 403
+                    ? "Accès interdit"
+                    : response.status === 404
+                    ? "Service non trouvé"
+                    : response.status === 500
+                    ? "Erreur serveur interne"
+                    : "Service indisponible"
+                }`,
+                status: response.status,
+              },
+            })
+          );
           return;
         }
-        
+
         throw new Error(`Erreur HTTP: ${response.status}`);
       }
 
       const result = await response.json();
 
       if (!result.success) {
-        throw new Error(result.message || "Erreur lors du chargement des données");
+        throw new Error(
+          result.message || "Erreur lors du chargement des données"
+        );
       }
 
       // Les données sont dans result.data selon la réponse Edge Function
       const data = result.data || result;
       setDashboardData(data);
-      
+
       // Générer les options de filtres basées sur les données disponibles
       // Utiliser les données de demandes pour déterminer les périodes actives
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
-      
+
       // Générer les mois disponibles (6 derniers mois + mois actuel)
       const monthsWithData = [];
       for (let i = 5; i >= 0; i--) {
         const date = new Date(currentYear, currentMonth - i - 1, 1);
         const monthValue = date.getMonth() + 1;
-        const monthLabel = date.toLocaleDateString('fr-FR', { month: 'long' });
+        const monthLabel = date.toLocaleDateString("fr-FR", { month: "long" });
         monthsWithData.push({ value: monthValue, label: monthLabel });
       }
-      
+
       setAvailableMonths(monthsWithData);
-      
+
       // Générer les années disponibles (année actuelle et 2 précédentes)
       const years = [currentYear, currentYear - 1, currentYear - 2];
       setAvailableYears(years);
-      
+
       console.log("✅ Données dashboard chargées:", data);
-      
+
       if (month !== undefined || year !== undefined) {
-        toast.success(`Données filtrées pour ${month ? `${month}/${year}` : 'la période sélectionnée'}`);
+        toast.success(
+          `Données filtrées pour ${
+            month ? `${month}/${year}` : "la période sélectionnée"
+          }`
+        );
       } else {
         toast.success("Données du dashboard mises à jour");
       }
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
-      const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+      const errorMessage =
+        error instanceof Error ? error.message : "Erreur inconnue";
       setError(errorMessage);
-      
+
       // Vérifier si c'est une erreur d'authentification ou de route
       if (errorMessage.includes("401") || errorMessage.includes("403")) {
         toast.error("Session expirée. Redirection vers la connexion...");
@@ -169,7 +190,9 @@ export default function EntrepriseDashboardPage() {
           router.push("/login");
         }, 2000);
       } else if (errorMessage.includes("404")) {
-        toast.error("Service temporairement indisponible. Redirection vers la connexion...");
+        toast.error(
+          "Service temporairement indisponible. Redirection vers la connexion..."
+        );
         setTimeout(() => {
           router.push("/login");
         }, 2000);
@@ -212,12 +235,19 @@ export default function EntrepriseDashboardPage() {
 
   // Gérer les erreurs de session
   useEffect(() => {
-    if (error && (error.includes("Session expirée") || error.includes("401") || error.includes("403"))) {
+    if (
+      error &&
+      (error.includes("Session expirée") ||
+        error.includes("401") ||
+        error.includes("403"))
+    ) {
       console.log("🔑 Erreur d'authentification détectée, déconnexion...");
       // Déclencher un événement personnalisé pour que le SessionErrorHandler gère la déconnexion
-      window.dispatchEvent(new CustomEvent('session-error', { 
-        detail: { message: error } 
-      }));
+      window.dispatchEvent(
+        new CustomEvent("session-error", {
+          detail: { message: error },
+        })
+      );
     }
   }, [error]);
 
@@ -244,14 +274,10 @@ export default function EntrepriseDashboardPage() {
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            Chargement du tableau de bord...
-          </p>
-        </div>
-      </div>
+      <LoadingSpinner
+        fullScreen={true}
+        message="Chargement du tableau de bord..."
+      />
     );
   }
 
@@ -280,9 +306,7 @@ export default function EntrepriseDashboardPage() {
           <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
             Erreur de chargement
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">
-            {error}
-          </p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={() => loadDashboardData()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -311,22 +335,28 @@ export default function EntrepriseDashboardPage() {
   }
 
   // Utiliser les mois et années disponibles depuis les données Edge Function
-  const months = availableMonths.length > 0 ? availableMonths : [
-    { value: 1, label: "Janvier" },
-    { value: 2, label: "Février" },
-    { value: 3, label: "Mars" },
-    { value: 4, label: "Avril" },
-    { value: 5, label: "Mai" },
-    { value: 6, label: "Juin" },
-    { value: 7, label: "Juillet" },
-    { value: 8, label: "Août" },
-    { value: 9, label: "Septembre" },
-    { value: 10, label: "Octobre" },
-    { value: 11, label: "Novembre" },
-    { value: 12, label: "Décembre" },
-  ];
-  
-  const years = availableYears.length > 0 ? availableYears : Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
+  const months =
+    availableMonths.length > 0
+      ? availableMonths
+      : [
+          { value: 1, label: "Janvier" },
+          { value: 2, label: "Février" },
+          { value: 3, label: "Mars" },
+          { value: 4, label: "Avril" },
+          { value: 5, label: "Mai" },
+          { value: 6, label: "Juin" },
+          { value: 7, label: "Juillet" },
+          { value: 8, label: "Août" },
+          { value: 9, label: "Septembre" },
+          { value: 10, label: "Octobre" },
+          { value: 11, label: "Novembre" },
+          { value: 12, label: "Décembre" },
+        ];
+
+  const years =
+    availableYears.length > 0
+      ? availableYears
+      : Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
 
   // Utiliser les données Edge Function directement pour les graphiques
   const demandesEvolutionData = charts?.demandes_evolution || [];
@@ -334,20 +364,22 @@ export default function EntrepriseDashboardPage() {
   const repartitionMotifsData = charts?.repartition_motifs || [];
 
   // Vérifier s'il y a des données pour afficher les graphiques
-  const hasDemandesData = demandesEvolutionData.some((d: any) => d.demandes > 0);
+  const hasDemandesData = demandesEvolutionData.some(
+    (d: any) => d.demandes > 0
+  );
   const hasMotifsData = repartitionMotifsData.length > 0;
   const hasMontantsData = montantsEvolutionData.some((d: any) => d.montant > 0);
 
   return (
     <div className="p-6 space-y-6">
       {/* Section Filtres */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-gray-600 dark:text-white text-sm font-semibold flex items-center gap-2">
             <Filter className="h-4 w-4" />
             Filtres de période
-            </h3>
-            <div className="flex items-center gap-2">
+          </h3>
+          <div className="flex items-center gap-2">
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md transition-colors flex items-center gap-1"
@@ -361,19 +393,27 @@ export default function EntrepriseDashboardPage() {
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               title="Actualiser les données"
             >
-              <RefreshCw className={`h-4 w-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 text-gray-500 ${
+                  isLoading ? "animate-spin" : ""
+                }`}
+              />
             </button>
-            </div>
           </div>
-          
+        </div>
+
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Mois</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Mois
+              </label>
               <select
                 value={selectedMonth || ""}
                 onChange={(e) => {
-                  const month = e.target.value ? parseInt(e.target.value) : null;
+                  const month = e.target.value
+                    ? parseInt(e.target.value)
+                    : null;
                   setSelectedMonth(month);
                   // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
                   if (month && !selectedYear) {
@@ -391,10 +431,16 @@ export default function EntrepriseDashboardPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Année</label>
+              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Année
+              </label>
               <select
                 value={selectedYear || ""}
-                onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
+                onChange={(e) =>
+                  setSelectedYear(
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               >
                 <option value="">Année en cours</option>
@@ -425,28 +471,36 @@ export default function EntrepriseDashboardPage() {
         )}
 
         {filters && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Période actuelle</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Période actuelle
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
                 {filters.period_description || "Mois en cours"}
-                </p>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Jour de paiement</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  {filters.payment_day || "Non défini"}
-                </p>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Statut</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.applied ? "Filtres actifs" : "Données du mois en cours"}
-                </p>
-              </div>
+              </p>
             </div>
-          )}
-        </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Jour de paiement
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {filters.payment_day || "Non défini"}
+              </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                Statut
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
+                {filters.applied
+                  ? "Filtres actifs"
+                  : "Données du mois en cours"}
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* En-tête du tableau de bord */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
@@ -475,8 +529,9 @@ export default function EntrepriseDashboardPage() {
               {partnerInfo?.company_name || session?.partner?.company_name}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {partnerInfo?.activity_domain || session?.partner?.activity_domain} • {statistics?.active_employees || 0}{" "}
-              employés actifs
+              {partnerInfo?.activity_domain ||
+                session?.partner?.activity_domain}{" "}
+              • {statistics?.active_employees || 0} employés actifs
             </p>
           </div>
         </div>
@@ -497,7 +552,9 @@ export default function EntrepriseDashboardPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
         <StatCard
           title="Employés actifs/Total"
-          value={`${statistics?.active_employees || 0}/${statistics?.total_employees || 0}`}
+          value={`${statistics?.active_employees || 0}/${
+            statistics?.total_employees || 0
+          }`}
           icon={Users}
           color="blue"
         />
@@ -534,7 +591,11 @@ export default function EntrepriseDashboardPage() {
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               title="Actualiser les données"
             >
-              <RefreshCw className={`h-4 w-4 text-gray-500 ${isLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 text-gray-500 ${
+                  isLoading ? "animate-spin" : ""
+                }`}
+              />
             </button>
           </div>
         </div>
@@ -562,12 +623,15 @@ export default function EntrepriseDashboardPage() {
               Date limite de remboursement
             </span>
             <span className="text-lg font-bold dark:text-white">
-              {financialPerformance?.date_limite_remboursement ? 
-                new Date(financialPerformance.date_limite_remboursement).toLocaleDateString("fr-FR", {
-                  day: "2-digit",
-                  month: "long",
-                  year: "numeric",
-                }) : "Non définie"}
+              {financialPerformance?.date_limite_remboursement
+                ? new Date(
+                    financialPerformance.date_limite_remboursement
+                  ).toLocaleDateString("fr-FR", {
+                    day: "2-digit",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "Non définie"}
             </span>
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
@@ -582,15 +646,19 @@ export default function EntrepriseDashboardPage() {
                 className="bg-yellow-400 h-2 rounded-full"
                 style={{
                   width: `${
-                    financialPerformance?.debloque_mois && financialPerformance?.a_rembourser_mois
-                      ? (financialPerformance.a_rembourser_mois / financialPerformance.debloque_mois) * 100
+                    financialPerformance?.debloque_mois &&
+                    financialPerformance?.a_rembourser_mois
+                      ? (financialPerformance.a_rembourser_mois /
+                          financialPerformance.debloque_mois) *
+                        100
                       : 0
                   }%`,
                 }}
               ></div>
             </div>
             <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              Taux de remboursement: {financialPerformance?.taux_remboursement || "0%"}
+              Taux de remboursement:{" "}
+              {financialPerformance?.taux_remboursement || "0%"}
             </span>
           </div>
         </div>
@@ -611,7 +679,10 @@ export default function EntrepriseDashboardPage() {
             )}
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={demandesEvolutionData} key={`demandes-${filters?.month}-${filters?.year}`}>
+            <LineChart
+              data={demandesEvolutionData}
+              key={`demandes-${filters?.month}-${filters?.year}`}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
               <XAxis dataKey="mois" stroke="#A0AEC0" />
               <YAxis stroke="#A0AEC0" />
@@ -639,7 +710,10 @@ export default function EntrepriseDashboardPage() {
             )}
           </div>
           <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={montantsEvolutionData} key={`montants-${filters?.month}-${filters?.year}`}>
+            <BarChart
+              data={montantsEvolutionData}
+              key={`montants-${filters?.month}-${filters?.year}`}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
               <XAxis dataKey="mois" stroke="#A0AEC0" />
               <YAxis stroke="#A0AEC0" />
@@ -696,8 +770,8 @@ export default function EntrepriseDashboardPage() {
           </ResponsiveContainer>
         </div>
         {/* Remboursements récents */}
-        <RemboursementsRecents 
-          compact={true} 
+        <RemboursementsRecents
+          compact={true}
           remboursements={dashboardData?.remboursements}
           isLoading={isLoading}
         />

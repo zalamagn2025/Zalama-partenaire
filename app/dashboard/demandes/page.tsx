@@ -8,9 +8,7 @@ import {
   AlertCircle,
   Search,
   Filter,
-  Calendar,
   Download,
-  MoreHorizontal,
   User,
   MessageSquare,
   PlusSquare,
@@ -19,12 +17,12 @@ import {
   PieChart as PieChartIcon,
   Check,
   X,
-  Loader2,
   RefreshCw,
   Eye,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
+import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
@@ -32,11 +30,9 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -75,7 +71,7 @@ export default function DemandesPage() {
   const [rejectingRequest, setRejectingRequest] = useState<string | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDemande, setSelectedDemande] = useState<any>(null);
-  
+
   // États pour les filtres de l'edge function
   const [filters, setFilters] = useState({
     mois: null as number | null,
@@ -85,16 +81,18 @@ export default function DemandesPage() {
     categorie: null as string | null,
     statut_remboursement: null as string | null,
     limit: 50,
-    offset: 0
+    offset: 0,
   });
-  
+
   // États pour les données de filtres
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
-  
+
   // État pour stocker les informations des employés
-  const [employeesData, setEmployeesData] = useState<Map<string, any>>(new Map());
-  
+  const [employeesData, setEmployeesData] = useState<Map<string, any>>(
+    new Map()
+  );
+
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
@@ -122,26 +120,29 @@ export default function DemandesPage() {
       setDemandesAvance(demandes);
     } catch (error: any) {
       console.error("Erreur lors du chargement des demandes:", error);
-      
+
       // Gérer les erreurs d'authentification et serveur
-      if (error.message && (
-        error.message.includes("Erreur serveur") ||
-        error.message.includes("500") ||
-        error.message.includes("401") ||
-        error.message.includes("403") ||
-        error.message.includes("404") ||
-        error.message.includes("503")
-      )) {
+      if (
+        error.message &&
+        (error.message.includes("Erreur serveur") ||
+          error.message.includes("500") ||
+          error.message.includes("401") ||
+          error.message.includes("403") ||
+          error.message.includes("404") ||
+          error.message.includes("503"))
+      ) {
         console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(new CustomEvent('session-error', { 
-          detail: { 
-            message: error.message,
-            status: error.status || 500
-          } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent("session-error", {
+            detail: {
+              message: error.message,
+              status: error.status || 500,
+            },
+          })
+        );
         return;
       }
-      
+
       toast.error("Erreur lors du chargement des demandes");
     } finally {
       if (showTableLoader) {
@@ -163,19 +164,23 @@ export default function DemandesPage() {
     setLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
-      
+
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+        Object.entries(activeFilters).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== ""
+        )
       );
-      
+
       console.log("🔄 Chargement des demandes avec filtres:", cleanFilters);
-      
+
       // Utiliser l'endpoint des demandes avec filtres
-      const demandesData = await edgeFunctionService.getSalaryDemands(cleanFilters);
+      const demandesData = await edgeFunctionService.getSalaryDemands(
+        cleanFilters
+      );
 
       if (!demandesData.success) {
         console.error("Erreur Edge Function:", demandesData.message);
@@ -185,58 +190,70 @@ export default function DemandesPage() {
 
       // Stocker les données pour les statistiques
       setCurrentMonthData(demandesData);
-      
+
       // Mettre à jour les données locales
       if (demandesData.data && Array.isArray(demandesData.data)) {
-          const firstDemande = demandesData.data[0] as any;
-          console.log("🔍 Première demande brute:", firstDemande);
-          console.log("🔍 Structure employé première demande:", {
-            hasEmploye: !!firstDemande?.employe,
-            employeType: typeof firstDemande?.employe,
-            employeKeys: firstDemande?.employe ? Object.keys(firstDemande.employe) : [],
-            employePrenom: firstDemande?.employe?.prenom,
-            employeNom: firstDemande?.employe?.nom,
-            employeData: firstDemande?.employe,
-            employeStringified: JSON.stringify(firstDemande?.employe)
+        const firstDemande = demandesData.data[0] as any;
+        console.log("🔍 Première demande brute:", firstDemande);
+        console.log("🔍 Structure employé première demande:", {
+          hasEmploye: !!firstDemande?.employe,
+          employeType: typeof firstDemande?.employe,
+          employeKeys: firstDemande?.employe
+            ? Object.keys(firstDemande.employe)
+            : [],
+          employePrenom: firstDemande?.employe?.prenom,
+          employeNom: firstDemande?.employe?.nom,
+          employeData: firstDemande?.employe,
+          employeStringified: JSON.stringify(firstDemande?.employe),
+        });
+
+        // Debug pour toutes les demandes
+        demandesData.data.forEach((demande: any, index: number) => {
+          console.log(`🔍 Demande ${index}:`, {
+            employe_id: demande.employe_id,
+            hasEmploye: !!demande.employe,
+            employeKeys: demande.employe ? Object.keys(demande.employe) : [],
+            employePrenom: demande.employe?.prenom,
+            employeNom: demande.employe?.nom,
           });
-          
-          // Debug pour toutes les demandes
-          demandesData.data.forEach((demande: any, index: number) => {
-            console.log(`🔍 Demande ${index}:`, {
-              employe_id: demande.employe_id,
-              hasEmploye: !!demande.employe,
-              employeKeys: demande.employe ? Object.keys(demande.employe) : [],
-              employePrenom: demande.employe?.prenom,
-              employeNom: demande.employe?.nom
-            });
-          });
-          
-          setDemandesAvance(demandesData.data);
+        });
+
+        setDemandesAvance(demandesData.data);
       }
-      
-      console.log("✅ Données chargées avec succès:", demandesData.data?.length, "demandes");
+
+      console.log(
+        "✅ Données chargées avec succès:",
+        demandesData.data?.length,
+        "demandes"
+      );
     } catch (error: any) {
-      console.error("Erreur lors du chargement des données Edge Functions:", error);
-      
+      console.error(
+        "Erreur lors du chargement des données Edge Functions:",
+        error
+      );
+
       // Gérer les erreurs d'authentification et serveur
-      if (error.message && (
-        error.message.includes("Erreur serveur") ||
-        error.message.includes("500") ||
-        error.message.includes("401") ||
-        error.message.includes("403") ||
-        error.message.includes("404") ||
-        error.message.includes("503")
-      )) {
+      if (
+        error.message &&
+        (error.message.includes("Erreur serveur") ||
+          error.message.includes("500") ||
+          error.message.includes("401") ||
+          error.message.includes("403") ||
+          error.message.includes("404") ||
+          error.message.includes("503"))
+      ) {
         console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(new CustomEvent('session-error', { 
-          detail: { 
-            message: error.message,
-            status: error.status || 500
-          } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent("session-error", {
+            detail: {
+              message: error.message,
+              status: error.status || 500,
+            },
+          })
+        );
         return;
       }
-      
+
       toast.error("Erreur lors du chargement des données");
     } finally {
       setEdgeFunctionLoading(false);
@@ -251,11 +268,12 @@ export default function DemandesPage() {
   // Fonction pour charger les informations des employés
   const loadEmployeesData = async () => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      const employeesData = await edgeFunctionService.getSalaryDemandsEmployees();
-      
+      const employeesData =
+        await edgeFunctionService.getSalaryDemandsEmployees();
+
       if (employeesData.success && employeesData.data) {
         // Créer une Map pour un accès rapide par ID
         const employeesMap = new Map();
@@ -263,40 +281,49 @@ export default function DemandesPage() {
           employeesMap.set(employee.id, employee);
         });
         setEmployeesData(employeesMap);
-        console.log("✅ Données employés chargées:", employeesMap.size, "employés");
+        console.log(
+          "✅ Données employés chargées:",
+          employeesMap.size,
+          "employés"
+        );
       }
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
     }
   };
 
-
   // Charger les périodes d'activité pour les filtres
   const loadActivityPeriods = async () => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      const periodsData = await edgeFunctionService.getSalaryDemandsActivityPeriods();
-      
+      const periodsData =
+        await edgeFunctionService.getSalaryDemandsActivityPeriods();
+
       console.log("🔍 Périodes d'activité reçues:", periodsData);
-      
+
       if (periodsData.success && periodsData.data) {
         // Transformer les données pour correspondre au format attendu
         const transformedData = {
           mois: periodsData.data.months?.map((m: any) => m.numero) || [],
-          annees: periodsData.data.years || []
+          annees: periodsData.data.years || [],
         };
         setActivityPeriods(transformedData);
         console.log("✅ Périodes d'activité définies:", transformedData);
         console.log("📊 Données brutes:", periodsData.data);
       } else {
-        console.log("❌ Pas de données de périodes d'activité, utilisation du fallback");
+        console.log(
+          "❌ Pas de données de périodes d'activité, utilisation du fallback"
+        );
         // Fallback: générer les mois et années disponibles
         generateFallbackPeriods();
       }
     } catch (error) {
-      console.error("Erreur lors du chargement des périodes d'activité:", error);
+      console.error(
+        "Erreur lors du chargement des périodes d'activité:",
+        error
+      );
       // Fallback en cas d'erreur
       generateFallbackPeriods();
     }
@@ -307,7 +334,7 @@ export default function DemandesPage() {
     const currentDate = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth() + 1;
-    
+
     // Générer les 6 derniers mois + mois actuel (comme dans dashboard)
     const monthsWithData = [];
     for (let i = 5; i >= 0; i--) {
@@ -315,15 +342,15 @@ export default function DemandesPage() {
       const monthValue = date.getMonth() + 1;
       monthsWithData.push(monthValue);
     }
-    
+
     // Générer les années disponibles (année actuelle et précédente)
     const yearsWithData = [currentYear - 1, currentYear];
-    
+
     const fallbackPeriods = {
       mois: monthsWithData,
-      annees: yearsWithData
+      annees: yearsWithData,
     };
-    
+
     console.log("🔄 Périodes de fallback générées:", fallbackPeriods);
     setActivityPeriods(fallbackPeriods);
   };
@@ -332,10 +359,10 @@ export default function DemandesPage() {
   const applyFilter = (filterKey: string, value: any) => {
     const newFilters = { ...filters, [filterKey]: value };
     setFilters(newFilters);
-    
+
     // Réinitialiser la pagination
     setCurrentPage(1);
-    
+
     // Recharger les données avec les nouveaux filtres
     loadSalaryDemandsData(newFilters);
   };
@@ -350,7 +377,7 @@ export default function DemandesPage() {
       categorie: null,
       statut_remboursement: null,
       limit: 50,
-      offset: 0
+      offset: 0,
     };
     setFilters(defaultFilters);
     setCurrentPage(1);
@@ -374,7 +401,7 @@ export default function DemandesPage() {
         console.log("⏰ Timeout: génération des périodes de fallback");
         generateFallbackPeriods();
       }, 3000); // Attendre 3 secondes avant d'utiliser le fallback
-      
+
       return () => clearTimeout(timer);
     }
   }, [session?.partner, activityPeriods]);
@@ -399,7 +426,7 @@ export default function DemandesPage() {
     const employe = (d as any).employe || (d as any).employee || d.employees;
     const demandesDetailes = (d as any).demandes_detailes || [];
     const premiereDemande = demandesDetailes[0] || {};
-    
+
     // Debug pour voir la structure des données
     console.log("🔍 Formatage demande:", {
       id: d.id,
@@ -409,54 +436,78 @@ export default function DemandesPage() {
       employeKeys: employe ? Object.keys(employe) : [],
       employePrenom: employe?.prenom,
       employeNom: employe?.nom,
-      employeData: employe
+      employeData: employe,
     });
-    
+
     // Construire le nom de l'employé de manière plus robuste
     let demandeur = "Employé inconnu";
-    
+
     // Vérifier si l'objet employé existe et a des propriétés
-    if (employe && typeof employe === 'object' && Object.keys(employe).length > 0) {
+    if (
+      employe &&
+      typeof employe === "object" &&
+      Object.keys(employe).length > 0
+    ) {
       const prenom = employe.prenom || employe.first_name || "";
       const nom = employe.nom || employe.last_name || employe.name || "";
       demandeur = `${prenom} ${nom}`.trim();
-      
+
       // Si toujours vide, essayer d'autres champs
       if (!demandeur) {
-        demandeur = employe.display_name || employe.email || `Employé ${d.employe_id}`;
+        demandeur =
+          employe.display_name || employe.email || `Employé ${d.employe_id}`;
       }
     } else {
       // Fallback: chercher dans les données d'employés chargées
       const employeeFromMap = employeesData.get(d.employe_id);
       if (employeeFromMap) {
-        const prenom = employeeFromMap.prenom || employeeFromMap.first_name || "";
-        const nom = employeeFromMap.nom || employeeFromMap.last_name || employeeFromMap.name || "";
+        const prenom =
+          employeeFromMap.prenom || employeeFromMap.first_name || "";
+        const nom =
+          employeeFromMap.nom ||
+          employeeFromMap.last_name ||
+          employeeFromMap.name ||
+          "";
         demandeur = `${prenom} ${nom}`.trim();
-        
+
         if (!demandeur) {
-          demandeur = employeeFromMap.display_name || employeeFromMap.email || `Employé ${d.employe_id}`;
+          demandeur =
+            employeeFromMap.display_name ||
+            employeeFromMap.email ||
+            `Employé ${d.employe_id}`;
         }
       } else {
         // Dernier fallback
         demandeur = `Employé ${d.employe_id}`;
       }
     }
-    
+
     return {
       ...d,
       id: premiereDemande.id || d.id, // ✅ Utiliser l'ID de la première demande détaillée
       type_demande: "Avance sur Salaire",
       demandeur: demandeur,
-      date: new Date((d as any).date_creation_premiere || d.date_creation || new Date()).toLocaleDateString("fr-FR"),
-      montant: (d as any).montant_total_demande || premiereDemande.montant_demande || d.montant_demande || 0,
+      date: new Date(
+        (d as any).date_creation_premiere || d.date_creation || new Date()
+      ).toLocaleDateString("fr-FR"),
+      montant:
+        (d as any).montant_total_demande ||
+        premiereDemande.montant_demande ||
+        d.montant_demande ||
+        0,
       commentaires: 0,
       poste: employe?.poste || employe?.position || "Non spécifié",
-      categorie: (d as any).categorie || (premiereDemande.num_installments === 1 ? "mono-mois" : "multi-mois"),
-      statut: (d as any).statut_global || premiereDemande.statut || d.statut || "Non défini",
+      categorie:
+        (d as any).categorie ||
+        (premiereDemande.num_installments === 1 ? "mono-mois" : "multi-mois"),
+      statut:
+        (d as any).statut_global ||
+        premiereDemande.statut ||
+        d.statut ||
+        "Non défini",
       type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
     };
   });
-
 
   // Filtrer les demandes (filtrage local pour la recherche textuelle)
   const filteredDemandes = allDemandes.filter((demande) => {
@@ -484,23 +535,30 @@ export default function DemandesPage() {
   );
 
   // Calculer les statistiques - utiliser les données Edge Function en priorité
-  const totalDemandes = currentMonthData?.statistics?.total || 
+  const totalDemandes =
+    currentMonthData?.statistics?.total ||
     currentMonthData?.count ||
     allDemandes.length;
-  
-  const approvedDemandes = currentMonthData?.statistics?.status_breakdown?.Validé || 
+
+  const approvedDemandes =
+    currentMonthData?.statistics?.status_breakdown?.Validé ||
     currentMonthData?.statistics?.by_status?.approved ||
     allDemandes.filter((d) => d.statut === "Validé").length;
-  
-  const pendingDemandes = currentMonthData?.statistics?.status_breakdown?.["En attente"] || 
+
+  const pendingDemandes =
+    currentMonthData?.statistics?.status_breakdown?.["En attente"] ||
     currentMonthData?.statistics?.by_status?.pending ||
     allDemandes.filter((d) => d.statut === "En attente").length;
-  
-  const pendingRHResponsable = currentMonthData?.statistics?.status_breakdown?.["En attente RH/Responsable"] || 
+
+  const pendingRHResponsable =
+    currentMonthData?.statistics?.status_breakdown?.[
+      "En attente RH/Responsable"
+    ] ||
     currentMonthData?.statistics?.by_status?.pending_rh_responsable ||
     allDemandes.filter((d) => d.statut === "En attente RH/Responsable").length;
-  
-  const rejectedDemandes = currentMonthData?.statistics?.status_breakdown?.Rejeté || 
+
+  const rejectedDemandes =
+    currentMonthData?.statistics?.status_breakdown?.Rejeté ||
     currentMonthData?.statistics?.by_status?.rejected ||
     allDemandes.filter((d) => d.statut === "Rejeté").length;
 
@@ -557,19 +615,19 @@ export default function DemandesPage() {
       );
 
       // Utiliser le nouveau proxy partner-approval
-      const response = await fetch('/api/proxy/partner-approval', {
-        method: 'POST',
+      const response = await fetch("/api/proxy/partner-approval", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId: requestId,
           action: "approve",
           approverId: session.admin?.id || session.user?.id,
           approverRole: approverRole,
-          reason: "Demande approuvée par le service RH"
-        })
+          reason: "Demande approuvée par le service RH",
+        }),
       });
 
       const result = await response.json();
@@ -612,19 +670,19 @@ export default function DemandesPage() {
       const loadingToast = toast.loading("Traitement du rejet... (8 secondes)");
 
       // Utiliser le nouveau proxy partner-approval
-      const response = await fetch('/api/proxy/partner-approval', {
-        method: 'POST',
+      const response = await fetch("/api/proxy/partner-approval", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           requestId: requestId,
           action: "reject",
           approverId: session.admin?.id || session.user?.id,
           approverRole: approverRole,
-          reason: "Demande rejetée par le service RH"
-        })
+          reason: "Demande rejetée par le service RH",
+        }),
       });
 
       const result = await response.json();
@@ -701,7 +759,11 @@ export default function DemandesPage() {
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 title="Actualiser les données du mois en cours"
               >
-                <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw
+                  className={`h-4 w-4 text-gray-500 ${
+                    edgeFunctionLoading ? "animate-spin" : ""
+                  }`}
+                />
               </button>
             </div>
             <p className="text-[var(--zalama-text)]/60 mt-1">
@@ -711,10 +773,12 @@ export default function DemandesPage() {
           </div>
           {/* Indicateur de rafraîchissement */}
           {tableLoading && (
-            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
-              <Loader2 className="h-4 w-4 animate-spin" />
+            <LoadingButton
+              loading={true}
+              className="text-sm text-blue-600 dark:text-blue-400"
+            >
               <span>Mise à jour...</span>
-            </div>
+            </LoadingButton>
           )}
         </div>
         <div className="flex gap-3">
@@ -903,8 +967,9 @@ export default function DemandesPage() {
               disabled={edgeFunctionLoading}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
             >
-              {edgeFunctionLoading && <Loader2 className="h-3 w-3 animate-spin" />}
-              Actualiser
+              <LoadingButton loading={edgeFunctionLoading}>
+                Actualiser
+              </LoadingButton>
             </button>
           </div>
         </div>
@@ -917,13 +982,20 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.mois || ""}
-              onChange={(e) => applyFilter('mois', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                applyFilter(
+                  "mois",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les mois</option>
               {activityPeriods?.mois?.map((mois: number) => (
                 <option key={mois} value={mois}>
-                  {new Date(0, mois - 1).toLocaleString('fr-FR', { month: 'long' })}
+                  {new Date(0, mois - 1).toLocaleString("fr-FR", {
+                    month: "long",
+                  })}
                 </option>
               ))}
             </select>
@@ -936,12 +1008,19 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.annee || ""}
-              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                applyFilter(
+                  "annee",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Toutes les années</option>
               {activityPeriods?.annees?.map((annee: number) => (
-                <option key={annee} value={annee}>{annee}</option>
+                <option key={annee} value={annee}>
+                  {annee}
+                </option>
               ))}
             </select>
           </div>
@@ -953,11 +1032,13 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.status || ""}
-              onChange={(e) => applyFilter('status', e.target.value || null)}
+              onChange={(e) => applyFilter("status", e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
-              <option value="En attente RH/Responsable">En attente RH/Responsable</option>
+              <option value="En attente RH/Responsable">
+                En attente RH/Responsable
+              </option>
               <option value="Validé">Validé</option>
               <option value="Rejeté">Rejeté</option>
             </select>
@@ -970,7 +1051,7 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.categorie || ""}
-              onChange={(e) => applyFilter('categorie', e.target.value || null)}
+              onChange={(e) => applyFilter("categorie", e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Toutes les catégories</option>
@@ -979,7 +1060,6 @@ export default function DemandesPage() {
             </select>
           </div>
 
-
           {/* Filtre par type de motif */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -987,7 +1067,9 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.type_motif || ""}
-              onChange={(e) => applyFilter('type_motif', e.target.value || null)}
+              onChange={(e) =>
+                applyFilter("type_motif", e.target.value || null)
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les motifs</option>
@@ -1007,7 +1089,9 @@ export default function DemandesPage() {
             </label>
             <select
               value={filters.statut_remboursement || ""}
-              onChange={(e) => applyFilter('statut_remboursement', e.target.value || null)}
+              onChange={(e) =>
+                applyFilter("statut_remboursement", e.target.value || null)
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
@@ -1018,7 +1102,6 @@ export default function DemandesPage() {
               <option value="ANNULE">Annulé</option>
             </select>
           </div>
-
         </div>
 
         {/* Indicateur de filtres actifs */}
@@ -1029,21 +1112,10 @@ export default function DemandesPage() {
         {/* Overlay de loading pour le tableau */}
         {tableLoading && (
           <div className="absolute inset-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm z-10 flex items-center justify-center rounded-lg">
-            <div className="text-center">
-              <Loader2 className="h-12 w-12 text-blue-500 mx-auto mb-4 animate-spin" />
-              <h3 className="text-lg font-medium text-gray-800 dark:text-gray-200 mb-2">
-                Traitement en cours...
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Mise à jour des données de la demande
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mb-3">
-                ⏱️ Temps estimé : 8 secondes
-              </p>
-              <div className="w-48 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full animate-pulse"></div>
-              </div>
-            </div>
+            <LoadingSpinner
+              size="lg"
+              message="Mise à jour des données de la demande"
+            />
           </div>
         )}
         {currentItems.length === 0 ? (
@@ -1088,7 +1160,10 @@ export default function DemandesPage() {
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {currentItems.map((demande) => (
-                  <tr key={demande.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <tr
+                    key={demande.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
                     <td className="px-3 py-3">
                       <div className="flex items-center min-w-0">
                         <div className="flex-shrink-0 h-6 w-6">
@@ -1100,22 +1175,25 @@ export default function DemandesPage() {
                           <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
                             {demande.demandeur}
                           </div>
-                          {demande.poste && demande.poste !== "Non spécifié" && (
-                            <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                              {demande.poste}
-                            </div>
-                          )}
+                          {demande.poste &&
+                            demande.poste !== "Non spécifié" && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                {demande.poste}
+                              </div>
+                            )}
                         </div>
                       </div>
                     </td>
                     <td className="px-2 py-3 text-center">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                        demande.categorie === "mono-mois"
-                          ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                          : demande.categorie === "multi-mois"
-                          ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                      }`}>
+                      <span
+                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                          demande.categorie === "mono-mois"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                            : demande.categorie === "multi-mois"
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                        }`}
+                      >
                         {demande.categorie || "N/A"}
                       </span>
                     </td>
@@ -1137,7 +1215,8 @@ export default function DemandesPage() {
                     <td className="px-2 py-3 text-center">
                       <span
                         className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                          demande.statut === "En attente" || demande.statut === "En attente RH/Responsable"
+                          demande.statut === "En attente" ||
+                          demande.statut === "En attente RH/Responsable"
                             ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                             : demande.statut === "Validé"
                             ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
@@ -1166,11 +1245,11 @@ export default function DemandesPage() {
                               }
                               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                              {approvingRequest === demande.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
+                              <LoadingButton
+                                loading={approvingRequest === demande.id}
+                              >
                                 <Check className="h-3 w-3" />
-                              )}
+                              </LoadingButton>
                               {approvingRequest === demande.id
                                 ? "Traitement..."
                                 : "Approuver"}
@@ -1187,11 +1266,11 @@ export default function DemandesPage() {
                               }
                               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                             >
-                              {rejectingRequest === demande.id ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
+                              <LoadingButton
+                                loading={rejectingRequest === demande.id}
+                              >
                                 <X className="h-3 w-3" />
-                              )}
+                              </LoadingButton>
                               {rejectingRequest === demande.id
                                 ? "Traitement..."
                                 : "Rejeter"}
@@ -1265,7 +1344,10 @@ export default function DemandesPage() {
 
       {/* Modal de détails de la demande */}
       <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent className="max-w-6xl max-h-[90vh]" style={{ width: '90vw', maxWidth: '1200px' }}>
+        <DialogContent
+          className="max-w-6xl max-h-[90vh]"
+          style={{ width: "90vw", maxWidth: "1200px" }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-xl">
               <FileText className="w-6 h-6 text-[var(--zalama-green)]" />
@@ -1293,7 +1375,9 @@ export default function DemandesPage() {
                             Nom complet :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.employe ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}` : selectedDemande.demandeur || "N/A"}
+                            {selectedDemande.employe
+                              ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}`
+                              : selectedDemande.demandeur || "N/A"}
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
@@ -1301,7 +1385,9 @@ export default function DemandesPage() {
                             Téléphone :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.employe ? selectedDemande.employe.telephone : "N/A"}
+                            {selectedDemande.employe
+                              ? selectedDemande.employe.telephone
+                              : "N/A"}
                           </span>
                         </div>
                         <div className="py-2">
@@ -1310,8 +1396,10 @@ export default function DemandesPage() {
                           </span>
                           <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                             <p className="text-sm text-gray-900 dark:text-white font-mono break-all">
-                              {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].pay_id 
-                                ? selectedDemande.demandes_detailes[0].pay_id 
+                              {selectedDemande.demandes_detailes &&
+                              selectedDemande.demandes_detailes.length > 0 &&
+                              selectedDemande.demandes_detailes[0].pay_id
+                                ? selectedDemande.demandes_detailes[0].pay_id
                                 : "N/A"}
                             </p>
                           </div>
@@ -1324,13 +1412,15 @@ export default function DemandesPage() {
                           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                             Catégorie :
                           </span>
-                          <span className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                            selectedDemande.categorie === "mono-mois"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                              : selectedDemande.categorie === "multi-mois"
-                              ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                          }`}>
+                          <span
+                            className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                              selectedDemande.categorie === "mono-mois"
+                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                : selectedDemande.categorie === "multi-mois"
+                                ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                            }`}
+                          >
                             {selectedDemande.categorie || "N/A"}
                           </span>
                         </div>
@@ -1348,16 +1438,20 @@ export default function DemandesPage() {
                           </span>
                           <span
                             className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                              (selectedDemande.statut_global || selectedDemande.statut) === "En attente"
+                              (selectedDemande.statut_global ||
+                                selectedDemande.statut) === "En attente"
                                 ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                : (selectedDemande.statut_global || selectedDemande.statut) === "Validé"
+                                : (selectedDemande.statut_global ||
+                                    selectedDemande.statut) === "Validé"
                                 ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                : (selectedDemande.statut_global || selectedDemande.statut) === "Rejeté"
+                                : (selectedDemande.statut_global ||
+                                    selectedDemande.statut) === "Rejeté"
                                 ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
                                 : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                             }`}
                           >
-                            {selectedDemande.statut_global || selectedDemande.statut}
+                            {selectedDemande.statut_global ||
+                              selectedDemande.statut}
                           </span>
                         </div>
                       </div>
@@ -1379,9 +1473,12 @@ export default function DemandesPage() {
                             Montant demandé :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.montant_total_demande 
-                              ? selectedDemande.montant_total_demande.toLocaleString() 
-                              : selectedDemande.montant ? selectedDemande.montant.toLocaleString() : "0"} GNF
+                            {selectedDemande.montant_total_demande
+                              ? selectedDemande.montant_total_demande.toLocaleString()
+                              : selectedDemande.montant
+                              ? selectedDemande.montant.toLocaleString()
+                              : "0"}{" "}
+                            GNF
                           </span>
                         </div>
                         <div className="flex justify-between items-center py-2">
@@ -1389,8 +1486,10 @@ export default function DemandesPage() {
                             Date de création :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.date_creation_premiere 
-                              ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR") 
+                            {selectedDemande.date_creation_premiere
+                              ? new Date(
+                                  selectedDemande.date_creation_premiere
+                                ).toLocaleDateString("fr-FR")
                               : selectedDemande.date || "N/A"}
                           </span>
                         </div>
@@ -1403,9 +1502,17 @@ export default function DemandesPage() {
                             Date de validation :
                           </span>
                           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].date_validation 
-                              ? new Date(selectedDemande.demandes_detailes[0].date_validation).toLocaleDateString("fr-FR") 
-                              : selectedDemande.updated_at ? new Date(selectedDemande.updated_at).toLocaleDateString("fr-FR") : "N/A"}
+                            {selectedDemande.demandes_detailes &&
+                            selectedDemande.demandes_detailes.length > 0 &&
+                            selectedDemande.demandes_detailes[0].date_validation
+                              ? new Date(
+                                  selectedDemande.demandes_detailes[0].date_validation
+                                ).toLocaleDateString("fr-FR")
+                              : selectedDemande.updated_at
+                              ? new Date(
+                                  selectedDemande.updated_at
+                                ).toLocaleDateString("fr-FR")
+                              : "N/A"}
                           </span>
                         </div>
                       </div>
@@ -1426,20 +1533,25 @@ export default function DemandesPage() {
                           Type de motif :
                         </span>
                         <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].type_motif 
-                            ? selectedDemande.demandes_detailes[0].type_motif 
+                          {selectedDemande.demandes_detailes &&
+                          selectedDemande.demandes_detailes.length > 0 &&
+                          selectedDemande.demandes_detailes[0].type_motif
+                            ? selectedDemande.demandes_detailes[0].type_motif
                             : selectedDemande.type_motif || "Autre"}
                         </span>
                       </div>
-                        <div className="py-2">
+                      <div className="py-2">
                         <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-2">
                           Description du motif :
                         </span>
                         <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                           <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
-                            {selectedDemande.demandes_detailes && selectedDemande.demandes_detailes.length > 0 && selectedDemande.demandes_detailes[0].motif 
-                              ? selectedDemande.demandes_detailes[0].motif 
-                              : selectedDemande.motif || "Aucune description fournie"}
+                            {selectedDemande.demandes_detailes &&
+                            selectedDemande.demandes_detailes.length > 0 &&
+                            selectedDemande.demandes_detailes[0].motif
+                              ? selectedDemande.demandes_detailes[0].motif
+                              : selectedDemande.motif ||
+                                "Aucune description fournie"}
                           </p>
                         </div>
                       </div>
@@ -1449,7 +1561,6 @@ export default function DemandesPage() {
               </div>
             </div>
           )}
-
         </DialogContent>
       </Dialog>
     </div>

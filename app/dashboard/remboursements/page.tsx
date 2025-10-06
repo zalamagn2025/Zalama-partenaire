@@ -9,8 +9,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { RefreshCw } from "lucide-react";
@@ -706,24 +706,17 @@ export default function RemboursementsPage() {
   console.log("🔍 Debug - remboursements:", remboursements);
   console.log("🔍 Debug - totalRemboursements:", totalRemboursements);
 
-  // Skeleton
+  // Loading state
   if (isLoading) {
     return (
-      <div className="p-8">
-        <div className="flex items-center justify-center mb-4">
-          <div className="text-center">
-            <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-blue-600" />
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {edgeFunctionLoading
-                ? "Chargement des données du mois en cours..."
-                : "Chargement des remboursements..."}
-            </p>
-          </div>
-        </div>
-        <Skeleton className="h-8 w-1/3 mb-4" />
-        <Skeleton className="h-12 w-full mb-4" />
-        <Skeleton className="h-64 w-full mb-4" />
-      </div>
+      <LoadingSpinner
+        fullScreen={true}
+        message={
+          edgeFunctionLoading
+            ? "Chargement des données du mois en cours..."
+            : "Chargement des remboursements..."
+        }
+      />
     );
   }
 

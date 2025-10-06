@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Users, Calendar, RefreshCw, Filter, Loader2 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
+import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
@@ -130,18 +131,18 @@ export default function FinancesPage() {
   const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
   // Ajoute un état pour le payment_day
   const [paymentDay, setPaymentDay] = useState<number | null>(null);
-  
+
   // États pour les données Edge Functions (mois en cours)
   const [currentMonthData, setCurrentMonthData] = useState<any>(null);
   const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
-  
+
   // États pour les filtres de l'edge function
   const [filters, setFilters] = useState({
     mois: null as number | null,
     annee: null as number | null,
     status: null as string | null,
     limit: 50,
-    offset: 0
+    offset: 0,
   });
 
   // États pour les mois et années actifs
@@ -160,35 +161,49 @@ export default function FinancesPage() {
   // Fonction pour charger les mois et années actifs
   const loadActivePeriods = async () => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Récupérer l'évolution mensuelle pour déterminer les mois actifs
-      const evolutionResponse = await edgeFunctionService.getFinancesEvolutionMensuelle();
+      const evolutionResponse =
+        await edgeFunctionService.getFinancesEvolutionMensuelle();
       if (evolutionResponse.success && evolutionResponse.data) {
         const evolutionData = evolutionResponse.data;
-        
+
         // Extraire les mois et années actifs
         const months = new Set<number>();
         const years = new Set<number>();
-        
+
         evolutionData.forEach((item: any) => {
           if (item.debloque > 0) {
             // Convertir le nom du mois en numéro
-            const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+            const monthNames = [
+              "Jan",
+              "Fév",
+              "Mar",
+              "Avr",
+              "Mai",
+              "Jun",
+              "Jul",
+              "Aoû",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Déc",
+            ];
             const monthIndex = monthNames.indexOf(item.mois);
             if (monthIndex !== -1) {
               months.add(monthIndex + 1); // +1 car les mois commencent à 1
             }
           }
         });
-        
+
         // Ajouter les années courantes et précédentes
         const currentYear = new Date().getFullYear();
         years.add(currentYear);
         years.add(currentYear - 1);
-        
+
         setActiveMonths(Array.from(months).sort((a, b) => a - b));
         setActiveYears(Array.from(years).sort((a, b) => b - a));
       }
@@ -201,7 +216,7 @@ export default function FinancesPage() {
   useEffect(() => {
     const fetchPaymentDay = async () => {
       if (!session?.partner || !session?.access_token) return;
-      
+
       try {
         edgeFunctionService.setAccessToken(session.access_token);
         const response = await edgeFunctionService.getDashboardData();
@@ -236,7 +251,11 @@ export default function FinancesPage() {
     });
   } else {
     // Date par défaut si payment_day n'est pas disponible
-    const dateRemboursement = new Date(now.getFullYear(), now.getMonth() + 1, 25);
+    const dateRemboursement = new Date(
+      now.getFullYear(),
+      now.getMonth() + 1,
+      25
+    );
     dateLimite = dateRemboursement.toLocaleDateString("fr-FR", {
       day: "2-digit",
       month: "long",
@@ -246,24 +265,30 @@ export default function FinancesPage() {
 
   const loadSalaryAdvanceData = async () => {
     if (!session?.access_token) return;
-    
+
     setIsLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // 1. Récupérer les statistiques financières via Edge Function
       const statsResponse = await edgeFunctionService.getFinancesStats();
       if (!statsResponse.success) {
-        console.error("Erreur lors de la récupération des statistiques:", statsResponse.message);
+        console.error(
+          "Erreur lors de la récupération des statistiques:",
+          statsResponse.message
+        );
         return;
       }
 
       const statsData = statsResponse.data || {};
-      
+
       // 2. Récupérer les demandes via Edge Function
       const demandesResponse = await edgeFunctionService.getFinancesDemandes();
       if (!demandesResponse.success) {
-        console.error("Erreur lors de la récupération des demandes:", demandesResponse.message);
+        console.error(
+          "Erreur lors de la récupération des demandes:",
+          demandesResponse.message
+        );
         return;
       }
 
@@ -271,9 +296,13 @@ export default function FinancesPage() {
       setSalaryRequests(demandes);
 
       // 3. Récupérer les remboursements via Edge Function
-      const remboursementsResponse = await edgeFunctionService.getFinancesRemboursements();
+      const remboursementsResponse =
+        await edgeFunctionService.getFinancesRemboursements();
       if (!remboursementsResponse.success) {
-        console.error("Erreur lors de la récupération des remboursements:", remboursementsResponse.message);
+        console.error(
+          "Erreur lors de la récupération des remboursements:",
+          remboursementsResponse.message
+        );
         return;
       }
 
@@ -301,29 +330,45 @@ export default function FinancesPage() {
         montantMoyen: statsData.montant_moyen || 0,
         evolutionMensuelle: statsData.evolution_mensuelle || [],
         repartitionParType: statsData.repartition_par_mois || [],
-        repartitionParStatut: statsData.repartition_par_statut || []
+        repartitionParStatut: statsData.repartition_par_statut || [],
       };
       setFinancialStats(newFinancialStats);
-      
+
       // Mettre à jour les mois et années actifs si nécessaire
-      if (statsData.evolution_mensuelle && statsData.evolution_mensuelle.length > 0) {
+      if (
+        statsData.evolution_mensuelle &&
+        statsData.evolution_mensuelle.length > 0
+      ) {
         const months = new Set<number>();
         const years = new Set<number>();
-        
+
         statsData.evolution_mensuelle.forEach((item: any) => {
           if (item.debloque > 0) {
-            const monthNames = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+            const monthNames = [
+              "Jan",
+              "Fév",
+              "Mar",
+              "Avr",
+              "Mai",
+              "Jun",
+              "Jul",
+              "Aoû",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Déc",
+            ];
             const monthIndex = monthNames.indexOf(item.mois);
             if (monthIndex !== -1) {
               months.add(monthIndex + 1);
             }
           }
         });
-        
+
         const currentYear = new Date().getFullYear();
         years.add(currentYear);
         years.add(currentYear - 1);
-        
+
         setActiveMonths(Array.from(months).sort((a, b) => a - b));
         setActiveYears(Array.from(years).sort((a, b) => b - a));
       }
@@ -344,13 +389,24 @@ export default function FinancesPage() {
       return {
         totalDebloque: currentMonthData.financial_performance.debloque_mois,
         totalRecupere: currentMonthData.financial_performance.a_rembourser_mois,
-        totalRevenus: currentMonthData.financial_performance.debloque_mois * 0.06, // Estimation des frais de service
-        totalRemboursements: currentMonthData.financial_performance.a_rembourser_mois,
-        totalCommissions: currentMonthData.financial_performance.debloque_mois * 0.06,
-        balance: parseFloat(currentMonthData.financial_performance.taux_remboursement),
+        totalRevenus:
+          currentMonthData.financial_performance.debloque_mois * 0.06, // Estimation des frais de service
+        totalRemboursements:
+          currentMonthData.financial_performance.a_rembourser_mois,
+        totalCommissions:
+          currentMonthData.financial_performance.debloque_mois * 0.06,
+        balance: parseFloat(
+          currentMonthData.financial_performance.taux_remboursement
+        ),
         pendingTransactions: 0, // À calculer selon vos besoins
-        totalTransactions: currentMonthData.financial_performance.employes_approuves_periode,
-        montantMoyen: currentMonthData.financial_performance.debloque_mois / Math.max(currentMonthData.financial_performance.employes_approuves_periode, 1),
+        totalTransactions:
+          currentMonthData.financial_performance.employes_approuves_periode,
+        montantMoyen:
+          currentMonthData.financial_performance.debloque_mois /
+          Math.max(
+            currentMonthData.financial_performance.employes_approuves_periode,
+            1
+          ),
         evolutionMensuelle: [], // À calculer selon vos besoins
         repartitionParType: [], // À calculer selon vos besoins
         repartitionParStatut: [], // À calculer selon vos besoins
@@ -514,7 +570,6 @@ export default function FinancesPage() {
     }));
   };
 
-
   // Charger les données financières via Edge Functions
   const loadFinancesData = async (customFilters: any = {}) => {
     if (!session?.access_token) return;
@@ -522,24 +577,36 @@ export default function FinancesPage() {
     setEdgeFunctionLoading(true);
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
-      
+
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+        Object.entries(activeFilters).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== ""
+        )
       );
-      
+
       // Valider les filtres
       validateFilters(cleanFilters);
-      
-      console.log("🔄 Chargement des données financières avec filtres:", cleanFilters);
-      console.log("📊 URL Edge Function:", `/api/proxy/partner-finances/stats?${new URLSearchParams(cleanFilters as any).toString()}`);
-      
+
+      console.log(
+        "🔄 Chargement des données financières avec filtres:",
+        cleanFilters
+      );
+      console.log(
+        "📊 URL Edge Function:",
+        `/api/proxy/partner-finances/stats?${new URLSearchParams(
+          cleanFilters as any
+        ).toString()}`
+      );
+
       // Charger les statistiques financières
-      const statsData = await edgeFunctionService.getFinancesStats(cleanFilters);
-      
+      const statsData = await edgeFunctionService.getFinancesStats(
+        cleanFilters
+      );
+
       if (!statsData.success) {
         console.error("Erreur Edge Function:", statsData.message);
         toast.error("Erreur lors du chargement des données financières");
@@ -549,7 +616,7 @@ export default function FinancesPage() {
       // Les données sont dans statsData.data selon la réponse Edge Function
       const data = statsData.data || statsData;
       setCurrentMonthData(data);
-      
+
       // Mettre à jour les statistiques financières
       if (data) {
         const newFinancialStats: FinancialStats = {
@@ -564,24 +631,27 @@ export default function FinancesPage() {
           montantMoyen: data.montant_moyen || 0,
           evolutionMensuelle: data.evolution_mensuelle || [],
           repartitionParType: data.repartition_par_mois || [],
-          repartitionParStatut: data.repartition_par_statut || []
+          repartitionParStatut: data.repartition_par_statut || [],
         };
         setFinancialStats(newFinancialStats);
-        
+
         // Mettre à jour les statistiques principales avec les données Edge Function
         setStats({
           fluxFinance: data.montant_total || 0,
           debloqueMois: data.montant_total || 0, // Utiliser le montant total pour le mois
           aRembourserMois: data.montant_restant || 0,
           dateLimite: dateLimite,
-          nbEmployesApprouves: data.total_transactions || 0
+          nbEmployesApprouves: data.total_transactions || 0,
         });
       }
 
       console.log("✅ Données financières chargées avec succès:", data);
       toast.success("Données financières mises à jour avec succès");
     } catch (error) {
-      console.error("Erreur lors du chargement des données Edge Functions:", error);
+      console.error(
+        "Erreur lors du chargement des données Edge Functions:",
+        error
+      );
       toast.error("Erreur lors du chargement des données financières");
     } finally {
       setEdgeFunctionLoading(false);
@@ -592,10 +662,10 @@ export default function FinancesPage() {
   const applyFilter = async (filterKey: string, value: any) => {
     const newFilters = { ...filters, [filterKey]: value };
     setFilters(newFilters);
-    
+
     // Recharger les données avec les nouveaux filtres
     await loadFinancesData(newFilters);
-    
+
     // Recharger aussi les remboursements avec les nouveaux filtres
     await loadTransactionsWithFilters(newFilters);
   };
@@ -607,7 +677,7 @@ export default function FinancesPage() {
       annee: null,
       status: null,
       limit: 50,
-      offset: 0
+      offset: 0,
     };
     setFilters(defaultFilters);
     await loadFinancesData(defaultFilters);
@@ -616,37 +686,46 @@ export default function FinancesPage() {
 
   // Fonction pour valider les paramètres de filtres
   const validateFilters = (filters: any) => {
-    const validParams = ['mois', 'annee', 'status', 'limit', 'offset'];
-    const invalidParams = Object.keys(filters).filter(key => !validParams.includes(key));
-    
+    const validParams = ["mois", "annee", "status", "limit", "offset"];
+    const invalidParams = Object.keys(filters).filter(
+      (key) => !validParams.includes(key)
+    );
+
     if (invalidParams.length > 0) {
-      console.warn("⚠️ Paramètres de filtres invalides détectés:", invalidParams);
+      console.warn(
+        "⚠️ Paramètres de filtres invalides détectés:",
+        invalidParams
+      );
     }
-    
+
     // Valider les valeurs
     if (filters.mois && (filters.mois < 1 || filters.mois > 12)) {
       console.warn("⚠️ Mois invalide:", filters.mois);
     }
-    
-    if (filters.status && !['PAYE', 'EN_ATTENTE', 'EN_RETARD', 'ANNULE'].includes(filters.status)) {
+
+    if (
+      filters.status &&
+      !["PAYE", "EN_ATTENTE", "EN_RETARD", "ANNULE"].includes(filters.status)
+    ) {
       console.warn("⚠️ Statut invalide:", filters.status);
     }
-    
+
     return invalidParams.length === 0;
   };
-
-
 
   // Pour l'historique des remboursements, charge les données de remboursements :
   const loadTransactions = async () => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       const response = await edgeFunctionService.getFinancesRemboursements();
       if (!response.success) {
-        console.error("Erreur lors du chargement des remboursements:", response.message);
+        console.error(
+          "Erreur lors du chargement des remboursements:",
+          response.message
+        );
         toast.error("Erreur lors du chargement des remboursements");
         return;
       }
@@ -663,26 +742,29 @@ export default function FinancesPage() {
       setFinancialStats(stats);
     } catch (e: any) {
       console.error("Erreur lors du chargement des remboursements:", e);
-      
+
       // Gérer les erreurs d'authentification et serveur
-      if (e.message && (
-        e.message.includes("Erreur serveur") ||
-        e.message.includes("500") ||
-        e.message.includes("401") ||
-        e.message.includes("403") ||
-        e.message.includes("404") ||
-        e.message.includes("503")
-      )) {
+      if (
+        e.message &&
+        (e.message.includes("Erreur serveur") ||
+          e.message.includes("500") ||
+          e.message.includes("401") ||
+          e.message.includes("403") ||
+          e.message.includes("404") ||
+          e.message.includes("503"))
+      ) {
         console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(new CustomEvent('session-error', { 
-          detail: { 
-            message: e.message,
-            status: e.status || 500
-          } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent("session-error", {
+            detail: {
+              message: e.message,
+              status: e.status || 500,
+            },
+          })
+        );
         return;
       }
-      
+
       toast.error("Erreur lors du chargement des remboursements");
     }
   };
@@ -690,24 +772,39 @@ export default function FinancesPage() {
   // Fonction pour charger les remboursements avec des filtres spécifiques
   const loadTransactionsWithFilters = async (customFilters: any = {}) => {
     if (!session?.access_token) return;
-    
+
     try {
       edgeFunctionService.setAccessToken(session.access_token);
-      
+
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
-        Object.entries(customFilters).filter(([_, value]) => value !== null && value !== undefined && value !== "")
+        Object.entries(customFilters).filter(
+          ([_, value]) => value !== null && value !== undefined && value !== ""
+        )
       );
-      
+
       // Valider les filtres
       validateFilters(cleanFilters);
-      
-      console.log("🔄 Chargement des remboursements avec filtres:", cleanFilters);
-      console.log("📋 URL Edge Function:", `/api/proxy/partner-finances/remboursements?${new URLSearchParams(cleanFilters as any).toString()}`);
-      
-      const response = await edgeFunctionService.getFinancesRemboursements(cleanFilters);
+
+      console.log(
+        "🔄 Chargement des remboursements avec filtres:",
+        cleanFilters
+      );
+      console.log(
+        "📋 URL Edge Function:",
+        `/api/proxy/partner-finances/remboursements?${new URLSearchParams(
+          cleanFilters as any
+        ).toString()}`
+      );
+
+      const response = await edgeFunctionService.getFinancesRemboursements(
+        cleanFilters
+      );
       if (!response.success) {
-        console.error("Erreur lors du chargement des remboursements filtrés:", response.message);
+        console.error(
+          "Erreur lors du chargement des remboursements filtrés:",
+          response.message
+        );
         return;
       }
 
@@ -718,23 +815,26 @@ export default function FinancesPage() {
       setTransactions(data);
     } catch (e: any) {
       console.error("Erreur lors du chargement des remboursements filtrés:", e);
-      
+
       // Gérer les erreurs d'authentification et serveur
-      if (e.message && (
-        e.message.includes("Erreur serveur") ||
-        e.message.includes("500") ||
-        e.message.includes("401") ||
-        e.message.includes("403") ||
-        e.message.includes("404") ||
-        e.message.includes("503")
-      )) {
+      if (
+        e.message &&
+        (e.message.includes("Erreur serveur") ||
+          e.message.includes("500") ||
+          e.message.includes("401") ||
+          e.message.includes("403") ||
+          e.message.includes("404") ||
+          e.message.includes("503"))
+      ) {
         console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(new CustomEvent('session-error', { 
-          detail: { 
-            message: e.message,
-            status: e.status || 500
-          } 
-        }));
+        window.dispatchEvent(
+          new CustomEvent("session-error", {
+            detail: {
+              message: e.message,
+              status: e.status || 500,
+            },
+          })
+        );
         return;
       }
     }
@@ -847,14 +947,14 @@ export default function FinancesPage() {
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {edgeFunctionLoading ? "Chargement des données du mois en cours..." : "Chargement des données financières..."}
-          </p>
-        </div>
-      </div>
+      <LoadingSpinner
+        fullScreen={true}
+        message={
+          edgeFunctionLoading
+            ? "Chargement des données du mois en cours..."
+            : "Chargement des données financières..."
+        }
+      />
     );
   }
 
@@ -880,9 +980,7 @@ export default function FinancesPage() {
       {/* En-tête Finances */}
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">
-            Finances
-          </h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">Finances</h1>
           <div className="flex items-center gap-2">
             {currentMonthData && (
               <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
@@ -895,7 +993,11 @@ export default function FinancesPage() {
               className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               title="Actualiser les données du mois en cours"
             >
-              <RefreshCw className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`h-4 w-4 text-gray-500 ${
+                  edgeFunctionLoading ? "animate-spin" : ""
+                }`}
+              />
             </button>
           </div>
         </div>
@@ -913,14 +1015,18 @@ export default function FinancesPage() {
           color="green"
         />
         <StatCard
-          title={`Montant total débloqué ${currentMonthData ? 'ce mois' : 'ce mois ci'}`}
+          title={`Montant total débloqué ${
+            currentMonthData ? "ce mois" : "ce mois ci"
+          }`}
           value={gnfFormatter(stats.debloqueMois)}
           icon={Calendar}
           color="green"
         />
 
         <StatCard
-          title={`Montant à rembourser ${currentMonthData ? 'ce mois' : 'ce mois ci'}`}
+          title={`Montant à rembourser ${
+            currentMonthData ? "ce mois" : "ce mois ci"
+          }`}
           value={gnfFormatter(stats.aRembourserMois)}
           icon={Calendar}
           color="green"
@@ -1019,7 +1125,9 @@ export default function FinancesPage() {
               disabled={edgeFunctionLoading}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
             >
-              {edgeFunctionLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+              {edgeFunctionLoading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : null}
               Actualiser
             </button>
           </div>
@@ -1037,30 +1145,36 @@ export default function FinancesPage() {
                 const mois = e.target.value ? parseInt(e.target.value) : null;
                 // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
                 if (mois && !filters.annee) {
-                  const newFilters = { ...filters, mois, annee: new Date().getFullYear() };
+                  const newFilters = {
+                    ...filters,
+                    mois,
+                    annee: new Date().getFullYear(),
+                  };
                   setFilters(newFilters);
                   loadFinancesData(newFilters);
                   loadTransactionsWithFilters(newFilters);
                 } else {
-                  applyFilter('mois', mois);
+                  applyFilter("mois", mois);
                 }
               }}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les mois</option>
-              {activeMonths.length > 0 ? (
-                activeMonths.map((month) => (
-                  <option key={month} value={month}>
-                    {new Date(0, month - 1).toLocaleString('fr-FR', { month: 'long' })}
-                  </option>
-                ))
-              ) : (
-                Array.from({ length: 12 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}
-                </option>
-                ))
-              )}
+              {activeMonths.length > 0
+                ? activeMonths.map((month) => (
+                    <option key={month} value={month}>
+                      {new Date(0, month - 1).toLocaleString("fr-FR", {
+                        month: "long",
+                      })}
+                    </option>
+                  ))
+                : Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString("fr-FR", {
+                        month: "long",
+                      })}
+                    </option>
+                  ))}
             </select>
           </div>
 
@@ -1071,7 +1185,12 @@ export default function FinancesPage() {
             </label>
             <select
               value={filters.annee || ""}
-              onChange={(e) => applyFilter('annee', e.target.value ? parseInt(e.target.value) : null)}
+              onChange={(e) =>
+                applyFilter(
+                  "annee",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Toutes les années</option>
@@ -1090,7 +1209,7 @@ export default function FinancesPage() {
             </label>
             <select
               value={filters.status || ""}
-              onChange={(e) => applyFilter('status', e.target.value || null)}
+              onChange={(e) => applyFilter("status", e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
@@ -1100,7 +1219,6 @@ export default function FinancesPage() {
               <option value="ANNULE">Annulé</option>
             </select>
           </div>
-
         </div>
 
         {/* Indicateur de filtres actifs supprimé */}

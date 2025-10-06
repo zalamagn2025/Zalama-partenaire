@@ -13,6 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
+import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import {
@@ -23,7 +25,6 @@ import {
   Calendar,
   DollarSign,
   AlertCircle,
-  Loader2,
   Search,
   Eye,
   FileText,
@@ -66,6 +67,10 @@ export default function DemandesAdhesionPage() {
   );
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+
+  // États pour la pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Charger les employés sans compte
   useEffect(() => {
@@ -118,7 +123,19 @@ export default function DemandesAdhesionPage() {
     }
 
     setFilteredEmployees(filtered);
+    // Réinitialiser la pagination quand les filtres changent
+    setCurrentPage(1);
   }, [employees, searchTerm, filterStatus]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
 
   const handleCreateAccount = async (employeeId: string) => {
     if (!session?.access_token) {
@@ -236,9 +253,7 @@ export default function DemandesAdhesionPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
+      <LoadingSpinner fullScreen={true} message="Chargement des employés..." />
     );
   }
 
@@ -324,7 +339,7 @@ export default function DemandesAdhesionPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {filteredEmployees.map((employee) => (
+              {currentEmployees.map((employee) => (
                 <div
                   key={employee.id}
                   className="flex items-center justify-between p-4 border border-[var(--zalama-border)] rounded-lg hover:bg-[var(--zalama-bg-light)] transition-colors cursor-pointer"
@@ -384,11 +399,11 @@ export default function DemandesAdhesionPage() {
                         disabled={rejectingEmployee === employee.id}
                         className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
                       >
-                        {rejectingEmployee === employee.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
+                        <LoadingButton
+                          loading={rejectingEmployee === employee.id}
+                        >
                           <X className="h-3 w-3" />
-                        )}
+                        </LoadingButton>
                         Rejeter
                       </Button>
 
@@ -411,11 +426,11 @@ export default function DemandesAdhesionPage() {
                             : ""
                         }
                       >
-                        {creatingAccount === employee.id ? (
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                        ) : (
+                        <LoadingButton
+                          loading={creatingAccount === employee.id}
+                        >
                           <UserPlus className="h-3 w-3" />
-                        )}
+                        </LoadingButton>
                         Créer
                       </Button>
                     </div>
@@ -424,6 +439,16 @@ export default function DemandesAdhesionPage() {
               ))}
             </div>
           </CardContent>
+
+          {/* Pagination */}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredEmployees.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            className="mt-4"
+          />
         </Card>
       )}
 
@@ -604,11 +629,11 @@ export default function DemandesAdhesionPage() {
                   disabled={rejectingEmployee === selectedEmployee.id}
                   className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
                 >
-                  {rejectingEmployee === selectedEmployee.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
+                  <LoadingButton
+                    loading={rejectingEmployee === selectedEmployee.id}
+                  >
                     <X className="h-4 w-4" />
-                  )}
+                  </LoadingButton>
                   Rejeter l'inscription
                 </Button>
 
@@ -639,11 +664,11 @@ export default function DemandesAdhesionPage() {
                         : ""
                     }
                   >
-                    {creatingAccount === selectedEmployee.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
+                    <LoadingButton
+                      loading={creatingAccount === selectedEmployee.id}
+                    >
                       <UserPlus className="h-4 w-4 mr-2" />
-                    )}
+                    </LoadingButton>
                     Créer le compte
                   </Button>
                 </div>
@@ -716,11 +741,11 @@ export default function DemandesAdhesionPage() {
                   disabled={rejectingEmployee === selectedEmployee.id}
                   className="bg-red-600 hover:bg-red-700 text-white"
                 >
-                  {rejectingEmployee === selectedEmployee.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
+                  <LoadingButton
+                    loading={rejectingEmployee === selectedEmployee.id}
+                  >
                     <X className="h-4 w-4 mr-2" />
-                  )}
+                  </LoadingButton>
                   Confirmer le rejet
                 </Button>
               </div>

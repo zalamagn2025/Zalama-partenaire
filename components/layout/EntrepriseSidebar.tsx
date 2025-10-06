@@ -10,7 +10,6 @@ import {
   FileText,
   CreditCard,
   Star,
-  FolderOpen,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -43,7 +42,7 @@ const getNavItems = () => [
     icon: CreditCard,
     href: `/dashboard/remboursements-test`,
   }, */
-  { label: "Documents", icon: FolderOpen, href: `/dashboard/documents` },
+  /* { label: "Documents", icon: FolderOpen, href: `/dashboard/documents` }, */
   { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
   { label: "Paramètres", icon: Settings, href: `/dashboard/parametres` },
 ];
