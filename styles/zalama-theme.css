@@ -554,7 +554,7 @@ div[class*="toast"] {
 
 /* Styles spécifiques pour les sections du dashboard principal */
 /* Sections "Période actuelle", "Jour de paiement", "Statut" */
-.bg-gray-50.dark\\:bg-gray-800 {
+.bg-gray-50.dark\:bg-gray-800 {
   background: var(--zalama-bg-lighter) !important;
   border: 1px solid var(--zalama-border) !important;
   border-radius: 0.5rem !important;
@@ -562,33 +562,33 @@ div[class*="toast"] {
 }
 
 /* Textes dans les sections du dashboard */
-.text-gray-500.dark\\:text-gray-400 {
+.text-gray-500.dark\:text-gray-400 {
   color: var(--zalama-text-secondary) !important;
 }
 
-.text-gray-900.dark\\:text-white {
+.text-gray-900.dark\:text-white {
   color: var(--zalama-text) !important;
 }
 
 /* Styles pour les boutons de filtres du dashboard */
-.bg-blue-100.hover\\:bg-blue-200.dark\\:bg-blue-900.dark\\:hover\\:bg-blue-800 {
+.bg-blue-100.hover\:bg-blue-200.dark\:bg-blue-900.dark\:hover\:bg-blue-800 {
   background: var(--zalama-bg-lighter) !important;
   color: var(--zalama-blue) !important;
   border: 1px solid var(--zalama-blue) !important;
 }
 
-.bg-blue-100.hover\\:bg-blue-200.dark\\:bg-blue-900.dark\\:hover\\:bg-blue-800:hover {
+.bg-blue-100.hover\:bg-blue-200.dark\:bg-blue-900.dark\:hover\:bg-blue-800:hover {
   background: var(--zalama-blue) !important;
   color: white !important;
 }
 
 /* Styles pour les boutons d'actualisation */
-.hover\\:bg-gray-100.dark\\:hover\\:bg-gray-800 {
+.hover\:bg-gray-100.dark\:hover\:bg-gray-800 {
   background: transparent !important;
   color: var(--zalama-text-secondary) !important;
 }
 
-.hover\\:bg-gray-100.dark\\:hover\\:bg-gray-800:hover {
+.hover\:bg-gray-100.dark\:hover\:bg-gray-800:hover {
   background: var(--zalama-bg-light) !important;
   color: var(--zalama-text) !important;
 }
@@ -621,57 +621,57 @@ div[class*="toast"] {
 }
 
 /* Styles pour les cartes de performance financière */
-.bg-\\[var\\(--zalama-card\\)\\] {
+.bg-\[var\(--zalama-card\)\] {
   background: var(--zalama-card) !important;
   border: 1px solid var(--zalama-border) !important;
 }
 
 /* Styles pour les headers de sections */
-.text-gray-600.dark\\:text-white {
+.text-gray-600.dark\:text-white {
   color: var(--zalama-text) !important;
 }
 
 /* Styles pour les boutons de réessai */
-.bg-blue-600.hover\\:bg-blue-700 {
+.bg-blue-600.hover\:bg-blue-700 {
   background: var(--zalama-blue) !important;
 }
 
-.bg-blue-600.hover\\:bg-blue-700:hover {
+.bg-blue-600.hover\:bg-blue-700:hover {
   background: var(--zalama-blue-accent) !important;
 }
 
 /* Styles pour les boutons gris */
-.bg-gray-600.hover\\:bg-gray-700 {
+.bg-gray-600.hover\:bg-gray-700 {
   background: var(--zalama-bg-light) !important;
   color: var(--zalama-text) !important;
   border: 1px solid var(--zalama-border) !important;
 }
 
-.bg-gray-600.hover\\:bg-gray-700:hover {
+.bg-gray-600.hover\:bg-gray-700:hover {
   background: var(--zalama-bg-lighter) !important;
   border-color: var(--zalama-blue) !important;
 }
 
 /* Styles pour les selects et inputs du dashboard */
-.border-gray-300.dark\\:border-gray-600 {
+.border-gray-300.dark\:border-gray-600 {
   border-color: var(--zalama-border) !important;
 }
 
-.bg-white.dark\\:bg-gray-800 {
+.bg-white.dark\:bg-gray-800 {
   background: var(--zalama-bg-light) !important;
 }
 
-.text-gray-900.dark\\:text-white {
+.text-gray-900.dark\:text-white {
   color: var(--zalama-text) !important;
 }
 
 /* Styles pour les labels des filtres */
-.text-gray-500.dark\\:text-gray-400 {
+.text-gray-500.dark\:text-gray-400 {
   color: var(--zalama-text-secondary) !important;
 }
 
 /* Styles pour les badges de filtres actifs */
-.bg-blue-100.text-blue-800.dark\\:bg-blue-900.dark\\:text-blue-300 {
+.bg-blue-100.text-blue-800.dark\:bg-blue-900.dark\:text-blue-300 {
   background: var(--zalama-bg-lighter) !important;
   color: var(--zalama-blue) !important;
   border: 1px solid var(--zalama-blue) !important;
