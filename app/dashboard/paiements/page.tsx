@@ -355,6 +355,7 @@ export default function PaiementsPage() {
           disabled={refreshing}
           variant="outline"
           size="sm"
+          className="border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-800 dark:hover:text-orange-300"
         >
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
           Actualiser
@@ -503,8 +504,10 @@ export default function PaiementsPage() {
                           variant="ghost" 
                           size="sm"
                           onClick={() => handleViewDetails(payment)}
+                          className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 mr-1" />
+                          Détails
                         </Button>
                       </TableCell>
                     </TableRow>

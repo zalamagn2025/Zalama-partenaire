@@ -878,7 +878,7 @@ export default function RemboursementsPage() {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1"
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
                 <Filter className="h-3 w-3" />
                 {showFilters ? "Masquer" : "Afficher"}
@@ -892,7 +892,7 @@ export default function RemboursementsPage() {
               <button
                 onClick={() => loadRemboursementsData(filters)}
                 disabled={edgeFunctionLoading}
-                className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
               >
                 {edgeFunctionLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
@@ -1231,7 +1231,7 @@ export default function RemboursementsPage() {
                   <td className="px-3 py-2">
                     <button
                       onClick={() => handleShowEmployeeDetails(employeeData)}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
+                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md transition-colors"
                       title="Voir les détails des remboursements"
                     >
                       <Eye className="w-4 h-4 mr-1" />
