@@ -11,6 +11,7 @@ import {
   CreditCard,
   Star,
   UserCheck,
+  Banknote,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -30,6 +31,12 @@ const getNavItems = () => [
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
   { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
+  // Ajout du lien Paiements
+  {
+    label: "Paiements",
+    icon: Banknote,
+    href: `/dashboard/paiements`,
+  },
   // Ajout du lien Remboursements
   {
     label: "Remboursements",
