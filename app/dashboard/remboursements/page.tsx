@@ -33,6 +33,7 @@ import {
   AlertCircle,
   Building,
   X,
+  Filter,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
@@ -111,6 +112,9 @@ export default function RemboursementsPage() {
     limit: 50,
     offset: 0,
   });
+
+  // État pour le toggle des filtres
+  const [showFilters, setShowFilters] = useState(false);
 
   // États pour les données dynamiques des filtres
   const [activeMonths, setActiveMonths] = useState<number[]>([]);
@@ -702,14 +706,66 @@ export default function RemboursementsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <LoadingSpinner
-        fullScreen={true}
-        message={
-          edgeFunctionLoading
-            ? "Chargement des données du mois en cours..."
-            : "Chargement des remboursements..."
-        }
-      />
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-3">
+              <div className="bg-gray-300 dark:bg-gray-700 rounded h-8 w-96"></div>
+              <div className="bg-gray-300 dark:bg-gray-700 rounded h-5 w-80"></div>
+            </div>
+            <div className="flex gap-2">
+              <div className="bg-gray-300 dark:bg-gray-700 rounded h-10 w-32"></div>
+              <div className="bg-gray-300 dark:bg-gray-700 rounded h-10 w-48"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-4 h-32"></div>
+
+        {/* Skeleton pour les statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour le tableau des remboursements */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="space-y-3">
+            {/* En-tête du tableau */}
+            <div className="grid grid-cols-8 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
+              {[...Array(8)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-gray-300 dark:bg-gray-700 rounded h-5"
+                ></div>
+              ))}
+            </div>
+            {/* Lignes du tableau */}
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="grid grid-cols-8 gap-4 py-3">
+                {[...Array(8)].map((_, j) => (
+                  <div
+                    key={j}
+                    className="bg-gray-300 dark:bg-gray-700 rounded h-6"
+                  ></div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
+
+        {/* Skeleton pour les graphiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-64"></div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-64"></div>
+        </div>
+      </div>
     );
   }
 
@@ -821,6 +877,13 @@ export default function RemboursementsPage() {
             </h3>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
                 onClick={resetFilters}
                 className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
@@ -840,7 +903,8 @@ export default function RemboursementsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
           {/* Filtre par mois */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -973,10 +1037,11 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
+        )}
 
         {/* Indicateur de filtres actifs supprimé */}
         {edgeFunctionLoading && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
             Mise à jour des données...
           </div>

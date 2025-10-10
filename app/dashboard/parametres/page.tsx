@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { PinInput } from "@/components/ui/PinInput";
 
 export default function ParametresPage() {
   const { theme, toggleTheme } = useTheme();
@@ -150,12 +151,12 @@ export default function ParametresPage() {
       return;
     }
 
-    // Validation de la complexité du mot de passe
+    // Validation de la complexité du code PIN
     const passwordRegex =
       /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(passwordData.newPassword)) {
       toast.error(
-        "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (@$!%*?&)"
+        "Le code PIN doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (@$!%*?&)"
       );
       return;
     }
@@ -178,7 +179,7 @@ export default function ParametresPage() {
 
       if (response.success) {
         toast.success(
-          "Mot de passe changé avec succès. Un email de confirmation a été envoyé."
+          "Code PIN changé avec succès. Un email de confirmation a été envoyé."
         );
         setPasswordData({
           currentPassword: "",
@@ -187,12 +188,12 @@ export default function ParametresPage() {
         });
       } else {
         throw new Error(
-          response.message || "Erreur lors du changement de mot de passe"
+          response.message || "Erreur lors du changement du code PIN"
         );
       }
     } catch (error: any) {
-      console.error("Erreur lors du changement de mot de passe:", error);
-      toast.error(error.message || "Erreur lors du changement de mot de passe");
+      console.error("Erreur lors du changement du code PIN:", error);
+      toast.error(error.message || "Erreur lors du changement du code PIN");
     } finally {
       setIsChangingPassword(false);
     }
@@ -326,7 +327,7 @@ export default function ParametresPage() {
             {/* Photo de profil */}
             <div className="flex items-center space-x-4 mb-6">
               <div className="relative">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                <div className="w-20 h-20 bg-blue-600 dark:bg-blue-700 rounded-full flex items-center justify-center text-white text-2xl font-bold">
                   {session?.admin?.display_name?.charAt(0) || "U"}
                 </div>
                 {isEditingProfile && (
@@ -385,7 +386,7 @@ export default function ParametresPage() {
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="email"
                     value={profileData.email}
@@ -403,7 +404,7 @@ export default function ParametresPage() {
                   Téléphone
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="tel"
                     value={profileData.telephone}
@@ -466,7 +467,7 @@ export default function ParametresPage() {
                   Nom de l'entreprise
                 </label>
                 <div className="relative">
-                  <Building className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     value={partnerData.company_name}
@@ -512,7 +513,7 @@ export default function ParametresPage() {
                   Email de l'entreprise
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="email"
                     value={partnerData.email}
@@ -529,7 +530,7 @@ export default function ParametresPage() {
                   Téléphone de l'entreprise
                 </label>
                 <div className="relative">
-                  <Phone className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="tel"
                     value={partnerData.phone}
@@ -546,7 +547,7 @@ export default function ParametresPage() {
                   Adresse
                 </label>
                 <div className="relative">
-                  <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
                     value={partnerData.headquarters_address}
@@ -588,108 +589,116 @@ export default function ParametresPage() {
                 <div>
                   <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                     <Lock className="w-5 h-5 text-blue-600" />
-                    Changer le mot de passe
+                    Changer le code PIN
                   </h3>
 
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Mot de passe actuel
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input
-                          type={showCurrentPassword ? "text" : "password"}
-                          value={passwordData.currentPassword}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              currentPassword: e.target.value,
-                            })
-                          }
-                          placeholder="Entrez votre mot de passe actuel"
-                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                        />
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Code PIN actuel
+                        </label>
                         <button
                           type="button"
-                          onClick={() =>
-                            setShowCurrentPassword(!showCurrentPassword)
-                          }
-                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
                         >
                           {showCurrentPassword ? (
-                            <EyeOff className="h-4 w-4" />
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              Masquer
+                            </>
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <>
+                              <Eye className="h-3 w-3" />
+                              Afficher
+                            </>
                           )}
                         </button>
                       </div>
+                      <PinInput
+                        value={passwordData.currentPassword}
+                        onChange={(value) =>
+                          setPasswordData({
+                            ...passwordData,
+                            currentPassword: value,
+                          })
+                        }
+                        masked={!showCurrentPassword}
+                        className="justify-start"
+                      />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Nouveau mot de passe
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input
-                          type={showNewPassword ? "text" : "password"}
-                          value={passwordData.newPassword}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              newPassword: e.target.value,
-                            })
-                          }
-                          placeholder="Entrez votre nouveau mot de passe"
-                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                        />
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Nouveau code PIN
+                        </label>
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
                         >
                           {showNewPassword ? (
-                            <EyeOff className="h-4 w-4" />
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              Masquer
+                            </>
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <>
+                              <Eye className="h-3 w-3" />
+                              Afficher
+                            </>
                           )}
                         </button>
                       </div>
+                      <PinInput
+                        value={passwordData.newPassword}
+                        onChange={(value) =>
+                          setPasswordData({
+                            ...passwordData,
+                            newPassword: value,
+                          })
+                        }
+                        masked={!showNewPassword}
+                        className="justify-start"
+                      />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Confirmer le nouveau mot de passe
-                      </label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                        <input
-                          type={showConfirmPassword ? "text" : "password"}
-                          value={passwordData.confirmPassword}
-                          onChange={(e) =>
-                            setPasswordData({
-                              ...passwordData,
-                              confirmPassword: e.target.value,
-                            })
-                          }
-                          placeholder="Confirmez votre nouveau mot de passe"
-                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                        />
+                      <div className="flex items-center justify-between mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Confirmer le nouveau code PIN
+                        </label>
                         <button
                           type="button"
-                          onClick={() =>
-                            setShowConfirmPassword(!showConfirmPassword)
-                          }
-                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
                         >
                           {showConfirmPassword ? (
-                            <EyeOff className="h-4 w-4" />
+                            <>
+                              <EyeOff className="h-3 w-3" />
+                              Masquer
+                            </>
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <>
+                              <Eye className="h-3 w-3" />
+                              Afficher
+                            </>
                           )}
                         </button>
                       </div>
+                      <PinInput
+                        value={passwordData.confirmPassword}
+                        onChange={(value) =>
+                          setPasswordData({
+                            ...passwordData,
+                            confirmPassword: value,
+                          })
+                        }
+                        masked={!showConfirmPassword}
+                        className="justify-start"
+                      />
                     </div>
 
                     <div className="pt-4">
@@ -710,7 +719,7 @@ export default function ParametresPage() {
                         )}
                         {isChangingPassword
                           ? "Changement..."
-                          : "Changer le mot de passe"}
+                          : "Changer le code PIN"}
                       </button>
                     </div>
                   </div>
@@ -748,7 +757,7 @@ export default function ParametresPage() {
                         Votre clé API
                       </label>
                       <div className="relative">
-                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <input
                           type={showApiKey ? "text" : "password"}
                           value={apiKeyData.api_key}
@@ -759,7 +768,7 @@ export default function ParametresPage() {
                         <button
                           type="button"
                           onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-3 top-2.5 h-4 w-4 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
                         >
                           {showApiKey ? (
                             <EyeOff className="h-4 w-4" />

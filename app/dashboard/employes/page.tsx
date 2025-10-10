@@ -340,16 +340,57 @@ export default function EmployesPage() {
 
   if (loading || isLoading || statisticsLoading) {
     return (
-      <LoadingSpinner
-        fullScreen={true}
-        message={
-          loading
-            ? "Chargement de la session..."
-            : isLoading
-            ? "Chargement des employés..."
-            : "Chargement des statistiques..."
-        }
-      />
+      <div className="space-y-6 animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-80"></div>
+          </div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-6 w-64 mt-1"></div>
+        </div>
+
+        {/* Skeleton pour les statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div
+              key={i}
+              className="bg-gray-200 dark:bg-gray-800 rounded-lg h-28"
+            ></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-24"></div>
+
+        {/* Skeleton pour le tableau */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="space-y-3">
+            {/* En-tête du tableau */}
+            <div className="grid grid-cols-6 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-gray-300 dark:bg-gray-700 rounded h-5"
+                ></div>
+              ))}
+            </div>
+            {/* Lignes du tableau */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="grid grid-cols-6 gap-4 py-3">
+                {[...Array(6)].map((_, j) => (
+                  <div
+                    key={j}
+                    className="bg-gray-300 dark:bg-gray-700 rounded h-6"
+                  ></div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
+      </div>
     );
   }
 

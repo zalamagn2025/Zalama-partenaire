@@ -717,16 +717,55 @@ export default function DemandesPage() {
 
   if (loading && demandesAvance.length === 0) {
     return (
-      <div className="p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-200 rounded"></div>
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-3">
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-96"></div>
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-80"></div>
+          </div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-40"></div>
+        </div>
+
+        {/* Skeleton pour les statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-24"></div>
+
+        {/* Skeleton pour la liste des demandes */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="space-y-4">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 bg-gray-300 dark:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="bg-gray-400 dark:bg-gray-600 rounded-full h-12 w-12"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-6 w-64"></div>
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-4 w-48"></div>
+                  </div>
+                </div>
+                <div className="flex gap-4">
+                  <div className="space-y-2">
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-5 w-32"></div>
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-4 w-24"></div>
+                  </div>
+                  <div className="bg-gray-400 dark:bg-gray-600 rounded h-9 w-24"></div>
+                </div>
+              </div>
             ))}
           </div>
-          <div className="h-64 bg-gray-200 rounded"></div>
         </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
       </div>
     );
   }

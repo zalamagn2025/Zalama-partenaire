@@ -947,14 +947,62 @@ export default function FinancesPage() {
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
-      <LoadingSpinner
-        fullScreen={true}
-        message={
-          edgeFunctionLoading
-            ? "Chargement des données du mois en cours..."
-            : "Chargement des données financières..."
-        }
-      />
+      <div className="p-3 space-y-4 w-full max-w-full overflow-hidden animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-8 w-48"></div>
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-8 w-32"></div>
+          </div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-64"></div>
+        </div>
+
+        {/* Skeleton pour les 4 cartes principales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-28"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les 2 statistiques supplémentaires */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-28"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
+
+        {/* Skeleton pour les graphiques */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
+        </div>
+
+        {/* Skeleton pour le tableau des transactions */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-4">
+          <div className="space-y-3">
+            {/* En-tête du tableau */}
+            <div className="grid grid-cols-5 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="bg-gray-300 dark:bg-gray-700 rounded h-5"></div>
+              ))}
+            </div>
+            {/* Lignes du tableau */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="grid grid-cols-5 gap-4 py-3">
+                {[...Array(5)].map((_, j) => (
+                  <div key={j} className="bg-gray-300 dark:bg-gray-700 rounded h-6"></div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
+      </div>
     );
   }
 

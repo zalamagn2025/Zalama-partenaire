@@ -42,7 +42,7 @@ export default function EntrepriseLayout({
         >
           <EntrepriseHeader />
           <main
-            className="flex-1 mb-8 overflow-y-auto px-6 text-gray-900 dark:text-white"
+            className="flex-1 mb-8 overflow-y-auto text-gray-900 dark:text-white"
             style={{ scrollbarWidth: "none" }}
           >
             {children}

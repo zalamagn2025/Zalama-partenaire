@@ -815,7 +815,7 @@ class EdgeFunctionService {
     accessToken: string,
     request: { employee_id: string; reason?: string }
   ): Promise<PartnerAuthResponse> {
-    const url = `${SUPABASE_URL}/functions/v1/partner-employees/reject`;
+    const url = `${SUPABASE_URL}/functions/v1/partner-auth/reject-employee-registration`;
 
     const config: RequestInit = {
       method: "POST",

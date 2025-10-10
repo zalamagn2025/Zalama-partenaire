@@ -271,13 +271,29 @@ export default function EntrepriseDashboardPage() {
     }
   }, [session?.partner, isLoading, dashboardData]);
 
-  // Si en cours de chargement, afficher un état de chargement
+  // Si en cours de chargement, afficher des skeletons
   if (loading || isLoading) {
     return (
-      <LoadingSpinner
-        fullScreen={true}
-        message="Chargement du tableau de bord..."
-      />
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-24"></div>
+
+        {/* Skeleton pour les cartes statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les graphiques */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
+        </div>
+
+        {/* Skeleton pour le tableau */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-96"></div>
+      </div>
     );
   }
 

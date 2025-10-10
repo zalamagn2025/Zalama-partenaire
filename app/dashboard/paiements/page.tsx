@@ -284,8 +284,58 @@ export default function PaiementsPage() {
     }
   };
 
-  if (authLoading) {
-    return <LoadingSpinner />;
+  if (authLoading || loading) {
+    return (
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-96"></div>
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-80"></div>
+          </div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-32"></div>
+        </div>
+
+        {/* Skeleton pour les statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
+
+        {/* Skeleton pour le tableau des paiements */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="space-y-3">
+            {/* En-tête du tableau */}
+            <div className="grid grid-cols-9 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
+              {[...Array(9)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-gray-300 dark:bg-gray-700 rounded h-5"
+                ></div>
+              ))}
+            </div>
+            {/* Lignes du tableau */}
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="grid grid-cols-9 gap-4 py-3">
+                {[...Array(9)].map((_, j) => (
+                  <div
+                    key={j}
+                    className="bg-gray-300 dark:bg-gray-700 rounded h-6"
+                  ></div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
+      </div>
+    );
   }
 
   return (
@@ -351,11 +401,11 @@ export default function PaiementsPage() {
       ) : null}
 
       {/* Filtres */}
-      <Card className="p-4">
+      <Card className="p-4 bg-[var(--zalama-card)] border-[var(--zalama-border)]">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-500" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-[var(--zalama-text)]">
               Filtres:
             </span>
           </div>
@@ -381,9 +431,9 @@ export default function PaiementsPage() {
       </Card>
 
       {/* Tableau des paiements */}
-      <Card>
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold">Liste des Paiements</h2>
+      <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
+        <div className="p-4 border-b border-[var(--zalama-border)]">
+          <h2 className="text-lg font-semibold text-[var(--zalama-text)]">Liste des Paiements</h2>
         </div>
         
         {loading ? (

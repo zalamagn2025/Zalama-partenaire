@@ -31,6 +31,7 @@ import {
   Clock,
   X,
   AlertTriangle,
+  User,
 } from "lucide-react";
 
 interface EmployeeWithoutAccount {
@@ -253,7 +254,46 @@ export default function DemandesAdhesionPage() {
 
   if (isLoading) {
     return (
-      <LoadingSpinner fullScreen={true} message="Chargement des employés..." />
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* Skeleton pour l'en-tête */}
+        <div className="flex items-center justify-between">
+          <div className="space-y-3">
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-80"></div>
+            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-6 w-64"></div>
+          </div>
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-16 w-32"></div>
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
+
+        {/* Skeleton pour la liste des employés */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+          <div className="space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div
+                key={i}
+                className="flex items-center justify-between p-4 bg-gray-300 dark:bg-gray-700 rounded-lg"
+              >
+                <div className="flex items-center gap-4 flex-1">
+                  <div className="bg-gray-400 dark:bg-gray-600 rounded-full h-10 w-10"></div>
+                  <div className="space-y-2 flex-1">
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-5 w-48"></div>
+                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-4 w-32"></div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="bg-gray-400 dark:bg-gray-600 rounded h-9 w-28"></div>
+                  <div className="bg-gray-400 dark:bg-gray-600 rounded h-9 w-20"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Skeleton pour la pagination */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
+      </div>
     );
   }
 
@@ -317,10 +357,10 @@ export default function DemandesAdhesionPage() {
         </div>
       </div>
 
-      {/* Liste des employés */}
-      {filteredEmployees.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
+      {/* Tableau des employés */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden">
+        {filteredEmployees.length === 0 ? (
+          <div className="p-12 text-center">
             <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
               Aucun employé sans compte
@@ -328,53 +368,84 @@ export default function DemandesAdhesionPage() {
             <p className="text-gray-600 dark:text-gray-400">
               Tous vos employés ont déjà un compte ZaLaMa.
             </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-          <CardHeader>
-            <CardTitle className="text-lg text-[var(--zalama-text)]">
-              Liste des employés sans compte
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
+              <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
+                <th className="w-1/4 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Employé
+                </th>
+                <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Poste
+                </th>
+                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Type de contrat
+                </th>
+                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Salaire net
+                </th>
+                <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-[var(--zalama-border)]">
               {currentEmployees.map((employee) => (
-                <div
+                <tr
                   key={employee.id}
-                  className="flex items-center justify-between p-4 border border-[var(--zalama-border)] rounded-lg hover:bg-[var(--zalama-bg-light)] transition-colors cursor-pointer"
-                  onClick={() => handleViewDetails(employee)}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                        {employee.prenom.charAt(0)}
-                        {employee.nom.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {employee.prenom} {employee.nom}
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                          {employee.prenom.charAt(0)}
+                          {employee.nom.charAt(0)}
+                        </span>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {employee.poste}
+                      <div>
+                        <div className="font-medium text-sm text-gray-900 dark:text-white">
+                          {employee.prenom} {employee.nom}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge
+                            variant={employee.actif ? "default" : "secondary"}
+                            className="text-xs"
+                          >
+                            {employee.actif ? "Actif" : "Inactif"}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={employee.actif ? "default" : "secondary"}
-                        className="text-xs"
-                      >
-                        {employee.actif ? "Actif" : "Inactif"}
-                      </Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {employee.type_contrat}
-                      </Badge>
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white truncate max-w-[200px]" title={employee.email || ""}>
+                      {employee.email || (
+                        <span className="text-red-500 text-xs">Non renseigné</span>
+                      )}
                     </div>
-
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="text-sm text-gray-900 dark:text-white">
+                      {employee.poste}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
+                    <Badge variant="outline" className="text-xs">
+                      {employee.type_contrat}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-4">
+                    <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                      {formatSalary(employee.salaire_net)}
+                    </div>
+                  </td>
+                  <td className="px-3 py-4">
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
@@ -434,45 +505,53 @@ export default function DemandesAdhesionPage() {
                         Créer
                       </Button>
                     </div>
-                  </div>
-                </div>
+                  </td>
+                </tr>
               ))}
-            </div>
-          </CardContent>
+            </tbody>
+          </table>
+        </div>
+        )}
+      </div>
 
-          {/* Pagination */}
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredEmployees.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={handlePageChange}
-            className="mt-4"
-          />
-        </Card>
+      {/* Pagination */}
+      {filteredEmployees.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={filteredEmployees.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+        />
       )}
 
       {/* Modal des détails */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>Détails de l'employé</span>
-              {/* <Button
-                variant="ghost"
-                size="sm"
+      {isModalOpen && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <User className="w-6 h-6 text-blue-600" />
+                  Détails de l'employé
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Informations complètes de l'employé sans compte
+                </p>
+              </div>
+              <button
                 onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8 p-0"
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
-                 <X className="h-4 w-4" />
-              </Button> */}
-            </DialogTitle>
-          </DialogHeader>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-          {selectedEmployee && (
-            <div className="space-y-6">
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
-              <div className="flex items-center gap-4 pb-4 border-b">
+              <div className="flex items-center gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
                   <span className="text-blue-600 dark:text-blue-400 font-semibold text-xl">
                     {selectedEmployee.prenom.charAt(0)}
@@ -483,13 +562,11 @@ export default function DemandesAdhesionPage() {
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                     {selectedEmployee.prenom} {selectedEmployee.nom}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-gray-600 dark:text-gray-400 mt-1">
                     {selectedEmployee.poste}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge
-                      variant={selectedEmployee.actif ? "default" : "secondary"}
-                    >
+                    <Badge variant={selectedEmployee.actif ? "default" : "secondary"}>
                       {selectedEmployee.actif ? "Actif" : "Inactif"}
                     </Badge>
                     <Badge variant="outline">
@@ -499,207 +576,156 @@ export default function DemandesAdhesionPage() {
                 </div>
               </div>
 
-              {/* Informations de contact */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  Informations de contact
-                </h4>
-                <div className="grid grid-cols-1 gap-3">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Email
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedEmployee.email || "Non renseigné"}
-                      </div>
-                    </div>
-                  </div>
+              {/* Informations en grille */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedEmployee.email || "Non renseigné"}
+                  </p>
                 </div>
-              </div>
 
-              <Separator />
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Type de contrat</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedEmployee.type_contrat}
+                  </p>
+                </div>
 
-              {/* Informations professionnelles */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Informations professionnelles
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Building2 className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Poste
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedEmployee.poste}
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'embauche</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatDate(selectedEmployee.date_embauche)}
+                  </p>
+                </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <FileText className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Type de contrat
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {selectedEmployee.type_contrat}
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire net</p>
+                  <p className="font-medium text-green-600 dark:text-green-400">
+                    {formatSalary(selectedEmployee.salaire_net)}
+                  </p>
+                </div>
 
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Date d'embauche
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {formatDate(selectedEmployee.date_embauche)}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                    <DollarSign className="h-4 w-4 text-gray-400" />
-                    <div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        Salaire net
-                      </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {formatSalary(selectedEmployee.salaire_net)}
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'ajout</p>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatDate(selectedEmployee.created_at)}
+                  </p>
                 </div>
               </div>
 
               {selectedEmployee.date_expiration && (
-                <>
-                  <Separator />
-                  <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                    <AlertCircle className="h-4 w-4 text-orange-500" />
-                    <div>
-                      <div className="text-sm font-medium text-orange-700 dark:text-orange-300">
-                        Contrat à durée déterminée
-                      </div>
-                      <div className="text-sm text-orange-600 dark:text-orange-400">
-                        Expire le {formatDate(selectedEmployee.date_expiration)}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              <Separator />
-
-              {/* Informations système */}
-              <div className="space-y-4">
-                <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Informations système
-                </h4>
-                <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <Clock className="h-4 w-4 text-gray-400" />
+                <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
                   <div>
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      Date d'ajout
+                    <div className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                      Contrat à durée déterminée
                     </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {formatDate(selectedEmployee.created_at)}
+                    <div className="text-sm text-orange-600 dark:text-orange-400">
+                      Expire le {formatDate(selectedEmployee.date_expiration)}
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+            </div>
 
-              {/* Actions */}
-              <Separator />
-              <div className="flex justify-between gap-3 pt-4">
-                <Button
-                  variant="outline"
+            {/* Footer */}
+            <div className="flex justify-between gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => {
+                  handleRejectEmployee(selectedEmployee);
+                  setIsModalOpen(false);
+                }}
+                disabled={rejectingEmployee === selectedEmployee.id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rejectingEmployee === selectedEmployee.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                Rejeter l'inscription
+              </button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                >
+                  Fermer
+                </button>
+                <button
                   onClick={() => {
-                    handleRejectEmployee(selectedEmployee);
+                    handleCreateAccount(selectedEmployee.id);
                     setIsModalOpen(false);
                   }}
-                  disabled={rejectingEmployee === selectedEmployee.id}
-                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                  disabled={
+                    creatingAccount === selectedEmployee.id ||
+                    !selectedEmployee.email
+                  }
+                  className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                    !selectedEmployee.email
+                      ? "bg-gray-400 cursor-not-allowed text-white"
+                      : "bg-green-600 hover:bg-green-700 text-white"
+                  }`}
+                  title={
+                    !selectedEmployee.email
+                      ? "Email requis pour créer un compte"
+                      : ""
+                  }
                 >
-                  <LoadingButton
-                    loading={rejectingEmployee === selectedEmployee.id}
-                  >
-                    <X className="h-4 w-4" />
-                  </LoadingButton>
-                  Rejeter l'inscription
-                </Button>
-
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsModalOpen(false)}
-                  >
-                    Fermer
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      handleCreateAccount(selectedEmployee.id);
-                      setIsModalOpen(false);
-                    }}
-                    disabled={
-                      creatingAccount === selectedEmployee.id ||
-                      !selectedEmployee.email
-                    }
-                    className={
-                      !selectedEmployee.email
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700"
-                    }
-                    title={
-                      !selectedEmployee.email
-                        ? "Email requis pour créer un compte"
-                        : ""
-                    }
-                  >
-                    <LoadingButton
-                      loading={creatingAccount === selectedEmployee.id}
-                    >
-                      <UserPlus className="h-4 w-4 mr-2" />
-                    </LoadingButton>
-                    Créer le compte
-                  </Button>
-                </div>
+                  {creatingAccount === selectedEmployee.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                  ) : (
+                    <UserPlus className="h-4 w-4" />
+                  )}
+                  Créer le compte
+                </button>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
 
       {/* Modal de confirmation de rejet */}
-      <Dialog open={isRejectModalOpen} onOpenChange={setIsRejectModalOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="h-5 w-5" />
-              Rejeter l'inscription
-            </DialogTitle>
-          </DialogHeader>
+      {isRejectModalOpen && selectedEmployee && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-red-50 to-orange-50/30 dark:from-red-900/20 dark:to-orange-900/10">
+              <div>
+                <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                  <AlertTriangle className="w-6 h-6" />
+                  Rejeter l'inscription
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Cette action enverra une notification à l'employé
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setIsRejectModalOpen(false);
+                  setRejectReason("");
+                  setSelectedEmployee(null);
+                }}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
 
-          {selectedEmployee && (
-            <div className="space-y-4">
-              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-                    <span className="text-red-600 dark:text-red-400 font-semibold">
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
+                    <span className="text-red-600 dark:text-red-400 font-semibold text-xl">
                       {selectedEmployee.prenom.charAt(0)}
                       {selectedEmployee.nom.charAt(0)}
                     </span>
                   </div>
                   <div>
-                    <div className="font-medium text-red-900 dark:text-red-100">
+                    <div className="font-semibold text-lg text-red-900 dark:text-red-100">
                       {selectedEmployee.prenom} {selectedEmployee.nom}
                     </div>
                     <div className="text-sm text-red-700 dark:text-red-300">
@@ -709,7 +735,7 @@ export default function DemandesAdhesionPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Motif du rejet (optionnel)
                 </label>
@@ -717,42 +743,43 @@ export default function DemandesAdhesionPage() {
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Expliquez pourquoi cette inscription est rejetée..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-white"
-                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-white resize-none"
+                  rows={4}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Ce motif sera envoyé à l'employé par email et SMS.
                 </p>
               </div>
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setIsRejectModalOpen(false);
-                    setRejectReason("");
-                    setSelectedEmployee(null);
-                  }}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  onClick={confirmRejectEmployee}
-                  disabled={rejectingEmployee === selectedEmployee.id}
-                  className="bg-red-600 hover:bg-red-700 text-white"
-                >
-                  <LoadingButton
-                    loading={rejectingEmployee === selectedEmployee.id}
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                  </LoadingButton>
-                  Confirmer le rejet
-                </Button>
-              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => {
+                  setIsRejectModalOpen(false);
+                  setRejectReason("");
+                  setSelectedEmployee(null);
+                }}
+                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmRejectEmployee}
+                disabled={rejectingEmployee === selectedEmployee.id}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {rejectingEmployee === selectedEmployee.id ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                ) : (
+                  <X className="h-4 w-4" />
+                )}
+                Confirmer le rejet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
