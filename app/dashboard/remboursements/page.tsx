@@ -1,14 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
@@ -40,6 +32,7 @@ import {
   History,
   AlertCircle,
   Building,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Bar, Pie } from "react-chartjs-2";
@@ -622,6 +615,16 @@ export default function RemboursementsPage() {
     return salaireRestant;
   };
 
+  // Fonction pour obtenir le montant demandé en toute sécurité
+  const getMontantDemande = (remboursement: any) => {
+    // Pour les données Edge Function, utiliser montant_transaction
+    if (remboursement.montant_transaction) {
+      return Number(remboursement.montant_transaction);
+    }
+    // Fallback pour les données locales
+    return Number(remboursement.demande_avance?.montant_demande || 0);
+  };
+
   // Fonction pour calculer les frais de service (6,5%)
   const calculateFraisService = (montantDemande: number) => {
     return montantDemande * 0.065; // 6,5%
@@ -674,16 +677,6 @@ export default function RemboursementsPage() {
     }
     // Fallback pour les données locales
     return calculateRemboursementDu(getMontantDemande(remboursement));
-  };
-
-  // Fonction pour obtenir le montant demandé en toute sécurité
-  const getMontantDemande = (remboursement: any) => {
-    // Pour les données Edge Function, utiliser montant_transaction
-    if (remboursement.montant_transaction) {
-      return Number(remboursement.montant_transaction);
-    }
-    // Fallback pour les données locales
-    return Number(remboursement.demande_avance?.montant_demande || 0);
   };
 
   // Total des remboursements en attente - utiliser les statistiques Edge Function en priorité
@@ -1312,167 +1305,162 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Modal de détail professionnelle */}
-      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Receipt className="w-5 h-5 text-blue-600" />
-              Détail du remboursement
-            </DialogTitle>
-            <DialogDescription>
-              Informations complètes et historique de la demande d'avance
-              salariale
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedRemboursement && (
-            <div className="space-y-6">
-              {/* Section Employé */}
+      {showDetailModal && selectedRemboursement && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
               <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <User className="w-4 h-4 text-gray-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Informations employé
-                  </h3>
-                </div>
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Receipt className="w-6 h-6 text-blue-600" />
+                  Détail du remboursement
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Informations complètes et historique de la demande d'avance salariale
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-8 space-y-8 overflow-y-auto flex-1">
+              {/* Section Employé */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                    <User className="w-5 h-5 text-orange-600" />
+                  </div>
+                  Informations employé
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       Nom complet
-                    </span>
-                    <span className="font-medium">
+                    </p>
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {selectedRemboursement.employee?.nom}{" "}
                       {selectedRemboursement.employee?.prenom}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Salaire net mensuel
-                    </span>
-                    <span className="font-medium">
-                      {gnfFormatter(getSalaireNet(selectedRemboursement))}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Section Détails financiers */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <DollarSign className="w-4 h-4 text-green-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Détails financiers
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                    <div className="text-sm text-blue-600 dark:text-blue-400 mb-1">
-                      Montant demandé
-                    </div>
-                    <div className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                      {gnfFormatter(getMontantDemande(selectedRemboursement))}
-                    </div>
+                    </p>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                      Frais de service (6,5%)
-                    </div>
-                    <div className="text-lg font-bold text-gray-800 dark:text-gray-300">
-                      {gnfFormatter(getFraisService(selectedRemboursement))}
-                    </div>
-                  </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                    <div className="text-sm text-green-600 dark:text-green-400 mb-1">
-                      Montant reçu par l'employé
-                    </div>
-                    <div className="text-lg font-bold text-green-800 dark:text-green-300">
-                      {gnfFormatter(getMontantRecu(selectedRemboursement))}
-                    </div>
-                  </div>
-                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-                    <div className="text-sm text-red-600 dark:text-red-400 mb-1">
-                      Dû à ZaLaMa
-                    </div>
-                    <div className="text-lg font-bold text-red-800 dark:text-red-300">
-                      {gnfFormatter(getRemboursementDu(selectedRemboursement))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4">
-                  <div className="text-sm text-orange-600 dark:text-orange-400 mb-1">
-                    Salaire restant après remboursement
-                  </div>
-                  <div className="text-xl font-bold text-orange-800 dark:text-orange-300">
-                    {gnfFormatter(
-                      calculateSalaireRestant(selectedRemboursement)
-                    )}
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Salaire net mensuel
+                    </p>
+                    <p className="font-medium text-green-600">
+                      {gnfFormatter(getSalaireNet(selectedRemboursement))}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              {/* Section Détails financiers */}
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <DollarSign className="w-5 h-5 text-green-600" />
+                  </div>
+                  Détails financiers
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Montant demandé
+                    </p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {gnfFormatter(getMontantDemande(selectedRemboursement))}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Frais de service (6,5%)
+                    </p>
+                    <p className="text-lg font-bold text-gray-800 dark:text-gray-300">
+                      {gnfFormatter(getFraisService(selectedRemboursement))}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Montant reçu par l'employé
+                    </p>
+                    <p className="text-lg font-bold text-green-600">
+                      {gnfFormatter(getMontantRecu(selectedRemboursement))}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Dû à ZaLaMa
+                    </p>
+                    <p className="text-lg font-bold text-red-600">
+                      {gnfFormatter(getRemboursementDu(selectedRemboursement))}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border-l-4 border-orange-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Salaire restant après remboursement
+                  </p>
+                  <p className="text-2xl font-bold text-orange-600">
+                    {gnfFormatter(calculateSalaireRestant(selectedRemboursement))}
+                  </p>
+                </div>
+              </div>
 
               {/* Section Dates */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Calendar className="w-4 h-4 text-purple-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Informations temporelles
-                  </h3>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                    <Calendar className="w-5 h-5 text-purple-600" />
+                  </div>
+                  Informations temporelles
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       Date de l'avance
-                    </div>
-                    <div className="font-medium">
+                    </p>
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {selectedRemboursement.demande_avance?.date_validation
-                        ? new Date(
-                            selectedRemboursement.demande_avance.date_validation
-                          ).toLocaleDateString("fr-FR")
+                        ? new Date(selectedRemboursement.demande_avance.date_validation).toLocaleDateString("fr-FR")
                         : "-"}
-                    </div>
+                    </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       Date limite remboursement
-                    </div>
-                    <div className="font-medium">
-                      {new Date(
-                        selectedRemboursement.date_limite_remboursement
-                      ).toLocaleDateString("fr-FR")}
-                    </div>
+                    </p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString("fr-FR")}
+                    </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3">
-                    <div className="text-xs text-gray-600 dark:text-gray-400 mb-1">
+                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                       Date de paiement
-                    </div>
-                    <div className="font-medium">
+                    </p>
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {selectedRemboursement.date_remboursement_effectue
-                        ? new Date(
-                            selectedRemboursement.date_remboursement_effectue
-                          ).toLocaleDateString("fr-FR")
+                        ? new Date(selectedRemboursement.date_remboursement_effectue).toLocaleDateString("fr-FR")
                         : "Non payé"}
-                    </div>
+                    </p>
                   </div>
                 </div>
               </div>
 
-              <Separator />
-
               {/* Section Statut */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <AlertCircle className="w-4 h-4 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Statut actuel
-                  </h3>
-                </div>
-                <div className="flex items-center gap-4">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-gray-600" />
+                  </div>
+                  Statut actuel
+                </h3>
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
                   <span
-                    className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium
+                    className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
                     ${
                       selectedRemboursement.statut === "PAYE"
                         ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
@@ -1501,20 +1489,17 @@ export default function RemboursementsPage() {
               {/* Section Historique */}
               {selectedRemboursement.tous_remboursements &&
                 selectedRemboursement.tous_remboursements.length > 0 && (
-                  <>
-                    <Separator />
-                    <div>
-                      <div className="flex items-center gap-2 mb-3">
-                        <History className="w-4 h-4 text-indigo-600" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                          Historique des remboursements
-                        </h3>
-                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-400 px-2 py-1 rounded-full">
-                          {selectedRemboursement.tous_remboursements.length}{" "}
-                          remboursement(s)
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                          <History className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        Historique des remboursements
+                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-400 px-3 py-1.5 rounded-full ml-auto">
+                          {selectedRemboursement.tous_remboursements.length} remboursement(s)
                         </span>
-                      </div>
-                      <div className="space-y-3 max-h-48 overflow-y-auto">
+                      </h3>
+                      <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
                         {selectedRemboursement.tous_remboursements.map(
                           (remb, index) => {
                             // Calculer le salaire restant après ce remboursement
@@ -1536,9 +1521,9 @@ export default function RemboursementsPage() {
                             return (
                               <div
                                 key={index}
-                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4"
+                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5"
                               >
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex justify-between items-start mb-4">
                                   <div className="flex items-center gap-2">
                                     <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-800 dark:text-indigo-400">
                                       {index + 1}
@@ -1555,7 +1540,7 @@ export default function RemboursementsPage() {
                                     )}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div className="grid grid-cols-2 gap-6 text-sm">
                                   <div>
                                     <span className="text-gray-500 dark:text-gray-400">
                                       Statut:{" "}
@@ -1599,44 +1584,47 @@ export default function RemboursementsPage() {
                         )}
                       </div>
                     </div>
-                  </>
                 )}
             </div>
-          )}
-
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={handleCloseModal}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal des informations financières de ZaLaMa */}
-      <Dialog
-        open={showFinancialInfoModal}
-        onOpenChange={setShowFinancialInfoModal}
-      >
-        <DialogContent className="max-w-2xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <Building className="w-6 h-6 text-[var(--zalama-green)]" />
-              Informations Financières - ZaLaMa SARL
-            </DialogTitle>
-
-            <DialogDescription>
-              Relevé d'identité bancaire et coordonnées de l'entreprise
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Conteneur avec scroll */}
-          <div className="max-h-[60vh] overflow-y-auto pr-2">
-            <div className="space-y-6">
+      {showFinancialInfoModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Building className="w-6 h-6 text-green-600" />
+                  Informations Financières - ZaLaMa SARL
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Relevé d'identité bancaire et coordonnées de l'entreprise
+                </p>
+              </div>
+              <button
+                onClick={() => setShowFinancialInfoModal(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Informations bancaires */}
               <div className="bg-gradient-to-br from-[var(--zalama-green)]/10 to-[var(--zalama-blue)]/10 dark:from-[var(--zalama-green)]/20 dark:to-[var(--zalama-blue)]/20 border border-[var(--zalama-green)]/30 dark:border-[var(--zalama-green)]/50 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
@@ -1821,44 +1809,45 @@ export default function RemboursementsPage() {
                 </div>
               </div>
             </div>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => setShowFinancialInfoModal(false)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
           </div>
-
-          <DialogFooter className="mt-6">
-            <Button
-              variant="outline"
-              onClick={() => setShowFinancialInfoModal(false)}
-              className="flex items-center gap-2 border-[var(--zalama-border)] hover:bg-[var(--zalama-green)]/10 dark:hover:bg-[var(--zalama-green)]/20"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* Modal des détails d'un employé */}
-      <Dialog
-        open={showEmployeeDetailsModal}
-        onOpenChange={setShowEmployeeDetailsModal}
-      >
-        <DialogContent
-          className="max-w-6xl w-[90vw] max-h-[90vh] overflow-y-auto"
-          style={{ width: "90vw", maxWidth: "1200px" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5" />
-              Détails des remboursements -{" "}
-              {selectedEmployeeDetails?.employe?.prenom}{" "}
-              {selectedEmployeeDetails?.employe?.nom}
-            </DialogTitle>
-            <DialogDescription>
-              Liste complète des remboursements individuels pour cet employé
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedEmployeeDetails && (
-            <div className="space-y-10 p-6">
+      {showEmployeeDetailsModal && selectedEmployeeDetails && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <User className="w-6 h-6 text-blue-600" />
+                  Détails des remboursements - {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom}
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Liste complète des remboursements individuels pour cet employé
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEmployeeDetailsModal(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-10 overflow-y-auto flex-1">
               {/* Informations de l'employé */}
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8">
                 <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
@@ -2091,20 +2080,19 @@ export default function RemboursementsPage() {
                 </div>
               </div>
             </div>
-          )}
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowEmployeeDetailsModal(false)}
-              className="flex items-center gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Fermer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => setShowEmployeeDetailsModal(false)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

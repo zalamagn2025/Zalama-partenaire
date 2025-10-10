@@ -49,6 +49,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -150,6 +151,22 @@ export default function PaiementsPage() {
     mois: new Date().getMonth() + 1,
     annee: new Date().getFullYear(),
   });
+
+  // Modal
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Ouvrir le modal
+  const handleViewDetails = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setIsModalOpen(true);
+  };
+
+  // Fermer le modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedPayment(null);
+  };
 
   // Fonction pour récupérer les statistiques
   const fetchStatistics = async () => {
@@ -432,7 +449,11 @@ export default function PaiementsPage() {
                         {formatDate(payment.date_paiement)}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewDetails(payment)}
+                        >
                           <Eye className="w-4 h-4" />
                         </Button>
                       </TableCell>
@@ -501,6 +522,156 @@ export default function PaiementsPage() {
             </BarChart>
           </ResponsiveContainer>
         </Card>
+      )}
+
+      {/* Modal de détails du paiement */}
+      {isModalOpen && selectedPayment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Détails du Paiement
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Référence: {selectedPayment.reference_paiement}
+                </p>
+              </div>
+              <button
+                onClick={handleCloseModal}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* Informations de l'employé */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Informations Employé
+                </h3>
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-500">Nom complet</p>
+                    <p className="font-medium">
+                      {selectedPayment.employe?.nom} {selectedPayment.employe?.prenom}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Poste</p>
+                    <p className="font-medium">{selectedPayment.employe?.poste || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-sm">{selectedPayment.employe?.email || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Téléphone</p>
+                    <p className="font-medium">{selectedPayment.employe?.telephone || "N/A"}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informations du paiement */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Détails du Paiement
+                </h3>
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Référence</span>
+                    <span className="font-mono font-medium">{selectedPayment.reference_paiement}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Période</span>
+                    <span className="font-medium">
+                      {formatDate(selectedPayment.periode_debut)} → {formatDate(selectedPayment.periode_fin)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
+                    <span className="font-medium">{formatDate(selectedPayment.date_paiement)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Date limite</span>
+                    <span className="font-medium">{formatDate(selectedPayment.date_limite)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Statut</span>
+                    <span>{getStatusBadge(selectedPayment.statut)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Méthode</span>
+                    <span className="font-medium">
+                      {selectedPayment.intervention_zalama ? "Intervention ZaLaMa" : selectedPayment.methode_paiement}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Montants */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Détails Financiers
+                </h3>
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Salaire net</span>
+                    <span className="font-medium">{gnfFormatter(selectedPayment.salaire_net)}</span>
+                  </div>
+                  <div className="flex justify-between text-orange-600">
+                    <span>Avances déduites</span>
+                    <span className="font-medium">- {gnfFormatter(selectedPayment.avances_deduites)}</span>
+                  </div>
+                  <div className="border-t pt-3 flex justify-between text-green-600">
+                    <span className="font-semibold">Salaire disponible</span>
+                    <span className="font-bold text-lg">{gnfFormatter(selectedPayment.salaire_disponible)}</span>
+                  </div>
+                  {selectedPayment.intervention_zalama && (
+                    <>
+                      <div className="flex justify-between text-blue-600">
+                        <span>Frais d'intervention (6%)</span>
+                        <span className="font-medium">+ {gnfFormatter(selectedPayment.frais_intervention)}</span>
+                      </div>
+                      <div className="border-t pt-3 flex justify-between text-purple-600">
+                        <span className="font-semibold">Montant total remboursement</span>
+                        <span className="font-bold text-lg">{gnfFormatter(selectedPayment.montant_total_remboursement)}</span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Commentaire */}
+              {selectedPayment.commentaire && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Commentaire
+                  </h3>
+                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      {selectedPayment.commentaire}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <Button 
+                onClick={handleCloseModal} 
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                Fermer
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

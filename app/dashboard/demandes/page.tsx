@@ -26,13 +26,6 @@ import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
@@ -1343,179 +1336,183 @@ export default function DemandesPage() {
       )}
 
       {/* Modal de détails de la demande */}
-      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
-        <DialogContent
-          className="max-w-6xl max-h-[90vh]"
-          style={{ width: "90vw", maxWidth: "1200px" }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl">
-              <FileText className="w-6 h-6 text-[var(--zalama-green)]" />
-              Détails de la demande
-            </DialogTitle>
-            <DialogDescription>
-              Informations complètes sur la demande d'avance
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedDemande && (
-            <div className="max-h-[60vh] overflow-y-auto pr-2">
+      {showDetailsModal && selectedDemande && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <FileText className="w-6 h-6 text-blue-600" />
+                  Détails de la demande
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Informations complètes sur la demande d'avance
+                </p>
+              </div>
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-6">
                 {/* Informations de l'employé */}
-                <div className="bg-gradient-to-br from-[var(--zalama-green)]/10 to-[var(--zalama-blue)]/10 dark:from-[var(--zalama-green)]/20 dark:to-[var(--zalama-blue)]/20 border border-[var(--zalama-green)]/30 dark:border-[var(--zalama-green)]/50 rounded-lg p-6">
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-[var(--zalama-green)]" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                      <User className="w-5 h-5 text-orange-600" />
+                    </div>
                     Informations de l'employé
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Nom complet :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.employe
-                              ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}`
-                              : selectedDemande.demandeur || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Téléphone :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.employe
-                              ? selectedDemande.employe.telephone
-                              : "N/A"}
-                          </span>
-                        </div>
-                        <div className="py-2">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-2">
-                            Numéro de réception :
-                          </span>
-                          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                            <p className="text-sm text-gray-900 dark:text-white font-mono break-all">
-                              {selectedDemande.demandes_detailes &&
-                              selectedDemande.demandes_detailes.length > 0 &&
-                              selectedDemande.demandes_detailes[0].pay_id
-                                ? selectedDemande.demandes_detailes[0].pay_id
-                                : "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Nom complet
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.employe
+                          ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}`
+                          : selectedDemande.demandeur || "N/A"}
+                      </p>
                     </div>
+                    
                     <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Catégorie :
-                          </span>
-                          <span
-                            className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                              selectedDemande.categorie === "mono-mois"
-                                ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                                : selectedDemande.categorie === "multi-mois"
-                                ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
-                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                            }`}
-                          >
-                            {selectedDemande.categorie || "N/A"}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Type de demande :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.type_demande}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Statut :
-                          </span>
-                          <span
-                            className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                              (selectedDemande.statut_global ||
-                                selectedDemande.statut) === "En attente"
-                                ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                                : (selectedDemande.statut_global ||
-                                    selectedDemande.statut) === "Validé"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
-                                : (selectedDemande.statut_global ||
-                                    selectedDemande.statut) === "Rejeté"
-                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                                : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                            }`}
-                          >
-                            {selectedDemande.statut_global ||
-                              selectedDemande.statut}
-                          </span>
-                        </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Téléphone
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.employe?.telephone || "N/A"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Poste
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.employe?.poste || selectedDemande.poste || "N/A"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Numéro de réception
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.demandes_detailes?.[0]?.numero_reception || 
+                         selectedDemande.employe?.telephone || 
+                         "N/A"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4 md:col-span-2">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        ID Transaction Lengo Pay
+                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 font-mono break-all">
+                          {selectedDemande.demandes_detailes?.[0]?.pay_id || "Non généré"}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Informations de la demande */}
-                <div className="bg-gradient-to-br from-[var(--zalama-blue)]/10 to-[var(--zalama-green)]/10 dark:from-[var(--zalama-blue)]/20 dark:to-[var(--zalama-green)]/20 border border-[var(--zalama-blue)]/30 dark:border-[var(--zalama-blue)]/50 rounded-lg p-6">
+                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-white dark:bg-gray-800">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-[var(--zalama-blue)]" />
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-blue-600" />
+                    </div>
                     Informations de la demande
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Montant demandé :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.montant_total_demande
-                              ? selectedDemande.montant_total_demande.toLocaleString()
-                              : selectedDemande.montant
-                              ? selectedDemande.montant.toLocaleString()
-                              : "0"}{" "}
-                            GNF
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center py-2">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Date de création :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.date_creation_premiere
-                              ? new Date(
-                                  selectedDemande.date_creation_premiere
-                                ).toLocaleDateString("fr-FR")
-                              : selectedDemande.date || "N/A"}
-                          </span>
-                        </div>
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Montant demandé
+                      </p>
+                      <p className="text-lg font-bold text-green-600">
+                        {selectedDemande.montant_total_demande
+                          ? selectedDemande.montant_total_demande.toLocaleString()
+                          : selectedDemande.montant
+                          ? selectedDemande.montant.toLocaleString()
+                          : "0"}{" "}
+                        GNF
+                      </p>
                     </div>
+                    
                     <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-                      <div className="space-y-3">
-                        <div className="flex justify-between items-center py-2">
-                          <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                            Date de validation :
-                          </span>
-                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {selectedDemande.demandes_detailes &&
-                            selectedDemande.demandes_detailes.length > 0 &&
-                            selectedDemande.demandes_detailes[0].date_validation
-                              ? new Date(
-                                  selectedDemande.demandes_detailes[0].date_validation
-                                ).toLocaleDateString("fr-FR")
-                              : selectedDemande.updated_at
-                              ? new Date(
-                                  selectedDemande.updated_at
-                                ).toLocaleDateString("fr-FR")
-                              : "N/A"}
-                          </span>
-                        </div>
-                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Catégorie
+                      </p>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          selectedDemande.categorie === "mono-mois"
+                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                            : selectedDemande.categorie === "multi-mois"
+                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
+                        }`}
+                      >
+                        {selectedDemande.categorie || "N/A"}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Type de demande
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.type_demande}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Statut
+                      </p>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          (selectedDemande.statut_global || selectedDemande.statut) === "En attente"
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            : (selectedDemande.statut_global || selectedDemande.statut) === "Validé"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            : (selectedDemande.statut_global || selectedDemande.statut) === "Rejeté"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                        }`}
+                      >
+                        {selectedDemande.statut_global || selectedDemande.statut}
+                      </span>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Date de création
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.date_creation_premiere
+                          ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR")
+                          : selectedDemande.date || "N/A"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Date de validation
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.demandes_detailes?.[0]?.date_validation
+                          ? new Date(selectedDemande.demandes_detailes[0].date_validation).toLocaleDateString("fr-FR")
+                          : selectedDemande.updated_at
+                          ? new Date(selectedDemande.updated_at).toLocaleDateString("fr-FR")
+                          : "N/A"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -1526,43 +1523,43 @@ export default function DemandesPage() {
                     <MessageSquare className="w-5 h-5 text-[var(--zalama-green)]" />
                     Détails du motif
                   </h3>
-                  <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-700">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                          Type de motif :
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {selectedDemande.demandes_detailes &&
-                          selectedDemande.demandes_detailes.length > 0 &&
-                          selectedDemande.demandes_detailes[0].type_motif
-                            ? selectedDemande.demandes_detailes[0].type_motif
-                            : selectedDemande.type_motif || "Autre"}
-                        </span>
-                      </div>
-                      <div className="py-2">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400 block mb-2">
-                          Description du motif :
-                        </span>
-                        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
-                          <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
-                            {selectedDemande.demandes_detailes &&
-                            selectedDemande.demandes_detailes.length > 0 &&
-                            selectedDemande.demandes_detailes[0].motif
-                              ? selectedDemande.demandes_detailes[0].motif
-                              : selectedDemande.motif ||
-                                "Aucune description fournie"}
-                          </p>
-                        </div>
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Type de motif
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}
+                      </p>
+                    </div>
+                    
+                    <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                        Description du motif
+                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                        <p className="text-sm text-gray-900 dark:text-white leading-relaxed">
+                          {selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif || "Aucune description fournie"}
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={() => setShowDetailsModal(false)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

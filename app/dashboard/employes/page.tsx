@@ -11,6 +11,7 @@ import {
   Calendar,
   TrendingUp,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
@@ -272,8 +273,19 @@ export default function EmployesPage() {
     }).format(salary);
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("fr-FR");
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "Non définie";
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "Date invalide";
+      return date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch {
+      return "Date invalide";
+    }
   };
 
   // Gestion des modales
@@ -704,96 +716,205 @@ export default function EmployesPage() {
 
       {/* Modal de visualisation des détails */}
       {isViewModalOpen && selectedEmployee && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white dark:bg-gray-800">
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Détails de l'employé
-                </h3>
-                <button
-                  onClick={closeViewModal}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                >
-                  ×
-                </button>
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {selectedEmployee.prenom} {selectedEmployee.nom}
+                </p>
               </div>
+              <button
+                onClick={closeViewModal}
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Nom complet
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.prenom} {selectedEmployee.nom}
-                  </p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      Prénom
+                    </label>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.prenom}
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      Nom
+                    </label>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.nom}
+                    </p>
+                  </div>
                 </div>
+                {/* Informations personnelles */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Email
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.email || "Non défini"}
-                  </p>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Informations Personnelles
+                  </h3>
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white break-all">
+                          {selectedEmployee.email || "Non défini"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Téléphone</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.telephone || "Non défini"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Genre</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.genre || "Non défini"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Statut</p>
+                        <span
+                          className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
+                            selectedEmployee.actif
+                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                          }`}
+                        >
+                          {selectedEmployee.actif ? "Actif" : "Inactif"}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedEmployee.adresse && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Adresse</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.adresse}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
+                
+                {/* Informations professionnelles */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Téléphone
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.telephone || "Non défini"}
-                  </p>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Informations Professionnelles
+                  </h3>
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Poste</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.poste}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Type de contrat</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.type_contrat}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedEmployee.role && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Rôle</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {selectedEmployee.role}
+                        </p>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'embauche</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {selectedEmployee.date_embauche
+                          ? formatDate(selectedEmployee.date_embauche)
+                          : "Non définie"}
+                      </p>
+                    </div>
+                  </div>
                 </div>
+                
+                {/* Informations financières */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Poste
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.poste}
-                  </p>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Informations Financières
+                  </h3>
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire net</p>
+                        <p className="text-lg font-bold text-green-600">
+                          {selectedEmployee.salaire_net
+                            ? formatSalary(selectedEmployee.salaire_net)
+                            : "Non défini"}
+                        </p>
+                      </div>
+                      {selectedEmployee.salaire_restant !== undefined && selectedEmployee.salaire_restant !== null && (
+                        <div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire restant</p>
+                          <p className="text-lg font-bold text-blue-600">
+                            {formatSalary(selectedEmployee.salaire_restant)}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
+                
+                {/* Informations système */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Type de contrat
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.type_contrat}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Salaire net
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.salaire_net
-                      ? formatSalary(selectedEmployee.salaire_net)
-                      : "Non défini"}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Date d'embauche
-                  </label>
-                  <p className="mt-1 text-sm text-gray-900 dark:text-white">
-                    {selectedEmployee.date_embauche
-                      ? formatDate(selectedEmployee.date_embauche)
-                      : "Non définie"}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Statut
-                  </label>
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedEmployee.actif
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                    }`}
-                  >
-                    {selectedEmployee.actif ? "Actif" : "Inactif"}
-                  </span>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                    Informations Système
+                  </h3>
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date de création</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {formatDate(selectedEmployee.created_at)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Dernière modification</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {formatDate(selectedEmployee.updated_at)}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedEmployee.user_id && (
+                      <div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ID Utilisateur</p>
+                        <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                          {selectedEmployee.user_id}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={closeViewModal}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              >
+                Fermer
+              </button>
             </div>
           </div>
         </div>
