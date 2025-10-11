@@ -399,7 +399,7 @@ export default function EmployesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* En-tête */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center space-x-4">

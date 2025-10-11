@@ -871,12 +871,12 @@ export default function ParametresPage() {
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                   <button
-                    onClick={() => theme === "dark" && toggleTheme()}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      theme === "light"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
+                    onClick={() => {
+                      // 🚫 TEMPORAIRE : Désactiver le thème blanc
+                      console.log('🚫 Thème blanc temporairement désactivé');
+                    }}
+                    disabled
+                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-yellow-100 rounded-lg">
@@ -887,19 +887,19 @@ export default function ParametresPage() {
                           Clair
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Thème lumineux
+                          🚫 Temporairement désactivé
                         </div>
                       </div>
                     </div>
                   </button>
 
                   <button
-                    onClick={() => theme === "light" && toggleTheme()}
-                    className={`p-4 rounded-lg border-2 transition-all ${
-                      theme === "dark"
-                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
-                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
+                    onClick={() => {
+                      // 🚫 TEMPORAIRE : Désactiver le toggle
+                      console.log('🚫 Toggle de thème temporairement désactivé');
+                    }}
+                    disabled
+                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
                   >
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-gray-800 rounded-lg">
@@ -910,7 +910,7 @@ export default function ParametresPage() {
                           Sombre
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          Thème sombre
+                          ✅ Actif (seul mode disponible)
                         </div>
                       </div>
                     </div>

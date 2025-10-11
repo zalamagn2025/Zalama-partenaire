@@ -30,7 +30,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { toast } from "sonner";
+import { useCustomToast } from "@/hooks/useCustomToast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 // Fonction pour formatter les montants en GNF
@@ -52,6 +52,7 @@ const formatDate = (dateString: string) => {
 
 export default function EntrepriseDashboardPage() {
   const { session, loading } = useEdgeAuthContext();
+  const toast = useCustomToast();
   const router = useRouter();
 
   // États pour les données Edge Function
@@ -175,7 +176,7 @@ export default function EntrepriseDashboardPage() {
           }`
         );
       } else {
-        toast.success("Données du dashboard mises à jour");
+        toast.updateSuccess("données du dashboard");
       }
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
@@ -185,19 +186,17 @@ export default function EntrepriseDashboardPage() {
 
       // Vérifier si c'est une erreur d'authentification ou de route
       if (errorMessage.includes("401") || errorMessage.includes("403")) {
-        toast.error("Session expirée. Redirection vers la connexion...");
+        toast.sessionError();
         setTimeout(() => {
           router.push("/login");
         }, 2000);
       } else if (errorMessage.includes("404")) {
-        toast.error(
-          "Service temporairement indisponible. Redirection vers la connexion..."
-        );
+        toast.error("Service temporairement indisponible. Redirection vers la connexion...");
         setTimeout(() => {
           router.push("/login");
         }, 2000);
       } else {
-        toast.error("Erreur lors du chargement des données du dashboard");
+        toast.loadingError("données du dashboard");
       }
     } finally {
       setIsLoading(false);
@@ -262,12 +261,7 @@ export default function EntrepriseDashboardPage() {
   useEffect(() => {
     if (session?.partner && !isLoading && dashboardData) {
       console.log("Données du partenaire:", session.partner);
-      toast.success(
-        `Bienvenue sur le tableau de bord de ${session.partner.company_name}`,
-        {
-          id: "dashboard-welcome",
-        }
-      );
+      toast.welcome(session.partner.company_name);
     }
   }, [session?.partner, isLoading, dashboardData]);
 
@@ -387,7 +381,7 @@ export default function EntrepriseDashboardPage() {
   const hasMontantsData = montantsEvolutionData.some((d: any) => d.montant > 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* Section Filtres */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -521,10 +515,9 @@ export default function EntrepriseDashboardPage() {
       {/* En-tête du tableau de bord */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-900 rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden">
+          <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${partnerInfo?.logo_url ? 'bg-white border-2 border-gray-200' : 'bg-blue-900'}`}>
             {partnerInfo?.logo_url ? (
               <>
-                {/* Fond blanc pour les PNG avec transparence */}
                 <div className="absolute inset-0 bg-white rounded-lg"></div>
                 <Image
                   src={partnerInfo.logo_url}

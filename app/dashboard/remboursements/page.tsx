@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
@@ -77,6 +78,20 @@ type Remboursement = {
       date_validation: string;
     };
   }[];
+};
+
+// Fonction pour obtenir le badge de statut
+const getStatusBadge = (statut: string) => {
+  switch (statut) {
+    case "PAYE":
+      return <Badge className="bg-green-500">Payé</Badge>;
+    case "EN_ATTENTE":
+      return <Badge className="bg-yellow-500">En attente</Badge>;
+    case "EN_RETARD":
+      return <Badge className="bg-red-500">En retard</Badge>;
+    default:
+      return <Badge className="bg-gray-500">{statut}</Badge>;
+  }
 };
 
 export default function RemboursementsPage() {
@@ -1372,16 +1387,15 @@ export default function RemboursementsPage() {
       {/* Modal de détail professionnelle */}
       {showDetailModal && selectedRemboursement && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Receipt className="w-6 h-6 text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Détail du remboursement
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Informations complètes et historique de la demande d'avance salariale
+                  Référence: {selectedRemboursement.id || "N/A"}
                 </p>
               </div>
               <button
@@ -1393,273 +1407,111 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Content - Scrollable */}
-            <div className="p-8 space-y-8 overflow-y-auto flex-1">
-              {/* Section Employé */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                    <User className="w-5 h-5 text-orange-600" />
-                  </div>
-                  Informations employé
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* Informations de l'employé */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Informations Employé
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Nom complet
-                    </p>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedRemboursement.employee?.nom}{" "}
-                      {selectedRemboursement.employee?.prenom}
+                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <div>
+                    <p className="text-xs text-gray-500">Nom complet</p>
+                    <p className="font-medium">
+                      {selectedRemboursement.employee?.prenom} {selectedRemboursement.employee?.nom}
                     </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Salaire net mensuel
-                    </p>
-                    <p className="font-medium text-green-600">
-                      {gnfFormatter(getSalaireNet(selectedRemboursement))}
-                    </p>
+                  <div>
+                    <p className="text-xs text-gray-500">Poste</p>
+                    <p className="font-medium">{selectedRemboursement.employee?.poste || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Email</p>
+                    <p className="font-medium text-sm">{selectedRemboursement.employee?.email || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Téléphone</p>
+                    <p className="font-medium">{selectedRemboursement.employee?.telephone || "N/A"}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Section Détails financiers */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                    <DollarSign className="w-5 h-5 text-green-600" />
-                  </div>
-                  Détails financiers
+              {/* Détails Financiers */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Détails Financiers
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Montant demandé
-                    </p>
-                    <p className="text-lg font-bold text-blue-600">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Montant demandé</p>
+                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
                       {gnfFormatter(getMontantDemande(selectedRemboursement))}
                     </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Frais de service (6,5%)
-                    </p>
-                    <p className="text-lg font-bold text-gray-800 dark:text-gray-300">
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Frais de service (6,5%)</p>
+                    <p className="text-xl font-bold text-gray-600 dark:text-gray-400">
                       {gnfFormatter(getFraisService(selectedRemboursement))}
                     </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Montant reçu par l'employé
-                    </p>
-                    <p className="text-lg font-bold text-green-600">
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                    <p className="text-xs text-green-600 dark:text-green-400 mb-2">Montant reçu</p>
+                    <p className="text-xl font-bold text-green-600 dark:text-green-400">
                       {gnfFormatter(getMontantRecu(selectedRemboursement))}
                     </p>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Dû à ZaLaMa
-                    </p>
-                    <p className="text-lg font-bold text-red-600">
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                    <p className="text-xs text-red-600 dark:text-red-400 mb-2">Remboursement dû</p>
+                    <p className="text-xl font-bold text-red-600 dark:text-red-400">
                       {gnfFormatter(getRemboursementDu(selectedRemboursement))}
                     </p>
                   </div>
                 </div>
-                <div className="mt-6 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5 border-l-4 border-orange-500">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                    Salaire restant après remboursement
-                  </p>
-                  <p className="text-2xl font-bold text-orange-600">
-                    {gnfFormatter(calculateSalaireRestant(selectedRemboursement))}
-                  </p>
-                </div>
               </div>
 
-              {/* Section Dates */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                    <Calendar className="w-5 h-5 text-purple-600" />
-                  </div>
-                  Informations temporelles
+              {/* Dates et Statut */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
+                  Dates et Statut
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Date de l'avance
-                    </p>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Date d'avance</span>
+                    <span className="font-medium">
                       {selectedRemboursement.demande_avance?.date_validation
                         ? new Date(selectedRemboursement.demande_avance.date_validation).toLocaleDateString("fr-FR")
-                        : "-"}
-                    </p>
+                        : "N/A"}
+                    </span>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Date limite remboursement
-                    </p>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Date limite</span>
+                    <span className="font-medium">
                       {new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString("fr-FR")}
-                    </p>
+                    </span>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4">
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                      Date de paiement
-                    </p>
-                    <p className="font-medium text-gray-900 dark:text-white">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
+                    <span className="font-medium">
                       {selectedRemboursement.date_remboursement_effectue
                         ? new Date(selectedRemboursement.date_remboursement_effectue).toLocaleDateString("fr-FR")
                         : "Non payé"}
-                    </p>
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600 dark:text-gray-400">Statut</span>
+                    <span>{getStatusBadge(selectedRemboursement.statut_remboursement)}</span>
                   </div>
                 </div>
               </div>
-
-              {/* Section Statut */}
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                  <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    <AlertCircle className="w-5 h-5 text-gray-600" />
-                  </div>
-                  Statut actuel
-                </h3>
-                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-5">
-                  <span
-                    className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium
-                    ${
-                      selectedRemboursement.statut === "PAYE"
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                        : selectedRemboursement.statut === "EN_ATTENTE"
-                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
-                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
-                    }`}
-                  >
-                    {selectedRemboursement.statut === "PAYE" ? (
-                      <>
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Payé
-                      </>
-                    ) : selectedRemboursement.statut === "EN_ATTENTE" ? (
-                      <>
-                        <Clock className="w-4 h-4 mr-2" />
-                        En attente
-                      </>
-                    ) : (
-                      selectedRemboursement.statut
-                    )}
-                  </span>
-                </div>
-              </div>
-
-              {/* Section Historique */}
-              {selectedRemboursement.tous_remboursements &&
-                selectedRemboursement.tous_remboursements.length > 0 && (
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-8 bg-white dark:bg-gray-800">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-3">
-                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                          <History className="w-5 h-5 text-indigo-600" />
-                        </div>
-                        Historique des remboursements
-                        <span className="text-xs bg-indigo-100 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-400 px-3 py-1.5 rounded-full ml-auto">
-                          {selectedRemboursement.tous_remboursements.length} remboursement(s)
-                        </span>
-                      </h3>
-                      <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
-                        {selectedRemboursement.tous_remboursements.map(
-                          (remb, index) => {
-                            // Calculer le salaire restant après ce remboursement
-                            let salaireRestantApres = getSalaireNet(
-                              selectedRemboursement
-                            );
-                            for (let i = 0; i <= index; i++) {
-                              const rembCourant =
-                                selectedRemboursement.tous_remboursements![i];
-                              const montantRemboursement = Number(
-                                rembCourant.montant_total_remboursement || 0
-                              );
-                              salaireRestantApres = Math.max(
-                                0,
-                                salaireRestantApres - montantRemboursement
-                              );
-                            }
-
-                            return (
-                              <div
-                                key={index}
-                                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5"
-                              >
-                                <div className="flex justify-between items-start mb-4">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/20 rounded-full flex items-center justify-center text-xs font-bold text-indigo-800 dark:text-indigo-400">
-                                      {index + 1}
-                                    </div>
-                                    <span className="font-medium">
-                                      Remboursement #{index + 1}
-                                    </span>
-                                  </div>
-                                  <span className="font-bold text-lg">
-                                    {gnfFormatter(
-                                      Number(
-                                        remb.montant_total_remboursement || 0
-                                      )
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-6 text-sm">
-                                  <div>
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                      Statut:{" "}
-                                    </span>
-                                    <span
-                                      className={`font-medium ${
-                                        remb.statut === "PAYE"
-                                          ? "text-green-600"
-                                          : "text-yellow-600"
-                                      }`}
-                                    >
-                                      {remb.statut}
-                                    </span>
-                                  </div>
-                                  <div>
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                      Date:{" "}
-                                    </span>
-                                    <span className="font-medium">
-                                      {remb.date_creation
-                                        ? new Date(
-                                            remb.date_creation
-                                          ).toLocaleDateString("fr-FR")
-                                        : "-"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                                  <div className="text-xs text-emerald-600 dark:text-emerald-400">
-                                    <span className="font-medium">
-                                      Salaire restant après ce remboursement:{" "}
-                                    </span>
-                                    <span className="font-bold">
-                                      {gnfFormatter(salaireRestantApres)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                    </div>
-                )}
             </div>
             
             {/* Footer */}
             <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              <Button 
+                onClick={() => setShowDetailModal(false)} 
+                className="bg-red-500 hover:bg-red-600 text-white"
               >
                 Fermer
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1670,22 +1522,21 @@ export default function RemboursementsPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Building className="w-6 h-6 text-green-600" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Informations Financières - ZaLaMa SARL
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   Relevé d'identité bancaire et coordonnées de l'entreprise
                 </p>
               </div>
-              <button
+              <Button
                 onClick={() => setShowFinancialInfoModal(false)}
                 className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
               >
                 <X className="h-5 w-5" />
-              </button>
+              </Button>
             </div>
             
             {/* Content - Scrollable */}
@@ -1877,12 +1728,12 @@ export default function RemboursementsPage() {
             
             {/* Footer */}
             <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={() => setShowFinancialInfoModal(false)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              <Button 
+                onClick={() => setShowFinancialInfoModal(false)} 
+                className="bg-red-500 hover:bg-red-600 text-white"
               >
                 Fermer
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1891,12 +1742,11 @@ export default function RemboursementsPage() {
       {/* Modal des détails d'un employé */}
       {showEmployeeDetailsModal && selectedEmployeeDetails && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <User className="w-6 h-6 text-blue-600" />
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                   Détails des remboursements - {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom}
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -1959,44 +1809,52 @@ export default function RemboursementsPage() {
 
               {/* Résumé des remboursements */}
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-8">
-                <h4 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-6">
+                <h4 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-8">
                   Résumé des remboursements
                 </h4>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                      {selectedEmployeeDetails.nombre_remboursements}
-                    </div>
-                    <div className="text-sm text-blue-700 dark:text-blue-300">
-                      Remboursements
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">
-                      {gnfFormatter(
-                        selectedEmployeeDetails.montant_total_remboursement
-                      )}
-                    </div>
-                    <div className="text-sm text-red-700 dark:text-red-300">
-                      Total à rembourser
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-blue-200 dark:border-blue-800">
+                    <div className="text-center">
+                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">
+                        {selectedEmployeeDetails.nombre_remboursements}
+                      </div>
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                        Remboursements
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                      {gnfFormatter(
-                        selectedEmployeeDetails.frais_service_total
-                      )}
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-300">
-                      Frais service
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-red-200 dark:border-red-800">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3 break-words">
+                        {gnfFormatter(
+                          selectedEmployeeDetails.montant_total_remboursement
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                        Total à rembourser
+                      </div>
                     </div>
                   </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                      {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-300 dark:border-gray-700">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400 mb-3 break-words">
+                        {gnfFormatter(
+                          selectedEmployeeDetails.frais_service_total
+                        )}
+                      </div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Frais service
+                      </div>
                     </div>
-                    <div className="text-sm text-emerald-700 dark:text-emerald-300">
-                      Salaire restant
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-emerald-200 dark:border-emerald-800">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-3 break-words">
+                        {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                      </div>
+                      <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                        Salaire restant
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -2025,119 +1883,64 @@ export default function RemboursementsPage() {
                     (remb: any, index: number) => (
                       <div
                         key={remb.id}
-                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8"
+                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
                       >
-                        <div className="flex justify-between items-start mb-4">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center text-xs font-bold text-blue-800 dark:text-blue-400">
+                        {/* En-tête du remboursement */}
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-semibold text-sm">
                               {index + 1}
                             </div>
-                            <span className="font-medium text-gray-900 dark:text-white">
-                              Remboursement #{index + 1}
+                            <div>
+                              <h5 className="font-semibold text-gray-900 dark:text-white">
+                                Remboursement #{index + 1}
+                              </h5>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Date: {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total dû</p>
+                            <span className="font-bold text-xl text-gray-900 dark:text-white">
+                              {gnfFormatter(remb.montant_total_remboursement)}
                             </span>
                           </div>
-                          <span className="font-bold text-lg text-red-600 dark:text-red-400">
-                            {gnfFormatter(remb.montant_total_remboursement)}
-                          </span>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 text-sm">
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Montant demandé:
-                            </span>
-                            <p className="font-medium text-gray-900 dark:text-white">
+
+                        {/* Détails financiers en cartes */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant demandé</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
                               {gnfFormatter(remb.montant_transaction)}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Frais service (6,5%):
-                            </span>
-                            <p className="font-medium text-gray-900 dark:text-white">
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Frais service (6,5%)</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
                               {gnfFormatter(remb.montant_transaction * 0.065)}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Montant reçu:
-                            </span>
-                            <p className="font-medium text-emerald-600 dark:text-emerald-400">
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant reçu</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
                               {gnfFormatter(
-                                remb.montant_transaction -
-                                  remb.montant_transaction * 0.065
+                                remb.montant_transaction - remb.montant_transaction * 0.065
                               )}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Remboursement dû:
-                            </span>
-                            <p className="font-medium text-red-600 dark:text-red-400">
+                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Remboursement dû</p>
+                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
                               {gnfFormatter(remb.montant_total_remboursement)}
                             </p>
                           </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Date avance:
-                            </span>
-                            <p className="text-gray-900 dark:text-white">
-                              {new Date(remb.date_creation).toLocaleDateString(
-                                "fr-FR"
-                              )}
-                            </p>
-                          </div>
-                          <div>
-                            <span className="text-gray-500 dark:text-gray-400">
-                              Statut:
-                            </span>
-                            <p>
-                              <span
-                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                  remb.statut === "EN_ATTENTE"
-                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                                    : remb.statut === "PAYE"
-                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                    : remb.statut === "EN_RETARD"
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                                    : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-                                }`}
-                              >
-                                {remb.statut}
-                              </span>
-                            </p>
-                          </div>
                         </div>
-                        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-6">
-                              <div>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  Catégorie:
-                                </span>
-                                <span
-                                  className={`ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    selectedEmployeeDetails.categorie ===
-                                    "mono-mois"
-                                      ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
-                                      : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300"
-                                  }`}
-                                >
-                                  {selectedEmployeeDetails.categorie ===
-                                  "mono-mois"
-                                    ? "Mono-mois"
-                                    : "Multi-mois"}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-gray-500 dark:text-gray-400">
-                                  Pay ID:
-                                </span>
-                                <span className="ml-2 text-gray-900 dark:text-white">
-                                  {remb.pay_id || "Non défini"}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
+
+                        {/* Statut */}
+                        <div className="flex items-center justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                          {getStatusBadge(remb.statut)}
                         </div>
                       </div>
                     )
@@ -2148,12 +1951,12 @@ export default function RemboursementsPage() {
             
             {/* Footer */}
             <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={() => setShowEmployeeDetailsModal(false)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
+              <Button 
+                onClick={() => setShowEmployeeDetailsModal(false)} 
+                className="bg-red-500 hover:bg-red-600 text-white"
               >
                 Fermer
-              </button>
+              </Button>
             </div>
           </div>
         </div>
