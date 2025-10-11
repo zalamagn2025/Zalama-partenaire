@@ -482,15 +482,88 @@ export default function AvisPage() {
         },
       ];
 
-  // Afficher un indicateur de chargement pendant la vérification de l'authentification
-  if (loading) {
+  // Afficher un skeleton loader pendant le chargement
+  if (loading || isLoading) {
     return (
-      <LoadingSpinner fullScreen={true} message="Chargement des avis..." />
+      <div className="p-6 space-y-6 animate-pulse">
+        {/* En-tête skeleton */}
+        <div className="space-y-2">
+          <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-64"></div>
+          <div className="h-5 bg-gray-200 dark:bg-gray-800 rounded w-96"></div>
+        </div>
+
+        {/* Titre statistiques skeleton */}
+        <div className="h-7 bg-gray-200 dark:bg-gray-800 rounded w-56 mt-2"></div>
+
+        {/* Stat cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          ))}
+        </div>
+
+        {/* Graphique skeleton */}
+        <div className="mt-6">
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6 overflow-hidden">
+            <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-48 mb-4"></div>
+            <div className="h-80 bg-gray-300 dark:bg-gray-700 rounded w-full"></div>
+          </div>
+        </div>
+
+        {/* Barre d'actions skeleton */}
+        <div className="flex flex-col sm:flex-row justify-between gap-4 mt-2">
+          <div className="flex gap-2">
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-64"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-32"></div>
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-32"></div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-32"></div>
+          </div>
+        </div>
+
+        {/* Liste avis skeleton */}
+        <div className="space-y-4 mt-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
+              <div className="flex gap-6">
+                <div className="flex-shrink-0">
+                  <div className="w-20 h-20 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+                  <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-20 mt-2"></div>
+                  <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-16 mt-1"></div>
+                </div>
+                <div className="flex-1 space-y-3">
+                  <div className="flex justify-between">
+                    <div className="h-6 bg-gray-300 dark:bg-gray-700 rounded w-48"></div>
+                    <div className="h-5 bg-gray-300 dark:bg-gray-700 rounded w-24"></div>
+                  </div>
+                  <div className="h-16 bg-gray-300 dark:bg-gray-700 rounded"></div>
+                  <div className="flex gap-4">
+                    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-24"></div>
+                    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-20"></div>
+                    <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-28"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination skeleton */}
+        <div className="flex items-center justify-between mt-6">
+          <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-48"></div>
+          <div className="flex gap-1">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-9 w-20 bg-gray-200 dark:bg-gray-800 rounded"></div>
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="p-6 space-y-6 max-w-full overflow-hidden">
       <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
         Avis des Salariés
       </h1>
@@ -516,11 +589,11 @@ export default function AvisPage() {
 
       {/* Graphiques */}
       <div className="mt-6">
-        <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6 w-full">
+        <div className="bg-[var(--zalama-card)] rounded-lg border border-[var(--zalama-border)] p-6">
           <h2 className="text-lg font-semibold text-[var(--zalama-text)] mb-4">
             Évolution des notes
           </h2>
-          <div className="h-80 w-full">
+          <div className="h-80 w-full overflow-hidden">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart
                 data={getEvolutionNotesData(avis)}

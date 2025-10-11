@@ -12,9 +12,17 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // 🚫 TEMPORAIRE : Désactiver le thème blanc - forcer le thème sombre
   const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
+    // 🚫 TEMPORAIRE : Forcer le thème sombre uniquement
+    setTheme('dark');
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.classList.add('dark');
+    
+    // 🚫 TEMPORAIRE : Ignorer localStorage et préférences système
+    /*
     // Vérifier si un thème est déjà enregistré dans localStorage
     const savedTheme = localStorage.getItem('zalama-theme');
     if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
@@ -39,9 +47,15 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         document.documentElement.classList.remove('dark');
       }
     }
+    */
   }, []);
 
   const toggleTheme = () => {
+    // 🚫 TEMPORAIRE : Désactiver le toggle - rester en mode sombre
+    console.log('🚫 Thème blanc temporairement désactivé - rester en mode sombre');
+    return;
+    
+    /*
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(newTheme);
     document.documentElement.setAttribute('data-theme', newTheme);
@@ -53,6 +67,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
+    */
   };
 
   return (
