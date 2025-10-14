@@ -12,6 +12,7 @@ import {
   Star,
   UserCheck,
   Banknote,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -36,6 +37,12 @@ const getNavItems = () => [
     label: "Paiements",
     icon: Banknote,
     href: `/dashboard/paiements`,
+  },
+  // Ajout du lien Paiements des Salaires
+  {
+    label: "Paiements des Salaires",
+    icon: DollarSign,
+    href: `/dashboard/payment-salary`,
   },
   // Ajout du lien Remboursements
   {

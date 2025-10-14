@@ -7,6 +7,8 @@ const DASHBOARD_EDGE_FUNCTION_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-d
 const PARTNER_FINANCES_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-finances`;
 const PARTNER_REIMBURSEMENTS_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-reimbursements`;
 const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
+const PAYMENT_EXECUTION_URL = `${SUPABASE_URL}/functions/v1/payment-execution`;
+const PAYMENT_EMPLOYEES_URL = `${SUPABASE_URL}/functions/v1/payment-employees`;
 
 export interface PartnerAuthResponse {
   success: boolean;
@@ -93,6 +95,93 @@ export interface ApprovalResponse {
   };
 }
 
+export interface PaymentEmployee {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  poste: string;
+  type_contrat: string;
+  telephone: string;
+  date_embauche: string;
+  salaire_net: number;
+  avances_deduites: number;
+  avances_mono_mois: number;
+  avances_multi_mois: number;
+  salaire_disponible: number;
+  periode_debut: string;
+  periode_fin: string;
+  deja_paye: boolean;
+  paiement_existant: {
+    id: string;
+    reference: string;
+  } | null;
+  eligible_paiement: boolean;
+  nombre_avances: number;
+  details_avances: Array<{
+    id: string;
+    type: "MONO_MOIS" | "MULTI_MOIS";
+    montant: number;
+    montant_echeance?: number;
+    num_installments: number;
+    echeance_actuelle?: number;
+    statut_remboursement: string;
+  }>;
+}
+
+export interface PaymentEmployeesResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    partenaire: {
+      id: string;
+      nom: string;
+      payment_day: number;
+    };
+    periode: {
+      debut: string;
+      fin: string;
+      mois: number;
+      annee: number;
+    };
+    employes: PaymentEmployee[];
+    statistiques: {
+      total_employes: number;
+      employes_eligibles: number;
+      employes_deja_payes: number;
+      employes_sans_salaire: number;
+      montant_total_net: number;
+      montant_total_avances: number;
+      montant_total_disponible: number;
+      avances_mono_mois_total: number;
+      avances_multi_mois_total: number;
+    };
+  };
+}
+
+export interface PaymentExecutionRequest {
+  employes_selectionnes?: string[];
+  mois?: number;
+  annee?: number;
+}
+
+export interface PaymentExecutionResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    partenaire: string;
+    periode: string;
+    periode_details: string;
+    message: string;
+    nombre_employes: number;
+    montant_total: number;
+    methode_paiement: string;
+    intervention_zalama: boolean;
+    frais_intervention: number;
+    paiements: any[];
+  };
+}
+
 export interface DashboardDataResponse {
   success: boolean;
   message: string;
@@ -125,7 +214,11 @@ export interface DashboardDataResponse {
     charts: {
       demandes_evolution: Array<{ mois: string; demandes: number }>;
       montants_evolution: Array<{ mois: string; montant: number }>;
-      repartition_motifs: Array<{ motif: string; valeur: number; color: string }>;
+      repartition_motifs: Array<{
+        motif: string;
+        valeur: number;
+        color: string;
+      }>;
     };
     partner_info: {
       id: string;
@@ -254,26 +347,26 @@ class EdgeFunctionService {
     filters: any = {}
   ): Promise<T> {
     // Utiliser les proxies locaux pour les endpoints salary-demands
-    if (endpoint.startsWith('/salary-demands')) {
+    if (endpoint.startsWith("/salary-demands")) {
       const url = `/api/proxy${endpoint}`;
       return this.makeLocalRequest<T>(url, options);
     }
-    
+
     // Utiliser les proxies locaux pour les endpoints partner-finances
     if (useFinancesApi) {
       const url = `/api/proxy/partner-finances${endpoint}`;
       return this.makeLocalRequest<T>(url, options);
     }
-    
+
     // Utiliser les proxies locaux pour les endpoints partner-reimbursements
     if (useReimbursementsApi) {
       let url = `/api/proxy/partner-reimbursements${endpoint}`;
-      
+
       // Ajouter les filtres comme paramètres de requête
       if (Object.keys(filters).length > 0) {
         const searchParams = new URLSearchParams();
         Object.entries(filters).forEach(([key, value]) => {
-          if (value !== null && value !== undefined && value !== '') {
+          if (value !== null && value !== undefined && value !== "") {
             searchParams.append(key, String(value));
           }
         });
@@ -281,10 +374,10 @@ class EdgeFunctionService {
           url += `?${searchParams.toString()}`;
         }
       }
-      
+
       return this.makeLocalRequest<T>(url, options);
     }
-    
+
     let baseUrl = EDGE_FUNCTION_BASE_URL;
     if (useDashboardApi) {
       baseUrl = DASHBOARD_EDGE_FUNCTION_BASE_URL;
@@ -378,14 +471,14 @@ class EdgeFunctionService {
     return this.makeRequest<DashboardDataResponse>("/dashboard-data", {}, true);
   }
 
-
-
   async getAvis(): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/avis", {}, true);
   }
 
   async getDemandes(status?: string): Promise<PartnerAuthResponse> {
-    const endpoint = status ? `/salary-demands?status=${encodeURIComponent(status)}` : "/salary-demands";
+    const endpoint = status
+      ? `/salary-demands?status=${encodeURIComponent(status)}`
+      : "/salary-demands";
     return this.makeRequest<PartnerAuthResponse>(endpoint, {}, true);
   }
 
@@ -453,11 +546,19 @@ class EdgeFunctionService {
   }
 
   async getSalaryDemandsEmployees(): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/salary-demands/employees", {}, true);
+    return this.makeRequest<PartnerAuthResponse>(
+      "/salary-demands/employees",
+      {},
+      true
+    );
   }
 
   async getSalaryDemandsActivityPeriods(): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/salary-demands/activity-periods", {}, true);
+    return this.makeRequest<PartnerAuthResponse>(
+      "/salary-demands/activity-periods",
+      {},
+      true
+    );
   }
 
   async createSalaryDemand(data: {
@@ -467,23 +568,34 @@ class EdgeFunctionService {
     type_motif: string;
     num_installments: number;
   }): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>("/salary-demands", {
-      method: "POST",
-      body: JSON.stringify(data),
-    }, true);
+    return this.makeRequest<PartnerAuthResponse>(
+      "/salary-demands",
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      },
+      true
+    );
   }
 
-  async updateSalaryDemand(id: string, data: {
-    montant_demande?: number;
-    motif?: string;
-    type_motif?: string;
-    commentaire_partenaire?: string;
-    num_installments?: number;
-  }): Promise<PartnerAuthResponse> {
-    return this.makeRequest<PartnerAuthResponse>(`/salary-demands/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }, true);
+  async updateSalaryDemand(
+    id: string,
+    data: {
+      montant_demande?: number;
+      motif?: string;
+      type_motif?: string;
+      commentaire_partenaire?: string;
+      num_installments?: number;
+    }
+  ): Promise<PartnerAuthResponse> {
+    return this.makeRequest<PartnerAuthResponse>(
+      `/salary-demands/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      true
+    );
   }
 
   async getPartnerInfo(): Promise<PartnerAuthResponse> {
@@ -491,7 +603,6 @@ class EdgeFunctionService {
   }
 
   // Méthodes de compatibilité (anciennes)
-
 
   async getDashboardAlerts(): Promise<PartnerAuthResponse> {
     return this.getAlerts();
@@ -505,81 +616,93 @@ class EdgeFunctionService {
   // MÉTHODES POUR L'EDGE FUNCTION PARTNER-FINANCES
   // ========================================
 
-  async getFinancesStats(filters: {
-    mois?: number;
-    annee?: number;
-    date_debut?: string;
-    date_fin?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<PartnerAuthResponse> {
+  async getFinancesStats(
+    filters: {
+      mois?: number;
+      annee?: number;
+      date_debut?: string;
+      date_fin?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<PartnerAuthResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
-    const url = queryString ? `/stats?${queryString}` : '/stats';
-    
+    const url = queryString ? `/stats?${queryString}` : "/stats";
+
     return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
   }
 
-  async getFinancesRemboursements(filters: {
-    mois?: number;
-    annee?: number;
-    date_debut?: string;
-    date_fin?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<PartnerAuthResponse> {
+  async getFinancesRemboursements(
+    filters: {
+      mois?: number;
+      annee?: number;
+      date_debut?: string;
+      date_fin?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<PartnerAuthResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
-    const url = queryString ? `/remboursements?${queryString}` : '/remboursements';
-    
+    const url = queryString
+      ? `/remboursements?${queryString}`
+      : "/remboursements";
+
     return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
   }
 
-  async getFinancesDemandes(filters: {
-    mois?: number;
-    annee?: number;
-    date_debut?: string;
-    date_fin?: string;
-    status?: string;
-    limit?: number;
-    offset?: number;
-  } = {}): Promise<PartnerAuthResponse> {
+  async getFinancesDemandes(
+    filters: {
+      mois?: number;
+      annee?: number;
+      date_debut?: string;
+      date_fin?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ): Promise<PartnerAuthResponse> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {
       if (value !== undefined && value !== null) {
         params.append(key, value.toString());
       }
     });
-    
+
     const queryString = params.toString();
-    const url = queryString ? `/demandes?${queryString}` : '/demandes';
-    
+    const url = queryString ? `/demandes?${queryString}` : "/demandes";
+
     return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
   }
 
-  async getFinancesEvolutionMensuelle(annee?: number): Promise<PartnerAuthResponse> {
+  async getFinancesEvolutionMensuelle(
+    annee?: number
+  ): Promise<PartnerAuthResponse> {
     const params = new URLSearchParams();
     if (annee !== undefined && annee !== null) {
-      params.append('annee', annee.toString());
+      params.append("annee", annee.toString());
     }
-    
+
     const queryString = params.toString();
-    const url = queryString ? `/evolution-mensuelle?${queryString}` : '/evolution-mensuelle';
-    
+    const url = queryString
+      ? `/evolution-mensuelle?${queryString}`
+      : "/evolution-mensuelle";
+
     return this.makeRequest<PartnerAuthResponse>(url, {}, false, true);
   }
 
@@ -613,7 +736,9 @@ class EdgeFunctionService {
   }
 
   // 🏢 Informations du partenaire
-  async getPartnerInfoWithToken(accessToken: string): Promise<PartnerAuthResponse> {
+  async getPartnerInfoWithToken(
+    accessToken: string
+  ): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/partner-info", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -654,7 +779,9 @@ class EdgeFunctionService {
   }
 
   // 📊 Statistiques
-  async getStatisticsWithToken(accessToken: string): Promise<PartnerAuthResponse> {
+  async getStatisticsWithToken(
+    accessToken: string
+  ): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/statistics", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -672,7 +799,9 @@ class EdgeFunctionService {
   }
 
   // 📋 Demandes
-  async getDemandesWithToken(accessToken: string): Promise<PartnerAuthResponse> {
+  async getDemandesWithToken(
+    accessToken: string
+  ): Promise<PartnerAuthResponse> {
     return this.makeRequest<PartnerAuthResponse>("/demandes", {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -845,46 +974,164 @@ class EdgeFunctionService {
 
   // 💰 PARTNER REIMBURSEMENTS - Méthodes pour les remboursements
   async getPartnerRemboursements(filters: any = {}): Promise<any> {
-    return this.makeRequest<any>("/", {
-      method: "GET",
-    }, false, false, true, filters);
+    return this.makeRequest<any>(
+      "/",
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true,
+      filters
+    );
   }
 
   async getPartnerRemboursementById(id: string): Promise<any> {
-    return this.makeRequest<any>(`/${id}`, {
-      method: "GET",
-    }, false, false, true);
+    return this.makeRequest<any>(
+      `/${id}`,
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true
+    );
   }
 
   async updatePartnerRemboursement(id: string, data: any): Promise<any> {
-    return this.makeRequest<any>(`/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    }, false, false, true);
+    return this.makeRequest<any>(
+      `/${id}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(data),
+      },
+      false,
+      false,
+      true
+    );
   }
 
   async getPartnerRemboursementsStatistics(filters: any = {}): Promise<any> {
-    return this.makeRequest<any>("/statistics", {
-      method: "GET",
-    }, false, false, true, filters);
+    return this.makeRequest<any>(
+      "/statistics",
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true,
+      filters
+    );
   }
 
   async getPartnerRemboursementsEmployees(): Promise<any> {
-    return this.makeRequest<any>("/employees", {
-      method: "GET",
-    }, false, false, true);
+    return this.makeRequest<any>(
+      "/employees",
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true
+    );
   }
 
   async getPartnerRemboursementsActivityPeriods(): Promise<any> {
-    return this.makeRequest<any>("/activity-periods", {
-      method: "GET",
-    }, false, false, true);
+    return this.makeRequest<any>(
+      "/activity-periods",
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true
+    );
   }
 
-  async getPartnerRemboursementsEcheances(remboursementId: string): Promise<any> {
-    return this.makeRequest<any>("/echeances", {
+  async getPartnerRemboursementsEcheances(
+    remboursementId: string
+  ): Promise<any> {
+    return this.makeRequest<any>(
+      "/echeances",
+      {
+        method: "GET",
+      },
+      false,
+      false,
+      true,
+      { remboursement_id: remboursementId }
+    );
+  }
+
+  // ========================================
+  // MÉTHODES POUR LES PAIEMENTS DE SALAIRES
+  // ========================================
+
+  // Récupérer les employés avec informations de paiement
+  async getPaymentEmployees(filters?: {
+    mois?: number;
+    annee?: number;
+  }): Promise<PaymentEmployeesResponse> {
+    const params = new URLSearchParams();
+    if (filters?.mois) params.append("mois", filters.mois.toString());
+    if (filters?.annee) params.append("annee", filters.annee.toString());
+
+    const queryString = params.toString();
+    const url = queryString ? `?${queryString}` : "";
+
+    const config: RequestInit = {
       method: "GET",
-    }, false, false, true, { remboursement_id: remboursementId });
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    };
+
+    try {
+      const response = await fetch(`${PAYMENT_EMPLOYEES_URL}${url}`, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des employés:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
+  }
+
+  // Exécuter les paiements de salaires
+  async executeSalaryPayments(
+    request: PaymentExecutionRequest
+  ): Promise<PaymentExecutionResponse> {
+    const config: RequestInit = {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+      body: JSON.stringify(request),
+    };
+
+    try {
+      const response = await fetch(PAYMENT_EXECUTION_URL, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message || data.error || `Erreur ${response.status}`
+        );
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de l'exécution des paiements:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
   }
 }
 
