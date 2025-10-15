@@ -1108,6 +1108,12 @@ class EdgeFunctionService {
   async executeSalaryPayments(
     request: PaymentExecutionRequest
   ): Promise<PaymentExecutionResponse> {
+    // Utiliser le proxy local pour éviter les problèmes CORS en développement
+    const isDevelopment = process.env.NODE_ENV === "development";
+    const url = isDevelopment
+      ? "/api/proxy-payment-execution"
+      : PAYMENT_EXECUTION_URL;
+
     const config: RequestInit = {
       method: "POST",
       headers: {
@@ -1117,8 +1123,14 @@ class EdgeFunctionService {
       body: JSON.stringify(request),
     };
 
+    console.log("🔄 Payment Execution:", {
+      url,
+      isDevelopment,
+      request,
+    });
+
     try {
-      const response = await fetch(PAYMENT_EXECUTION_URL, config);
+      const response = await fetch(url, config);
       const data = await response.json();
 
       if (!response.ok) {
