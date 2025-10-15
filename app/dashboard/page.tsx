@@ -382,136 +382,6 @@ export default function EntrepriseDashboardPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* Section Filtres */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-gray-600 dark:text-white text-sm font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtres de période
-          </h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md transition-colors flex items-center gap-1"
-            >
-              <Calendar className="h-3 w-3" />
-              {showFilters ? "Masquer" : "Filtrer"}
-            </button>
-            <button
-              onClick={() => loadDashboardData()}
-              disabled={isLoading}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              title="Actualiser les données"
-            >
-              <RefreshCw
-                className={`h-4 w-4 text-gray-500 ${
-                  isLoading ? "animate-spin" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Mois
-              </label>
-              <select
-                value={selectedMonth || ""}
-                onChange={(e) => {
-                  const month = e.target.value
-                    ? parseInt(e.target.value)
-                    : null;
-                  setSelectedMonth(month);
-                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                  if (month && !selectedYear) {
-                    setSelectedYear(new Date().getFullYear());
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Mois en cours</option>
-                {months.map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Année
-              </label>
-              <select
-                value={selectedYear || ""}
-                onChange={(e) =>
-                  setSelectedYear(
-                    e.target.value ? parseInt(e.target.value) : null
-                  )
-                }
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Année en cours</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end gap-2">
-              <button
-                onClick={applyFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                Appliquer
-              </button>
-              <button
-                onClick={resetFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        )}
-
-        {filters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Période actuelle
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.period_description || "Mois en cours"}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Jour de paiement
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.payment_day || "Non défini"}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Statut
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.applied
-                  ? "Filtres actifs"
-                  : "Données du mois en cours"}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* En-tête du tableau de bord */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
         <div className="flex items-center gap-4">
@@ -555,6 +425,178 @@ export default function EntrepriseDashboardPage() {
             Compte actif
           </span>
         </div>
+      </div>
+
+      {/* Informations de contexte - Extrait de la carte des filtres */}
+      {filters && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Période actuelle
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.period_description || "Mois en cours"}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <RefreshCw className="w-4 h-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Jour de paiement
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.payment_day || "Non défini"}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <Filter className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Statut des filtres
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.applied
+                    ? "Filtres actifs"
+                    : "Données du mois en cours"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtres avancés - Style identique à la page remboursements */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => loadDashboardData()}
+                disabled={isLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            {/* Filtre par mois */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mois
+              </label>
+              <select
+                value={selectedMonth || ""}
+                onChange={(e) => {
+                  const month = e.target.value
+                    ? parseInt(e.target.value)
+                    : null;
+                  setSelectedMonth(month);
+                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                  if (month && !selectedYear) {
+                    setSelectedYear(new Date().getFullYear());
+                  }
+                }}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Tous les mois</option>
+                {months.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par année */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Année
+              </label>
+              <select
+                value={selectedYear || ""}
+                onChange={(e) =>
+                  setSelectedYear(
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Toutes les années</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex items-end gap-2">
+              <button
+                onClick={applyFilters}
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                Appliquer
+              </button>
+              <button
+                onClick={resetFilters}
+                disabled={isLoading}
+                className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {isLoading && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
       </div>
 
       {/* Cartes statistiques principales */}
