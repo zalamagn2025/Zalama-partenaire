@@ -13,6 +13,7 @@ import {
   UserCheck,
   Banknote,
   DollarSign,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,7 +27,7 @@ const getNavItems = () => [
   { label: "Tableau de bord", icon: Home, href: `/dashboard` },
   {
     label: "Demandes d'Adhésion",
-    icon: Users,
+    icon: UserPlus,
     href: `/dashboard/demandes-adhesion`,
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },

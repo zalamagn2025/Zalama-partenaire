@@ -16,6 +16,7 @@ import {
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import type { Employee } from "@/lib/supabase";
 
@@ -63,33 +64,19 @@ export default function EmployesPage() {
     }
   }, [loading, session?.partner]);
 
-  const loadEmployees = async (page: number = 1, filters: any = {}) => {
+  const loadEmployees = async () => {
     if (!session?.access_token) return;
 
     setIsLoading(true);
     try {
-      // Construire les paramètres de requête
-      const queryParams = new URLSearchParams();
-      queryParams.append("limit", employeesPerPage.toString());
-      queryParams.append("offset", ((page - 1) * employeesPerPage).toString());
-
-      // Ajouter les filtres
-      if (filters.search) queryParams.append("search", filters.search);
-      if (filters.type_contrat)
-        queryParams.append("type_contrat", filters.type_contrat);
-      if (filters.actif !== null && filters.actif !== undefined)
-        queryParams.append("actif", filters.actif.toString());
-
-      const response = await fetch(
-        `/api/proxy/employees?${queryParams.toString()}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      // Charger TOUS les employés d'un coup pour le filtrage côté client
+      const response = await fetch(`/api/proxy/employees?limit=1000`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
@@ -107,8 +94,6 @@ export default function EmployesPage() {
       const pagination = employeesData.data?.pagination || {};
 
       setEmployees(employeesList);
-      setFilteredEmployees(employeesList);
-      setTotalPages(pagination.total_pages || 0);
       setTotalEmployees(pagination.total || 0);
 
       console.log("Employés chargés via proxy:", employeesList);
@@ -221,22 +206,42 @@ export default function EmployesPage() {
     }
   }, [loading, session, router]);
 
-  // Appliquer les filtres et recharger les données
+  // Filtrage côté client uniquement - AUCUN rechargement de page
   useEffect(() => {
-    const filters = {
-      search: searchTerm || undefined,
-      type_contrat: selectedContractType || undefined,
-      actif:
-        selectedStatus === "actif"
-          ? true
-          : selectedStatus === "inactif"
-          ? false
-          : undefined,
-    };
+    let filtered = [...employees];
 
-    loadEmployees(1, filters);
+    // Filtre par recherche (côté client)
+    if (searchTerm) {
+      filtered = filtered.filter((employee) => {
+        const fullName = `${employee.prenom} ${employee.nom}`.toLowerCase();
+        const email = employee.email?.toLowerCase() || '';
+        const poste = employee.poste?.toLowerCase() || '';
+        
+        return (
+          fullName.includes(searchTerm.toLowerCase()) ||
+          email.includes(searchTerm.toLowerCase()) ||
+          poste.includes(searchTerm.toLowerCase())
+        );
+      });
+    }
+
+    // Filtre par type de contrat
+    if (selectedContractType) {
+      filtered = filtered.filter((employee) => 
+        employee.type_contrat === selectedContractType
+      );
+    }
+
+    // Filtre par statut
+    if (selectedStatus === "actif") {
+      filtered = filtered.filter((employee) => employee.actif);
+    } else if (selectedStatus === "inactif") {
+      filtered = filtered.filter((employee) => !employee.actif);
+    }
+
+    setFilteredEmployees(filtered);
     setCurrentPage(1);
-  }, [searchTerm, selectedContractType, selectedStatus]);
+  }, [employees, searchTerm, selectedContractType, selectedStatus]);
 
   // Les statistiques sont globales et ne changent pas avec les filtres
 
@@ -247,21 +252,14 @@ export default function EmployesPage() {
   const totalEmployeesFromStats = statistics?.statistics?.total_employees || 0;
 
   // Pagination
-  const currentEmployees = filteredEmployees; // Les données viennent déjà paginées de l'API
+  // Pagination côté client
+  const totalPagesClient = Math.ceil(filteredEmployees.length / employeesPerPage);
+  const startIndex = (currentPage - 1) * employeesPerPage;
+  const endIndex = startIndex + employeesPerPage;
+  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    const filters = {
-      search: searchTerm || undefined,
-      type_contrat: selectedContractType || undefined,
-      actif:
-        selectedStatus === "actif"
-          ? true
-          : selectedStatus === "inactif"
-          ? false
-          : undefined,
-    };
-    loadEmployees(page, filters);
   };
 
   // Fonctions utilitaires
@@ -466,14 +464,13 @@ export default function EmployesPage() {
         <div className="flex flex-col lg:flex-row gap-4">
           {/* Recherche */}
           <div className="flex-1">
-            <div className="relative bg-[var(--zalama-card)]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
+              <Input
                 placeholder="Rechercher un employé..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+                className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
               />
             </div>
           </div>
@@ -698,7 +695,7 @@ export default function EmployesPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPagesClient > 1 && (
           <div className="bg-white dark:bg-[var(--zalama-card)] px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
@@ -710,7 +707,7 @@ export default function EmployesPage() {
               </button>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPagesClient}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-[var(--zalama-card)] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Suivant
@@ -733,7 +730,7 @@ export default function EmployesPage() {
               </div>
               <div>
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  {Array.from({ length: totalPagesClient }, (_, i) => i + 1).map(
                     (page) => (
                       <button
                         key={page}

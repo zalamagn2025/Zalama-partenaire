@@ -309,14 +309,18 @@ export default function DemandesAdhesionPage() {
             Gérez les employés sans compte ZaLaMa
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="h-8 w-8 text-blue-600" />
-          <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {filteredEmployees.length}
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
+              <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              employés sans compte
+            <div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                {filteredEmployees.length}
+              </div>
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                Employés sans compte
+              </div>
             </div>
           </div>
         </div>
