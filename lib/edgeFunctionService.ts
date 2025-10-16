@@ -1091,12 +1091,7 @@ class EdgeFunctionService {
       const response = await fetch(`${PAYMENT_EMPLOYEES_URL}${url}`, config);
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || `Erreur ${response.status}`
-        );
-      }
-
+      // Retourner la réponse complète même en cas d'erreur pour permettre la gestion détaillée
       return data;
     } catch (error) {
       console.error("Erreur lors de la récupération des employés:", error);
@@ -1133,12 +1128,7 @@ class EdgeFunctionService {
       const response = await fetch(url, config);
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || data.error || `Erreur ${response.status}`
-        );
-      }
-
+      // Retourner la réponse complète même en cas d'erreur pour permettre la gestion détaillée
       return data;
     } catch (error) {
       console.error("Erreur lors de l'exécution des paiements:", error);
