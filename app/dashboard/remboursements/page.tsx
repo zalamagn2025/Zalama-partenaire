@@ -63,6 +63,9 @@ type Remboursement = {
     nom: string;
     prenom: string;
     salaire_net: number;
+    email?: string;
+    telephone?: string;
+    poste?: string;
   };
   demande_avance?: {
     montant_demande: number;
@@ -1498,7 +1501,7 @@ export default function RemboursementsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Statut</span>
-                    <span>{getStatusBadge(selectedRemboursement.statut_remboursement)}</span>
+                    <span>{getStatusBadge(selectedRemboursement.statut)}</span>
                   </div>
                 </div>
               </div>

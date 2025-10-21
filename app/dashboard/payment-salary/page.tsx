@@ -478,7 +478,7 @@ export default function PaymentSalaryPage() {
         <div>
           <h1
             className="text-3xl font-bold"
-            style={{ color: "var(--zalama-text)" }}
+            style={{ color: "var(--zalama-orange)" }}
           >
             Paiements des Salaires
           </h1>
@@ -516,9 +516,9 @@ export default function PaymentSalaryPage() {
         <CardHeader>
           <CardTitle
             className="flex items-center gap-2"
-            style={{ color: "var(--zalama-text)" }}
+            style={{ color: "var(--zalama-orange)" }}
           >
-            <Filter className="h-5 w-5" />
+            <Filter className="h-5 w-5" style={{ color: "var(--zalama-orange)" }} />
             Filtres de période
           </CardTitle>
           <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
@@ -614,7 +614,7 @@ export default function PaymentSalaryPage() {
                 onClick={applyFilters}
                 disabled={isLoading}
                 style={{
-                  background: "var(--zalama-blue)",
+                  background: "var(--zalama-orange)",
                   color: "white",
                 }}
               >
@@ -647,9 +647,9 @@ export default function PaymentSalaryPage() {
         <CardHeader>
           <CardTitle
             className="flex items-center gap-2"
-            style={{ color: "var(--zalama-text)" }}
+            style={{ color: "var(--zalama-orange)" }}
           >
-            <Calendar className="h-5 w-5" />
+            <Calendar className="h-5 w-5" style={{ color: "var(--zalama-orange)" }} />
             Période de paiement
           </CardTitle>
         </CardHeader>
@@ -928,7 +928,7 @@ export default function PaymentSalaryPage() {
                   }}
                   disabled={isExecuting || selectionStats.count === 0}
                   style={{
-                    background: "var(--zalama-success)",
+                    background: "var(--zalama-orange)",
                     color: "white",
                   }}
                 >
@@ -939,7 +939,7 @@ export default function PaymentSalaryPage() {
                     </>
                   ) : (
                     <>
-                      <CreditCard className="h-4 w-4 mr-2" />
+                      <CreditCard className="h-4 w-4 mr-2" style={{ color: "var(--zalama-orange)" }} />
                       Payer
                     </>
                   )}
@@ -991,7 +991,7 @@ export default function PaymentSalaryPage() {
                       </AlertDialogCancel>
                       <AlertDialogAction
                         onClick={executePayments}
-                        className="bg-[var(--zalama-success)] text-white hover:bg-[var(--zalama-success)]/90"
+                        className="bg-[var(--zalama-orange)] text-white hover:bg-[var(--zalama-orange)]/90"
                       >
                         Confirmer les paiements
                       </AlertDialogAction>
@@ -1012,7 +1012,7 @@ export default function PaymentSalaryPage() {
         }}
       >
         <CardHeader>
-          <CardTitle style={{ color: "var(--zalama-text)" }}>
+          <CardTitle style={{ color: "var(--zalama-orange)" }}>
             Liste des employés
           </CardTitle>
           <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
@@ -1030,34 +1030,46 @@ export default function PaymentSalaryPage() {
                   >
                     Sélection
                   </TableHead>
-                  <TableHead style={{ color: "var(--zalama-text)" }}>
+                  <TableHead 
+                    className="min-w-[200px] max-w-[250px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
                     Employé
                   </TableHead>
-                  <TableHead style={{ color: "var(--zalama-text)" }}>
+                  <TableHead 
+                    className="min-w-[150px] max-w-[200px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
                     Poste
                   </TableHead>
                   <TableHead
-                    className="text-right"
+                    className="text-right min-w-[120px]"
                     style={{ color: "var(--zalama-text)" }}
                   >
                     Salaire net
                   </TableHead>
                   <TableHead
-                    className="text-right"
+                    className="text-right min-w-[150px]"
                     style={{ color: "var(--zalama-text)" }}
                   >
                     Avances déduites
                   </TableHead>
                   <TableHead
-                    className="text-right"
+                    className="text-right min-w-[140px]"
                     style={{ color: "var(--zalama-text)" }}
                   >
                     Salaire disponible
                   </TableHead>
-                  <TableHead style={{ color: "var(--zalama-text)" }}>
+                  <TableHead 
+                    className="min-w-[120px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
                     Statut
                   </TableHead>
-                  <TableHead style={{ color: "var(--zalama-text)" }}>
+                  <TableHead 
+                    className="min-w-[100px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
                     Détails
                   </TableHead>
                 </TableRow>
@@ -1080,24 +1092,31 @@ export default function PaymentSalaryPage() {
                         disabled={!employee.eligible_paiement || isExecuting}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div>
+                    <TableCell className="max-w-[250px]">
+                      <div className="overflow-hidden">
                         <p
-                          className="font-medium"
+                          className="font-medium truncate"
                           style={{ color: "var(--zalama-text)" }}
+                          title={`${employee.prenom} ${employee.nom}`}
                         >
                           {employee.prenom} {employee.nom}
                         </p>
                         <p
-                          className="text-sm"
+                          className="text-sm truncate"
                           style={{ color: "var(--zalama-text-secondary)" }}
+                          title={employee.email}
                         >
                           {employee.email}
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell style={{ color: "var(--zalama-text)" }}>
-                      {employee.poste}
+                    <TableCell 
+                      className="max-w-[200px]"
+                      style={{ color: "var(--zalama-text)" }}
+                    >
+                      <div className="truncate" title={employee.poste}>
+                        {employee.poste}
+                      </div>
                     </TableCell>
                     <TableCell
                       className="text-right"
@@ -1147,7 +1166,7 @@ export default function PaymentSalaryPage() {
                         <Badge
                           variant="default"
                           style={{
-                            background: "var(--zalama-blue)",
+                            background: "var(--zalama-orange)",
                             color: "white",
                           }}
                         >
@@ -1166,14 +1185,16 @@ export default function PaymentSalaryPage() {
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
+                    <TableCell className="max-w-[180px]">
+                      <div className="text-sm space-y-1 overflow-hidden">
                         <div style={{ color: "var(--zalama-text)" }}>
                           Avances: {employee.nombre_avances}
                         </div>
                         {employee.paiement_existant && (
                           <div
+                            className="truncate"
                             style={{ color: "var(--zalama-text-secondary)" }}
+                            title={`Ref: ${employee.paiement_existant.reference}`}
                           >
                             Ref: {employee.paiement_existant.reference}
                           </div>
