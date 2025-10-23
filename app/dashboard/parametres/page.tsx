@@ -147,17 +147,13 @@ export default function ParametresPage() {
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Les nouveaux mots de passe ne correspondent pas");
+      toast.error("Les nouveaux codes PIN ne correspondent pas");
       return;
     }
 
-    // Validation de la complexité du code PIN
-    const passwordRegex =
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-    if (!passwordRegex.test(passwordData.newPassword)) {
-      toast.error(
-        "Le code PIN doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial (@$!%*?&)"
-      );
+    // Validation simple du code PIN (6 caractères minimum)
+    if (passwordData.newPassword.length < 6) {
+      toast.error("Le code PIN doit contenir au moins 6 caractères");
       return;
     }
 
@@ -732,12 +728,10 @@ export default function ParametresPage() {
                     Conseils de sécurité
                   </h4>
                   <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
-                    <li>• Utilisez un mot de passe d'au moins 8 caractères</li>
-                    <li>
-                      • Incluez des lettres, chiffres et caractères spéciaux
-                    </li>
+                    <li>• Utilisez un code PIN d'au moins 6 caractères</li>
+                    <li>• Évitez les codes PIN simples (123456, etc.)</li>
                     <li>• Ne partagez jamais vos identifiants</li>
-                    <li>• Changez votre mot de passe régulièrement</li>
+                    <li>• Changez votre code PIN régulièrement</li>
                   </ul>
                 </div>
               </div>

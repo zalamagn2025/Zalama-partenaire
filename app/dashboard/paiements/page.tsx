@@ -80,6 +80,9 @@ interface PaymentStatistics {
   montant_total_remboursements: number;
   employes_payes_distincts: number;
   dernier_paiement: string | null;
+  dernier_paiement_paye: string | null;
+  delai_remboursement: string | null;
+  jours_restants_remboursement: number | null;
   paiements_par_mois: Record<string, any>;
 }
 
@@ -373,32 +376,96 @@ export default function PaiementsPage() {
           ))}
         </div>
       ) : statistics ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Paiements"
-            value={statistics.total_paiements.toString()}
-            icon={Banknote}
-            color="blue"
-          />
-          <StatCard
-            title="Montant Total Salaires"
-            value={gnfFormatter(statistics.montant_total_salaires)}
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatCard
-            title="Avances Déduites"
-            value={gnfFormatter(statistics.montant_total_avances_deduites)}
-            icon={Calendar}
-            color="yellow"
-          />
-          <StatCard
-            title="Montant Remboursements"
-            value={gnfFormatter(statistics.montant_total_remboursements)}
-            icon={Banknote}
-            color="purple"
-          />
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard
+              title="Total Paiements"
+              value={statistics.total_paiements.toString()}
+              icon={Banknote}
+              color="blue"
+            />
+            <StatCard
+              title="Montant Total Salaires"
+              value={gnfFormatter(statistics.montant_total_salaires)}
+              icon={TrendingUp}
+              color="green"
+            />
+            <StatCard
+              title="Avances Déduites"
+              value={gnfFormatter(statistics.montant_total_avances_deduites)}
+              icon={Calendar}
+              color="yellow"
+            />
+            <StatCard
+              title="Montant Remboursements"
+              value={gnfFormatter(statistics.montant_total_remboursements)}
+              icon={Banknote}
+              color="purple"
+            />
+          </div>
+
+          {/* Carte Délai de Remboursement */}
+          {statistics.delai_remboursement && (
+            <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                    <h3 className="text-sm font-medium text-orange-800 dark:text-orange-300">
+                      Délai de Remboursement ZaLaMa
+                    </h3>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-2xl font-bold text-orange-900 dark:text-orange-200">
+                        {formatDate(statistics.delai_remboursement)}
+                      </span>
+                    </div>
+                    {statistics.jours_restants_remboursement !== null && (
+                      <div className="flex items-center gap-2">
+                        <Badge 
+                          variant={
+                            statistics.jours_restants_remboursement > 7 
+                              ? "default" 
+                              : statistics.jours_restants_remboursement > 0 
+                              ? "secondary" 
+                              : "destructive"
+                          }
+                          className={
+                            statistics.jours_restants_remboursement > 7
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : statistics.jours_restants_remboursement > 0
+                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }
+                        >
+                          {statistics.jours_restants_remboursement > 0
+                            ? `${statistics.jours_restants_remboursement} jours restants`
+                            : statistics.jours_restants_remboursement === 0
+                            ? "Échéance aujourd'hui"
+                            : `Retard de ${Math.abs(statistics.jours_restants_remboursement)} jours`}
+                        </Badge>
+                      </div>
+                    )}
+                    {statistics.dernier_paiement_paye && (
+                      <p className="text-xs text-orange-700 dark:text-orange-400">
+                        Basé sur le dernier paiement du {formatDate(statistics.dernier_paiement_paye)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">
+                    2 semaines
+                  </span>
+                  <span className="text-xs text-orange-500 dark:text-orange-500">
+                    après paiement
+                  </span>
+                </div>
+              </div>
+            </Card>
+          )}
+        </>
       ) : null}
 
       {/* Filtres */}

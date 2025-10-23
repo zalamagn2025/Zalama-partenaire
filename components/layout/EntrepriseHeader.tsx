@@ -146,11 +146,6 @@ export default function EntrepriseHeader() {
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
             {getPageTitle()}
           </h1>
-          <div className="hidden md:flex items-center ml-6 text-gray-600 dark:text-gray-300 text-sm">
-            <span className="bg-blue-100 text-xl dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6">
-              {session?.partner?.company_name || "Dashboard"}
-            </span>
-          </div>
         </div>
 
         {/* Bloc actions */}

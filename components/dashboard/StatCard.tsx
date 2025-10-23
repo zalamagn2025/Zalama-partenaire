@@ -8,7 +8,7 @@ interface StatCardProps {
   icon: LucideIcon;
   trend?: string;
   trendDirection?: 'up' | 'down';
-  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple';
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'purple' | 'orange';
 }
 
 const colorClasses = {
@@ -36,6 +36,11 @@ const colorClasses = {
     bg: 'bg-purple-100 dark:bg-purple-900/20',
     text: 'text-purple-600 dark:text-purple-400',
     icon: 'text-purple-600 dark:text-purple-400'
+  },
+  orange: {
+    bg: 'bg-orange-100 dark:bg-orange-900/20',
+    text: 'text-orange-600 dark:text-orange-400',
+    icon: 'text-orange-600 dark:text-orange-400'
   }
 };
 

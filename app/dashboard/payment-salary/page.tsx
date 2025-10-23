@@ -55,8 +55,8 @@ import {
   RefreshCw,
   CreditCard,
   Filter,
+  Loader2,
 } from "lucide-react";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -86,10 +86,15 @@ export default function PaymentSalaryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isExecuting, setIsExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<any>(null);
 
-  // États pour les filtres
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  // États pour les filtres - Par défaut octobre 2025
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1; // Octobre = 10
+  const currentYear = 2025;
+
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(
     new Set()
   );
@@ -155,12 +160,12 @@ export default function PaymentSalaryPage() {
     }
   };
 
-  // Charger les données au montage du composant
+  // Charger les données au montage du composant avec les filtres par défaut
   useEffect(() => {
     if (!loading && session?.access_token) {
-      loadPaymentData();
+      loadPaymentData(selectedMonth, selectedYear);
     }
-  }, [loading, session?.access_token]);
+  }, [loading, session?.access_token, selectedMonth, selectedYear]);
 
   // Gestion de la sélection des employés
   const handleEmployeeSelection = (employeeId: string, checked: boolean) => {
@@ -205,6 +210,7 @@ export default function PaymentSalaryPage() {
     }
 
     setIsExecuting(true);
+    setPaymentError(null);
 
     try {
       console.log(
@@ -219,25 +225,75 @@ export default function PaymentSalaryPage() {
         annee: selectedYear || undefined,
       });
 
+      console.log("📊 Réponse complète de l'edge function:", response);
+
+      // Gérer les erreurs détaillées de l'edge function
       if (!response.success) {
-        throw new Error(
-          response.message || "Erreur lors de l'exécution des paiements"
-        );
+        setPaymentError(response);
+
+        // Afficher les erreurs spécifiques
+        if (
+          (response.data as any)?.erreurs &&
+          (response.data as any).erreurs.length > 0
+        ) {
+          const errors = (response.data as any).erreurs;
+
+          // Vérifier si c'est une erreur de paiement déjà existant
+          const hasPaymentExistsError = errors.some(
+            (err: any) => err.erreur && err.erreur.includes("PAYE")
+          );
+
+          if (hasPaymentExistsError) {
+            // Afficher un message spécifique pour les paiements déjà existants
+            const paymentExistsErrors = errors.filter(
+              (err: any) => err.erreur && err.erreur.includes("PAYE")
+            );
+
+            const employeeNames = paymentExistsErrors
+              .map((err: any) => err.employe)
+              .join(", ");
+            toast.error(`Paiement déjà existant pour: ${employeeNames}`, {
+              duration: 8000,
+            });
+          } else {
+            // Autres types d'erreurs
+            const errorDetails = errors
+              .map((err: any) => `${err.employe}: ${err.erreur}`)
+              .join("\n");
+
+            toast.error(
+              `${response.message}\n\nErreurs détaillées:\n${errorDetails}`,
+              { duration: 10000 }
+            );
+          }
+        } else {
+          toast.error(
+            response.message || "Erreur lors de l'exécution des paiements"
+          );
+        }
+
+        // Ne pas fermer le dialog en cas d'erreur pour que l'utilisateur puisse voir les détails
+        return;
       }
 
       console.log("✅ Paiements exécutés avec succès:", response);
 
-      toast.success(
-        `Paiements exécutés avec succès pour ${
-          response.data?.nombre_employes || 0
-        } employés`
-      );
+      // Afficher les statistiques de succès
+      const stats = (response.data as any)?.statistiques;
+      if (stats) {
+        toast.success(
+          `Paiements exécutés: ${stats.paiements_reussis}/${stats.total_employes} employés traités avec succès`
+        );
+      } else {
+        toast.success(
+          `Paiements exécutés avec succès pour ${
+            response.data?.nombre_employes || 0
+          } employés`
+        );
+      }
 
       // Recharger les données pour mettre à jour les statuts
-      await loadPaymentData(
-        selectedMonth || undefined,
-        selectedYear || undefined
-      );
+      await loadPaymentData(selectedMonth, selectedYear);
       setSelectedEmployees(new Set());
       setShowPaymentDialog(false);
     } catch (error) {
@@ -255,11 +311,11 @@ export default function PaymentSalaryPage() {
     loadPaymentData(selectedMonth || undefined, selectedYear || undefined);
   };
 
-  // Réinitialiser les filtres
+  // Réinitialiser les filtres aux valeurs par défaut
   const resetFilters = () => {
-    setSelectedMonth(null);
-    setSelectedYear(null);
-    loadPaymentData();
+    setSelectedMonth(currentMonth);
+    setSelectedYear(currentYear);
+    loadPaymentData(currentMonth, currentYear);
   };
 
   // Calculer les statistiques de sélection
@@ -295,23 +351,36 @@ export default function PaymentSalaryPage() {
   // Si en cours de chargement initial
   if (loading || isLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div
+        className="p-6 space-y-6"
+        style={{
+          background: "var(--zalama-bg-dark)",
+          color: "var(--zalama-text)",
+        }}
+      >
         <div className="animate-pulse space-y-6">
           {/* Skeleton pour les filtres */}
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
+          <div
+            className="rounded-lg h-32"
+            style={{ background: "var(--zalama-bg-light)" }}
+          ></div>
 
           {/* Skeleton pour les statistiques */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="bg-gray-200 dark:bg-gray-800 rounded-lg h-24"
+                className="rounded-lg h-24"
+                style={{ background: "var(--zalama-bg-light)" }}
               ></div>
             ))}
           </div>
 
           {/* Skeleton pour le tableau */}
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-96"></div>
+          <div
+            className="rounded-lg h-96"
+            style={{ background: "var(--zalama-bg-light)" }}
+          ></div>
         </div>
       </div>
     );
@@ -320,12 +389,18 @@ export default function PaymentSalaryPage() {
   // Si pas de session
   if (!session?.partner) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: "var(--zalama-bg-dark)" }}
+      >
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h2
+            className="text-xl font-semibold mb-2"
+            style={{ color: "var(--zalama-text)" }}
+          >
             Accès non autorisé
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p style={{ color: "var(--zalama-text-secondary)" }}>
             Vous n'avez pas les permissions nécessaires pour accéder à cette
             page.
           </p>
@@ -337,13 +412,29 @@ export default function PaymentSalaryPage() {
   // Si erreur
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: "var(--zalama-bg-dark)" }}
+      >
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 mb-2">
+          <h2
+            className="text-xl font-semibold mb-2"
+            style={{ color: "var(--zalama-danger)" }}
+          >
             Erreur de chargement
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-          <Button onClick={() => loadPaymentData()}>Réessayer</Button>
+          <p className="mb-4" style={{ color: "var(--zalama-text-secondary)" }}>
+            {error}
+          </p>
+          <Button
+            onClick={() => loadPaymentData(selectedMonth, selectedYear)}
+            style={{
+              background: "var(--zalama-blue)",
+              color: "white",
+            }}
+          >
+            Réessayer
+          </Button>
         </div>
       </div>
     );
@@ -352,12 +443,18 @@ export default function PaymentSalaryPage() {
   // Si pas de données
   if (!paymentData?.data) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div
+        className="flex items-center justify-center h-screen"
+        style={{ background: "var(--zalama-bg-dark)" }}
+      >
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h2
+            className="text-xl font-semibold mb-2"
+            style={{ color: "var(--zalama-text)" }}
+          >
             Aucune donnée disponible
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p style={{ color: "var(--zalama-text-secondary)" }}>
             Impossible de charger les données de paiement.
           </p>
         </div>
@@ -369,28 +466,37 @@ export default function PaymentSalaryPage() {
   const selectionStats = getSelectionStats();
 
   return (
-    <div className="p-6 space-y-6">
+    <div
+      className="p-6 space-y-6"
+      style={{
+        background: "var(--zalama-bg-dark)",
+        color: "var(--zalama-text)",
+      }}
+    >
       {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold dark:text-white">
+          <h1
+            className="text-3xl font-bold"
+            style={{ color: "var(--zalama-orange)" }}
+          >
             Paiements des Salaires
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <p className="mt-2" style={{ color: "var(--zalama-text-secondary)" }}>
             Gérez les paiements de salaires pour {partenaire.nom}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Button
-            onClick={() =>
-              loadPaymentData(
-                selectedMonth || undefined,
-                selectedYear || undefined
-              )
-            }
+            onClick={() => loadPaymentData(selectedMonth, selectedYear)}
             disabled={isLoading}
             variant="outline"
             size="sm"
+            style={{
+              background: "var(--zalama-bg-light)",
+              borderColor: "var(--zalama-border)",
+              color: "var(--zalama-text)",
+            }}
           >
             <RefreshCw
               className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
@@ -401,13 +507,21 @@ export default function PaymentSalaryPage() {
       </div>
 
       {/* Filtres */}
-      <Card>
+      <Card
+        style={{
+          background: "var(--zalama-card)",
+          borderColor: "var(--zalama-border)",
+        }}
+      >
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle
+            className="flex items-center gap-2"
+            style={{ color: "var(--zalama-orange)" }}
+          >
+            <Filter className="h-5 w-5" style={{ color: "var(--zalama-orange)" }} />
             Filtres de période
           </CardTitle>
-          <CardDescription>
+          <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
             Sélectionnez la période pour laquelle vous souhaitez gérer les
             paiements
           </CardDescription>
@@ -415,20 +529,38 @@ export default function PaymentSalaryPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label htmlFor="month">Mois</Label>
-              <Select
-                value={selectedMonth?.toString() || ""}
-                onValueChange={(value) =>
-                  setSelectedMonth(value ? parseInt(value) : null)
-                }
+              <Label
+                htmlFor="month"
+                style={{ color: "var(--zalama-text-secondary)" }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Mois en cours" />
+                Mois
+              </Label>
+              <Select
+                value={selectedMonth.toString()}
+                onValueChange={(value) => setSelectedMonth(parseInt(value))}
+              >
+                <SelectTrigger
+                  style={{
+                    background: "var(--zalama-bg-light)",
+                    borderColor: "var(--zalama-border)",
+                    color: "var(--zalama-text)",
+                  }}
+                >
+                  <SelectValue placeholder="Sélectionner le mois" />
                 </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <SelectItem key={i + 1} value={(i + 1).toString()}>
-                      {new Date(2024, i).toLocaleDateString("fr-FR", {
+                <SelectContent
+                  style={{
+                    background: "var(--zalama-card)",
+                    borderColor: "var(--zalama-border)",
+                  }}
+                >
+                  {Array.from({ length: currentMonth }, (_, i) => (
+                    <SelectItem
+                      key={i + 1}
+                      value={(i + 1).toString()}
+                      style={{ color: "var(--zalama-text)" }}
+                    >
+                      {new Date(2025, i).toLocaleDateString("fr-FR", {
                         month: "long",
                       })}
                     </SelectItem>
@@ -437,21 +569,39 @@ export default function PaymentSalaryPage() {
               </Select>
             </div>
             <div>
-              <Label htmlFor="year">Année</Label>
-              <Select
-                value={selectedYear?.toString() || ""}
-                onValueChange={(value) =>
-                  setSelectedYear(value ? parseInt(value) : null)
-                }
+              <Label
+                htmlFor="year"
+                style={{ color: "var(--zalama-text-secondary)" }}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Année en cours" />
+                Année
+              </Label>
+              <Select
+                value={selectedYear.toString()}
+                onValueChange={(value) => setSelectedYear(parseInt(value))}
+              >
+                <SelectTrigger
+                  style={{
+                    background: "var(--zalama-bg-light)",
+                    borderColor: "var(--zalama-border)",
+                    color: "var(--zalama-text)",
+                  }}
+                >
+                  <SelectValue placeholder="Sélectionner l'année" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  style={{
+                    background: "var(--zalama-card)",
+                    borderColor: "var(--zalama-border)",
+                  }}
+                >
                   {Array.from({ length: 3 }, (_, i) => {
-                    const year = new Date().getFullYear() - i;
+                    const year = 2025 - i;
                     return (
-                      <SelectItem key={year} value={year.toString()}>
+                      <SelectItem
+                        key={year}
+                        value={year.toString()}
+                        style={{ color: "var(--zalama-text)" }}
+                      >
                         {year}
                       </SelectItem>
                     );
@@ -460,13 +610,25 @@ export default function PaymentSalaryPage() {
               </Select>
             </div>
             <div className="flex items-end gap-2">
-              <Button onClick={applyFilters} disabled={isLoading}>
+              <Button
+                onClick={applyFilters}
+                disabled={isLoading}
+                style={{
+                  background: "var(--zalama-orange)",
+                  color: "white",
+                }}
+              >
                 Appliquer
               </Button>
               <Button
                 onClick={resetFilters}
                 variant="outline"
                 disabled={isLoading}
+                style={{
+                  background: "var(--zalama-bg-light)",
+                  borderColor: "var(--zalama-border)",
+                  color: "var(--zalama-text)",
+                }}
               >
                 Reset
               </Button>
@@ -476,28 +638,62 @@ export default function PaymentSalaryPage() {
       </Card>
 
       {/* Informations de période */}
-      <Card>
+      <Card
+        style={{
+          background: "var(--zalama-card)",
+          borderColor: "var(--zalama-border)",
+        }}
+      >
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
+          <CardTitle
+            className="flex items-center gap-2"
+            style={{ color: "var(--zalama-orange)" }}
+          >
+            <Calendar className="h-5 w-5" style={{ color: "var(--zalama-orange)" }} />
             Période de paiement
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <Label className="text-sm text-gray-500">Période</Label>
-              <p className="font-medium">
+              <Label
+                className="text-sm"
+                style={{ color: "var(--zalama-text-secondary)" }}
+              >
+                Période
+              </Label>
+              <p
+                className="font-medium"
+                style={{ color: "var(--zalama-text)" }}
+              >
                 {formatDate(periode.debut)} - {formatDate(periode.fin)}
               </p>
             </div>
             <div>
-              <Label className="text-sm text-gray-500">Jour de paiement</Label>
-              <p className="font-medium">{partenaire.payment_day} du mois</p>
+              <Label
+                className="text-sm"
+                style={{ color: "var(--zalama-text-secondary)" }}
+              >
+                Jour de paiement
+              </Label>
+              <p
+                className="font-medium"
+                style={{ color: "var(--zalama-text)" }}
+              >
+                {partenaire.payment_day} du mois
+              </p>
             </div>
             <div>
-              <Label className="text-sm text-gray-500">Mois/Année</Label>
-              <p className="font-medium">
+              <Label
+                className="text-sm"
+                style={{ color: "var(--zalama-text-secondary)" }}
+              >
+                Mois/Année
+              </Label>
+              <p
+                className="font-medium"
+                style={{ color: "var(--zalama-text)" }}
+              >
                 {periode.mois}/{periode.annee}
               </p>
             </div>
@@ -507,18 +703,40 @@ export default function PaymentSalaryPage() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card>
+        <Card
+          style={{
+            background: "var(--zalama-card)",
+            borderColor: "var(--zalama-border)",
+          }}
+        >
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <Users className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: "var(--zalama-bg-light)" }}
+              >
+                <Users
+                  className="h-6 w-6"
+                  style={{ color: "var(--zalama-blue)" }}
+                />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Employés éligibles</p>
-                <p className="text-2xl font-bold">
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
+                  Employés éligibles
+                </p>
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--zalama-text)" }}
+                >
                   {statistiques.employes_eligibles}
                 </p>
-                <p className="text-xs text-gray-400">
+                <p
+                  className="text-xs"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
                   / {statistiques.total_employes} total
                 </p>
               </div>
@@ -526,17 +744,34 @@ export default function PaymentSalaryPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          style={{
+            background: "var(--zalama-card)",
+            borderColor: "var(--zalama-border)",
+          }}
+        >
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <DollarSign className="h-6 w-6 text-green-600 dark:text-green-400" />
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: "var(--zalama-bg-light)" }}
+              >
+                <DollarSign
+                  className="h-6 w-6"
+                  style={{ color: "var(--zalama-success)" }}
+                />
               </div>
               <div>
-                <p className="text-sm text-gray-500">
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
                   Montant total disponible
                 </p>
-                <p className="text-2xl font-bold">
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--zalama-text)" }}
+                >
                   {gnfFormatter(statistiques.montant_total_disponible)}
                 </p>
               </div>
@@ -544,15 +779,34 @@ export default function PaymentSalaryPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          style={{
+            background: "var(--zalama-card)",
+            borderColor: "var(--zalama-border)",
+          }}
+        >
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-                <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: "var(--zalama-bg-light)" }}
+              >
+                <AlertCircle
+                  className="h-6 w-6"
+                  style={{ color: "var(--zalama-warning)" }}
+                />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Avances à déduire</p>
-                <p className="text-2xl font-bold">
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
+                  Avances à déduire
+                </p>
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--zalama-text)" }}
+                >
                   {gnfFormatter(statistiques.montant_total_avances)}
                 </p>
               </div>
@@ -560,15 +814,34 @@ export default function PaymentSalaryPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card
+          style={{
+            background: "var(--zalama-card)",
+            borderColor: "var(--zalama-border)",
+          }}
+        >
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: "var(--zalama-bg-light)" }}
+              >
+                <CheckCircle
+                  className="h-6 w-6"
+                  style={{ color: "var(--zalama-blue)" }}
+                />
               </div>
               <div>
-                <p className="text-sm text-gray-500">Déjà payés</p>
-                <p className="text-2xl font-bold">
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
+                  Déjà payés
+                </p>
+                <p
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--zalama-text)" }}
+                >
                   {statistiques.employes_deja_payes}
                 </p>
               </div>
@@ -578,16 +851,28 @@ export default function PaymentSalaryPage() {
       </div>
 
       {/* Actions de sélection */}
-      <Card>
+      <Card
+        style={{
+          background: "var(--zalama-card)",
+          borderColor: "var(--zalama-border)",
+        }}
+      >
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Employés à payer</span>
+            <span style={{ color: "var(--zalama-text)" }}>
+              Employés à payer
+            </span>
             <div className="flex items-center gap-2">
               <Button
                 onClick={selectAllEligible}
                 variant="outline"
                 size="sm"
                 disabled={isExecuting}
+                style={{
+                  background: "var(--zalama-bg-light)",
+                  borderColor: "var(--zalama-border)",
+                  color: "var(--zalama-text)",
+                }}
               >
                 Tout sélectionner
               </Button>
@@ -596,81 +881,71 @@ export default function PaymentSalaryPage() {
                 variant="outline"
                 size="sm"
                 disabled={isExecuting}
+                style={{
+                  background: "var(--zalama-bg-light)",
+                  borderColor: "var(--zalama-border)",
+                  color: "var(--zalama-text)",
+                }}
               >
                 Tout désélectionner
               </Button>
-              {/* Bouton de test pour forcer la sélection */}
-              <Button
-                onClick={() => {
-                  console.log(
-                    "🧪 Test: Forcer la sélection de tous les employés"
-                  );
-                  if (paymentData?.data?.employes) {
-                    const allIds = paymentData.data.employes.map(
-                      (emp) => emp.id
-                    );
-                    setSelectedEmployees(new Set(allIds));
-                    console.log("✅ Tous les employés sélectionnés:", allIds);
-                  }
-                }}
-                variant="outline"
-                size="sm"
-                className="bg-purple-100 text-purple-800"
-              >
-                Forcer Tout
-              </Button>
-              {/* Bouton de test temporaire */}
-              <Button
-                onClick={() => {
-                  const debugStats = getSelectionStats();
-                  console.log("🔍 Debug Info:", {
-                    selectedEmployees: Array.from(selectedEmployees),
-                    selectedEmployeesSize: selectedEmployees.size,
-                    selectionStats: debugStats,
-                    paymentDataExists: !!paymentData?.data,
-                    employesCount: paymentData?.data?.employes?.length || 0,
-                    employesEligibles:
-                      paymentData?.data?.employes?.filter(
-                        (emp) => emp.eligible_paiement
-                      )?.length || 0,
-                    paymentData: paymentData?.data,
-                  });
-                  alert(
-                    `Debug: ${selectedEmployees.size} employés sélectionnés, ${debugStats.count} dans les stats`
-                  );
-                }}
-                variant="outline"
-                size="sm"
-                className="bg-yellow-100 text-yellow-800"
-              >
-                Debug
-              </Button>
             </div>
           </CardTitle>
-          <CardDescription>
+          <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
             Sélectionnez les employés que vous souhaitez payer pour cette
             période
           </CardDescription>
         </CardHeader>
         <CardContent>
           {/* Affichage des statistiques de sélection */}
-          <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-900/20 rounded-lg">
+          <div
+            className="mb-4 p-4 rounded-lg"
+            style={{ background: "var(--zalama-bg-lighter)" }}
+          >
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">
+                <p
+                  className="font-medium"
+                  style={{ color: "var(--zalama-text)" }}
+                >
                   {selectionStats.count} employé(s) sélectionné(s)
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--zalama-text-secondary)" }}
+                >
                   Montant total: {gnfFormatter(selectionStats.total)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  IDs sélectionnés:{" "}
-                  {Array.from(selectedEmployees).join(", ") || "Aucun"}
                 </p>
               </div>
 
-              {/* Bouton de paiement toujours visible pour debug */}
+              {/* Boutons de paiement */}
               <div className="flex items-center gap-2">
+                {/* Bouton direct Payer */}
+                <Button
+                  onClick={() => {
+                    console.log("🔄 Exécution directe des paiements");
+                    executePayments();
+                  }}
+                  disabled={isExecuting || selectionStats.count === 0}
+                  style={{
+                    background: "var(--zalama-orange)",
+                    color: "white",
+                  }}
+                >
+                  {isExecuting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Paiement en cours...
+                    </>
+                  ) : (
+                    <>
+                      <CreditCard className="h-4 w-4 mr-2" style={{ color: "var(--zalama-orange)" }} />
+                      Payer
+                    </>
+                  )}
+                </Button>
+
+                {/* Bouton avec confirmation (optionnel) */}
                 <AlertDialog
                   open={showPaymentDialog}
                   onOpenChange={setShowPaymentDialog}
@@ -678,27 +953,23 @@ export default function PaymentSalaryPage() {
                   <AlertDialogTrigger asChild>
                     <Button
                       disabled={isExecuting || selectionStats.count === 0}
-                      className="bg-green-600 hover:bg-green-700"
+                      variant="outline"
+                      size="sm"
+                      style={{
+                        background: "var(--zalama-bg-light)",
+                        borderColor: "var(--zalama-border)",
+                        color: "var(--zalama-text)",
+                      }}
                     >
-                      {isExecuting ? (
-                        <>
-                          <LoadingSpinner className="h-4 w-4 mr-2" />
-                          Exécution...
-                        </>
-                      ) : (
-                        <>
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Exécuter les paiements
-                        </>
-                      )}
+                      Confirmer
                     </Button>
                   </AlertDialogTrigger>
-                  <AlertDialogContent>
+                  <AlertDialogContent className="bg-[var(--zalama-card)] border-[var(--zalama-border)] text-[var(--zalama-text)]">
                     <AlertDialogHeader>
-                      <AlertDialogTitle>
+                      <AlertDialogTitle className="text-[var(--zalama-text)]">
                         Confirmer l'exécution des paiements
                       </AlertDialogTitle>
-                      <AlertDialogDescription>
+                      <AlertDialogDescription className="text-[var(--zalama-text-secondary)]">
                         Vous êtes sur le point d'exécuter les paiements pour{" "}
                         <strong>{selectionStats.count} employé(s)</strong> pour
                         un montant total de{" "}
@@ -714,28 +985,19 @@ export default function PaymentSalaryPage() {
                     <AlertDialogFooter>
                       <AlertDialogCancel
                         onClick={() => setShowPaymentDialog(false)}
+                        className="bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-lighter)]"
                       >
                         Annuler
                       </AlertDialogCancel>
-                      <AlertDialogAction onClick={executePayments}>
+                      <AlertDialogAction
+                        onClick={executePayments}
+                        className="bg-[var(--zalama-orange)] text-white hover:bg-[var(--zalama-orange)]/90"
+                      >
                         Confirmer les paiements
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-
-                {/* Bouton de test direct */}
-                <Button
-                  onClick={() => {
-                    console.log("🧪 Test direct de paiement");
-                    executePayments();
-                  }}
-                  disabled={isExecuting || selectionStats.count === 0}
-                  variant="outline"
-                  className="bg-orange-100 text-orange-800"
-                >
-                  Test Direct
-                </Button>
               </div>
             </div>
           </div>
@@ -743,10 +1005,17 @@ export default function PaymentSalaryPage() {
       </Card>
 
       {/* Tableau des employés */}
-      <Card>
+      <Card
+        style={{
+          background: "var(--zalama-card)",
+          borderColor: "var(--zalama-border)",
+        }}
+      >
         <CardHeader>
-          <CardTitle>Liste des employés</CardTitle>
-          <CardDescription>
+          <CardTitle style={{ color: "var(--zalama-orange)" }}>
+            Liste des employés
+          </CardTitle>
+          <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
             Consultez les détails de chaque employé et sélectionnez ceux à payer
           </CardDescription>
         </CardHeader>
@@ -754,22 +1023,63 @@ export default function PaymentSalaryPage() {
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">Sélection</TableHead>
-                  <TableHead>Employé</TableHead>
-                  <TableHead>Poste</TableHead>
-                  <TableHead className="text-right">Salaire net</TableHead>
-                  <TableHead className="text-right">Avances déduites</TableHead>
-                  <TableHead className="text-right">
+                <TableRow style={{ background: "var(--zalama-bg-light)" }}>
+                  <TableHead
+                    className="w-12"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Sélection
+                  </TableHead>
+                  <TableHead 
+                    className="min-w-[200px] max-w-[250px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Employé
+                  </TableHead>
+                  <TableHead 
+                    className="min-w-[150px] max-w-[200px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Poste
+                  </TableHead>
+                  <TableHead
+                    className="text-right min-w-[120px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Salaire net
+                  </TableHead>
+                  <TableHead
+                    className="text-right min-w-[150px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Avances déduites
+                  </TableHead>
+                  <TableHead
+                    className="text-right min-w-[140px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
                     Salaire disponible
                   </TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Détails</TableHead>
+                  <TableHead 
+                    className="min-w-[120px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Statut
+                  </TableHead>
+                  <TableHead 
+                    className="min-w-[100px]"
+                    style={{ color: "var(--zalama-text)" }}
+                  >
+                    Détails
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {employes.map((employee) => (
-                  <TableRow key={employee.id}>
+                  <TableRow
+                    key={employee.id}
+                    style={{ borderColor: "var(--zalama-border)" }}
+                  >
                     <TableCell>
                       <Checkbox
                         checked={selectedEmployees.has(employee.id)}
@@ -782,40 +1092,60 @@ export default function PaymentSalaryPage() {
                         disabled={!employee.eligible_paiement || isExecuting}
                       />
                     </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
+                    <TableCell className="max-w-[250px]">
+                      <div className="overflow-hidden">
+                        <p
+                          className="font-medium truncate"
+                          style={{ color: "var(--zalama-text)" }}
+                          title={`${employee.prenom} ${employee.nom}`}
+                        >
                           {employee.prenom} {employee.nom}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p
+                          className="text-sm truncate"
+                          style={{ color: "var(--zalama-text-secondary)" }}
+                          title={employee.email}
+                        >
                           {employee.email}
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell>{employee.poste}</TableCell>
-                    <TableCell className="text-right">
+                    <TableCell 
+                      className="max-w-[200px]"
+                      style={{ color: "var(--zalama-text)" }}
+                    >
+                      <div className="truncate" title={employee.poste}>
+                        {employee.poste}
+                      </div>
+                    </TableCell>
+                    <TableCell
+                      className="text-right"
+                      style={{ color: "var(--zalama-text)" }}
+                    >
                       {gnfFormatter(employee.salaire_net)}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="text-sm">
-                        <div>
+                        <div style={{ color: "var(--zalama-text)" }}>
                           Total: {gnfFormatter(employee.avances_deduites)}
                         </div>
-                        <div className="text-gray-500">
+                        <div style={{ color: "var(--zalama-text-secondary)" }}>
                           Mono: {gnfFormatter(employee.avances_mono_mois)}
                         </div>
-                        <div className="text-gray-500">
+                        <div style={{ color: "var(--zalama-text-secondary)" }}>
                           Multi: {gnfFormatter(employee.avances_multi_mois)}
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <span
-                        className={`font-medium ${
-                          employee.salaire_disponible > 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
+                        className="font-medium"
+                        style={{
+                          color:
+                            employee.salaire_disponible > 0
+                              ? "var(--zalama-success)"
+                              : "var(--zalama-danger)",
+                        }}
                       >
                         {gnfFormatter(employee.salaire_disponible)}
                       </span>
@@ -824,7 +1154,10 @@ export default function PaymentSalaryPage() {
                       {employee.deja_paye ? (
                         <Badge
                           variant="secondary"
-                          className="bg-green-100 text-green-800"
+                          style={{
+                            background: "var(--zalama-success)",
+                            color: "white",
+                          }}
                         >
                           <CheckCircle className="h-3 w-3 mr-1" />
                           Déjà payé
@@ -832,25 +1165,37 @@ export default function PaymentSalaryPage() {
                       ) : employee.eligible_paiement ? (
                         <Badge
                           variant="default"
-                          className="bg-blue-100 text-blue-800"
+                          style={{
+                            background: "var(--zalama-orange)",
+                            color: "white",
+                          }}
                         >
                           Éligible
                         </Badge>
                       ) : (
                         <Badge
                           variant="destructive"
-                          className="bg-red-100 text-red-800"
+                          style={{
+                            background: "var(--zalama-danger)",
+                            color: "white",
+                          }}
                         >
                           <XCircle className="h-3 w-3 mr-1" />
                           Non éligible
                         </Badge>
                       )}
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>Avances: {employee.nombre_avances}</div>
+                    <TableCell className="max-w-[180px]">
+                      <div className="text-sm space-y-1 overflow-hidden">
+                        <div style={{ color: "var(--zalama-text)" }}>
+                          Avances: {employee.nombre_avances}
+                        </div>
                         {employee.paiement_existant && (
-                          <div className="text-gray-500">
+                          <div
+                            className="truncate"
+                            style={{ color: "var(--zalama-text-secondary)" }}
+                            title={`Ref: ${employee.paiement_existant.reference}`}
+                          >
                             Ref: {employee.paiement_existant.reference}
                           </div>
                         )}

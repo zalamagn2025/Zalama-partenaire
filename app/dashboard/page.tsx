@@ -256,6 +256,7 @@ export default function EntrepriseDashboardPage() {
   const charts = dashboardData?.charts;
   const partnerInfo = dashboardData?.partner_info;
   const filters = dashboardData?.filters;
+  const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
 
   // Afficher un message de bienvenue
   useEffect(() => {
@@ -607,7 +608,7 @@ export default function EntrepriseDashboardPage() {
             statistics?.total_employees || 0
           }`}
           icon={Users}
-          color="blue"
+          color="orange"
         />
         <StatCard
           title="Demandes totales"
@@ -619,7 +620,7 @@ export default function EntrepriseDashboardPage() {
           title="Demandes par employé"
           value={statistics?.demandes_per_employee || "0.0"}
           icon={ClipboardList}
-          color="yellow"
+          color="orange"
         />
         <StatCard
           title="Note moyenne"
@@ -629,11 +630,11 @@ export default function EntrepriseDashboardPage() {
         />
       </div>
 
-      {/* Performance financière */}
+      {/* Performance financière - Avances */}
       <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-gray-600 dark:text-white text-lg font-semibold">
-            Performance financière
+          <h2 className="text-lg font-semibold" style={{ color: "var(--zalama-orange)" }}>
+            Performance financière - Avances sur salaire
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -653,7 +654,7 @@ export default function EntrepriseDashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Montant total débloqué
+              Montant total débloqué (Avances)
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(financialPerformance?.debloque_mois)}
@@ -661,7 +662,7 @@ export default function EntrepriseDashboardPage() {
           </div>
           <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              À rembourser
+              À rembourser (Avances)
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(financialPerformance?.a_rembourser_mois)}
@@ -715,12 +716,94 @@ export default function EntrepriseDashboardPage() {
         </div>
       </div>
 
+      {/* Performance Paiements de Salaire */}
+      {paymentSalaryStats && (
+        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--zalama-orange)" }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Paiements de Salaires
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Total paiements effectués
+              </span>
+              <span className="text-2xl font-bold dark:text-white">
+                {paymentSalaryStats.paiements_effectues || 0}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                sur {paymentSalaryStats.total_paiements || 0} paiements
+              </span>
+            </div>
+            
+            <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Montant total versé
+              </span>
+              <span className="text-xl font-bold dark:text-white">
+                {gnfFormatter(paymentSalaryStats.montant_total_salaires)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                à {paymentSalaryStats.employes_payes_distincts || 0} employés
+              </span>
+            </div>
+            
+            {paymentSalaryStats.delai_remboursement && (
+              <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+                <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                  Délai remboursement ZaLaMa
+                </span>
+                <span className="text-lg font-bold dark:text-white">
+                  {formatDate(paymentSalaryStats.delai_remboursement)}
+                </span>
+                {paymentSalaryStats.jours_restants_remboursement !== null && (
+                  <div className="mt-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      paymentSalaryStats.jours_restants_remboursement > 7 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : paymentSalaryStats.jours_restants_remboursement > 0
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {paymentSalaryStats.jours_restants_remboursement > 0
+                        ? `${paymentSalaryStats.jours_restants_remboursement} jours restants`
+                        : paymentSalaryStats.jours_restants_remboursement === 0
+                        ? "Échéance aujourd'hui"
+                        : `Retard de ${Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours`
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {paymentSalaryStats.montant_total_avances_deduites > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-blue-700 dark:text-blue-400">
+                  Avances déduites des salaires
+                </span>
+                <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                  {gnfFormatter(paymentSalaryStats.montant_total_avances_deduites)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Visualisations et Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Évolution des demandes
             </h3>
             {filters?.applied && (
@@ -751,7 +834,7 @@ export default function EntrepriseDashboardPage() {
         {/* Montants débloqués */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Montants débloqués
             </h3>
             {filters?.applied && (
@@ -781,7 +864,7 @@ export default function EntrepriseDashboardPage() {
         {/* Répartition par motif */}
         <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Répartition par motif
             </h3>
             {filters?.applied && (

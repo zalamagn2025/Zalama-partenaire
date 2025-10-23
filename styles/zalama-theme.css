@@ -1,5 +1,7 @@
 :root {
   /* Variables communes aux deux thèmes */
+  --zalama-orange: #f97316; /* Orange ZaLaMa - couleur principale de la marque */
+  --zalama-orange-accent: #fb923c; /* Hover orange - plus clair */
   --zalama-blue: #3b82f6; /* Accent, boutons - bleu vif */
   --zalama-blue-accent: #60a5fa; /* Hover bouton - bleu plus clair */
   --zalama-success: #10b981; /* Succès */
@@ -141,6 +143,18 @@ body {
   color: var(--zalama-blue);
 }
 
+.text-orange {
+  color: var(--zalama-orange);
+}
+
+.bg-orange {
+  background: var(--zalama-orange);
+}
+
+.border-orange {
+  border-color: var(--zalama-orange);
+}
+
 .btn-primary {
   background: var(--zalama-blue);
   color: #fff;
@@ -151,6 +165,18 @@ body {
 
 .btn-primary:hover {
   background: var(--zalama-blue-accent);
+}
+
+.btn-orange {
+  background: var(--zalama-orange);
+  color: #fff;
+  border-radius: 0.5rem;
+  padding: 0.5rem 1.2rem;
+  font-weight: 600;
+}
+
+.btn-orange:hover {
+  background: var(--zalama-orange-accent);
 }
 
 /* Styles pour les en-têtes de section comme sur l'image */
