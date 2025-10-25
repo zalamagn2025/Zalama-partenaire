@@ -112,7 +112,7 @@ export default function EntrepriseSidebar() {
 
   return (
     <aside
-      className={`sidebar fixed top-0 left-0 h-full bg-gray-700 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-30 ${
+      className={`sidebar fixed top-0 left-0 h-full bg-[var(--zalama-bg-darker-light)] border-r border-white/40 transition-all duration-300 z-30 ${
         collapsed ? "w-16" : "w-64"
       }`}
       style={{
@@ -122,7 +122,7 @@ export default function EntrepriseSidebar() {
       }}
     >
       {/* Logo et titre */}
-      <div className="flex items-center justify-between h-18 px-4 border-b border-[var(--zalama-border)]">
+      <div className="flex items-center justify-between h-18 px-4 border-b border-white/20">
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center">
             <div className="relative w-32 h-20 mr-3">
@@ -142,7 +142,7 @@ export default function EntrepriseSidebar() {
         )}
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          className="p-2 rounded-full bg-transparent hover:bg-white/10 hover:scale-110 hover:shadow-lg border border-transparent hover:border-white/30 transition-all duration-300 text-gray-700 dark:text-gray-300 backdrop-blur-sm"
         >
           {collapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -172,14 +172,14 @@ export default function EntrepriseSidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${
+                  className={`flex items-center px-3 py-2.5 rounded-lg transition-all duration-300 group relative overflow-hidden ${
                     isActive
-                      ? "bg-[var(--zalama-bg-lighter)] text-[var(--zalama-blue)] border-l-4 border-[var(--zalama-blue)] shadow-sm"
-                      : "text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] hover:text-[var(--zalama-blue)]"
+                      ? "bg-gradient-to-r from-blue-500/20 to-blue-600/20 text-blue-400 border-l-4 border-blue-400 shadow-lg backdrop-blur-sm"
+                      : "text-[var(--zalama-text)] hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-blue-400 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm hover:border-l-2 hover:border-blue-400/50"
                   }`}
                 >
                   <item.icon
-                    className={`w-5 h-5 ${collapsed ? "mx-auto" : "mr-3"}`}
+                    className={`w-5 h-5 transition-all duration-300 group-hover:scale-110 ${collapsed ? "mx-auto" : "mr-3"}`}
                   />
                   <span
                     className={`${collapsed ? "hidden" : "block"} sidebar-text`}
@@ -194,11 +194,11 @@ export default function EntrepriseSidebar() {
       </nav>
 
       {/* Profil utilisateur */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="absolute bottom-0 left-0 right-0 border-t border-white/20 p-4">
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`flex items-center w-full rounded-lg p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors ${
+            className={`flex items-center w-full rounded-lg p-2 text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-white/5 hover:to-white/10 hover:text-white hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm border border-transparent hover:border-white/30 transition-all duration-300 group ${
               collapsed ? "justify-center" : "justify-between"
             }`}
           >
@@ -207,15 +207,15 @@ export default function EntrepriseSidebar() {
                 collapsed ? "justify-center" : ""
               }`}
             >
-              <div className="w-8 h-8 rounded-full bg-[var(--zalama-blue)] flex items-center justify-center text-white font-semibold flex-shrink-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0 group-hover:scale-110 transition-all duration-300 shadow-lg">
                 {session?.admin?.display_name?.charAt(0) || "A"}
               </div>
               {!collapsed && (
-                <div className="ml-3 sidebar-text">
-                  <p className="text-sm font-medium">
-                    {session?.partner?.company_name || "Entreprise"}
+                <div className="ml-3 sidebar-text min-w-0 flex-1 text-left">
+                  <p className="text-sm font-medium truncate text-left" title={session?.admin?.display_name || "Admin"}>
+                    {session?.admin?.display_name || "Admin"}
                   </p>
-                  <p className="text-xs text-[var(--zalama-gray)]/60">
+                  <p className="text-xs text-[var(--zalama-gray)]/60 truncate text-left" title={session?.admin?.role || "Administrateur"}>
                     {session?.admin?.role
                       ? session.admin.role.charAt(0).toUpperCase() +
                         session.admin.role.slice(1)
@@ -224,18 +224,18 @@ export default function EntrepriseSidebar() {
                 </div>
               )}
             </div>
-            {!collapsed && <ChevronRight className="w-4 h-4 sidebar-text" />}
+            {/* {!collapsed && <ChevronRight className="w-4 h-4 sidebar-text group-hover:scale-110 transition-all duration-300" />} */}
           </button>
 
           {menuOpen && !collapsed && (
-            <div className="absolute bottom-full left-0 w-full mb-2 bg-[var(--zalama-card)] dark:text-gray-300 rounded-lg border border-[var(--zalama-border)] shadow-lg overflow-hidden">
+            <div className="absolute bottom-full left-0 w-full mb-2 bg-white/10 backdrop-blur-xl dark:text-gray-300 rounded-lg border border-white/30 shadow-xl overflow-hidden">
               <ul>
                 <li>
                   <button
-                    className="flex w-full items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                    className="flex w-full items-center px-4 py-2 text-sm text-red-400 hover:bg-gradient-to-r hover:from-red-500/10 hover:to-red-600/10 hover:scale-105 hover:shadow-lg transition-all duration-300 rounded-md group"
                     onClick={handleLogout}
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
+                    <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-all duration-300" />
                     Déconnexion
                   </button>
                 </li>

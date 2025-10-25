@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Badge } from "@/components/ui/badge";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -68,6 +69,14 @@ export default function EntrepriseDashboardPage() {
     Array<{ value: number; label: string }>
   >([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  
+  // État pour éviter l'affichage multiple du toast de bienvenue
+  const [welcomeToastShown, setWelcomeToastShown] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('welcome_toast_shown') === 'true';
+    }
+    return false;
+  });
 
   // Charger les données du dashboard via Edge Function
   const loadDashboardData = async (month?: number, year?: number) => {
@@ -169,34 +178,22 @@ export default function EntrepriseDashboardPage() {
 
       console.log("✅ Données dashboard chargées:", data);
 
-      if (month !== undefined || year !== undefined) {
-        toast.success(
-          `Données filtrées pour ${
-            month ? `${month}/${year}` : "la période sélectionnée"
-          }`
-        );
-      } else {
-        toast.updateSuccess("données du dashboard");
-      }
+      // Données chargées avec succès
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
       setError(errorMessage);
 
-      // Vérifier si c'est une erreur d'authentification ou de route
+      // Gestion des erreurs sans affichage de toast
       if (errorMessage.includes("401") || errorMessage.includes("403")) {
-        toast.sessionError();
         setTimeout(() => {
           router.push("/login");
         }, 2000);
       } else if (errorMessage.includes("404")) {
-        toast.error("Service temporairement indisponible. Redirection vers la connexion...");
         setTimeout(() => {
           router.push("/login");
         }, 2000);
-      } else {
-        toast.loadingError("données du dashboard");
       }
     } finally {
       setIsLoading(false);
@@ -228,6 +225,8 @@ export default function EntrepriseDashboardPage() {
   useEffect(() => {
     if (!loading && !session) {
       console.log("🔄 Pas de session, redirection vers /login");
+      // Réinitialiser le flag du toast de bienvenue lors de la déconnexion
+      localStorage.removeItem('welcome_toast_shown');
       router.push("/login");
     }
   }, [loading, session, router]);
@@ -258,13 +257,16 @@ export default function EntrepriseDashboardPage() {
   const filters = dashboardData?.filters;
   const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
 
-  // Afficher un message de bienvenue
+  // Afficher un message de bienvenue (une seule fois par session)
   useEffect(() => {
-    if (session?.partner && !isLoading && dashboardData) {
+    if (session?.partner && !isLoading && dashboardData && !welcomeToastShown) {
       console.log("Données du partenaire:", session.partner);
       toast.welcome(session.partner.company_name);
+      setWelcomeToastShown(true);
+      // Sauvegarder dans localStorage pour persister entre les rechargements
+      localStorage.setItem('welcome_toast_shown', 'true');
     }
-  }, [session?.partner, isLoading, dashboardData]);
+  }, [session?.partner, isLoading, dashboardData, welcomeToastShown]);
 
   // Si en cours de chargement, afficher des skeletons
   if (loading || isLoading) {
@@ -384,7 +386,7 @@ export default function EntrepriseDashboardPage() {
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* En-tête du tableau de bord */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${partnerInfo?.logo_url ? 'bg-white border-2 border-gray-200' : 'bg-blue-900'}`}>
             {partnerInfo?.logo_url ? (
@@ -422,16 +424,16 @@ export default function EntrepriseDashboardPage() {
               ? new Date(partnerInfo.created_at).getFullYear()
               : new Date().getFullYear()}
           </span>
-          <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">
+          <Badge variant="success" className="mt-1">
             Compte actif
-          </span>
+          </Badge>
         </div>
       </div>
 
       {/* Informations de contexte - Extrait de la carte des filtres */}
       {filters && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                 <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -447,7 +449,7 @@ export default function EntrepriseDashboardPage() {
             </div>
           </div>
           
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                 <RefreshCw className="w-4 h-4 text-green-600 dark:text-green-400" />
@@ -463,7 +465,7 @@ export default function EntrepriseDashboardPage() {
             </div>
           </div>
           
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                 <Filter className="w-4 h-4 text-orange-600 dark:text-orange-400" />
@@ -484,7 +486,7 @@ export default function EntrepriseDashboardPage() {
       )}
 
       {/* Filtres avancés - Style identique à la page remboursements */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -537,7 +539,7 @@ export default function EntrepriseDashboardPage() {
                     setSelectedYear(new Date().getFullYear());
                   }
                 }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="">Tous les mois</option>
                 {months.map((month) => (
@@ -560,7 +562,7 @@ export default function EntrepriseDashboardPage() {
                     e.target.value ? parseInt(e.target.value) : null
                   )
                 }
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="">Toutes les années</option>
                 {years.map((year) => (
@@ -631,7 +633,7 @@ export default function EntrepriseDashboardPage() {
       </div>
 
       {/* Performance financière - Avances */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold" style={{ color: "var(--zalama-orange)" }}>
             Performance financière - Avances sur salaire
@@ -652,7 +654,7 @@ export default function EntrepriseDashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Montant total débloqué (Avances)
             </span>
@@ -660,7 +662,7 @@ export default function EntrepriseDashboardPage() {
               {gnfFormatter(financialPerformance?.debloque_mois)}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               À rembourser (Avances)
             </span>
@@ -670,7 +672,7 @@ export default function EntrepriseDashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Date limite de remboursement
             </span>
@@ -686,23 +688,26 @@ export default function EntrepriseDashboardPage() {
                 : "Non définie"}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Jours restants avant remboursement
             </span>
             <span className="text-lg font-bold dark:text-white">
               {financialPerformance?.jours_restants || "0"} jours
             </span>
-            <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+            <div className="w-full bg-gray-700 rounded-full h-2 mt-2 overflow-hidden">
               <div
-                className="bg-yellow-400 h-2 rounded-full"
+                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${
                     financialPerformance?.debloque_mois &&
                     financialPerformance?.a_rembourser_mois
-                      ? (financialPerformance.a_rembourser_mois /
-                          financialPerformance.debloque_mois) *
-                        100
+                      ? Math.min(
+                          (financialPerformance.a_rembourser_mois /
+                            financialPerformance.debloque_mois) *
+                            100,
+                          100
+                        )
                       : 0
                   }%`,
                 }}
@@ -718,7 +723,7 @@ export default function EntrepriseDashboardPage() {
 
       {/* Performance Paiements de Salaire */}
       {paymentSalaryStats && (
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--zalama-orange)" }}>
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -729,7 +734,7 @@ export default function EntrepriseDashboardPage() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
               <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
                 Total paiements effectués
               </span>
@@ -741,7 +746,7 @@ export default function EntrepriseDashboardPage() {
               </span>
             </div>
             
-            <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
               <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
                 Montant total versé
               </span>
@@ -754,7 +759,7 @@ export default function EntrepriseDashboardPage() {
             </div>
             
             {paymentSalaryStats.delai_remboursement && (
-              <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4">
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                 <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
                   Délai remboursement ZaLaMa
                 </span>
@@ -801,7 +806,7 @@ export default function EntrepriseDashboardPage() {
       {/* Visualisations et Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Évolution des demandes
@@ -832,7 +837,7 @@ export default function EntrepriseDashboardPage() {
           </ResponsiveContainer>
         </div>
         {/* Montants débloqués */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Montants débloqués
@@ -862,7 +867,7 @@ export default function EntrepriseDashboardPage() {
       {/* Répartition par motif + Remboursements récents */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Répartition par motif */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-8">
             <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Répartition par motif

@@ -309,7 +309,7 @@ export default function DemandesAdhesionPage() {
             Gérez les employés sans compte ZaLaMa
           </p>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm p-6 backdrop-blur-sm">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
               <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
@@ -327,7 +327,7 @@ export default function DemandesAdhesionPage() {
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-sm p-4">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow-sm p-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           {/* Recherche */}
           <div className="relative flex-1 max-w-md">
@@ -362,7 +362,7 @@ export default function DemandesAdhesionPage() {
       </div>
 
       {/* Tableau des employés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         {filteredEmployees.length === 0 ? (
           <div className="p-12 text-center">
             <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -398,7 +398,7 @@ export default function DemandesAdhesionPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-[var(--zalama-border)]">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentEmployees.map((employee) => (
                 <tr
                   key={employee.id}
@@ -418,7 +418,7 @@ export default function DemandesAdhesionPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            variant={employee.actif ? "default" : "secondary"}
+                            variant={employee.actif ? "success" : "error"}
                             className="text-xs"
                           >
                             {employee.actif ? "Actif" : "Inactif"}
@@ -440,7 +440,7 @@ export default function DemandesAdhesionPage() {
                     </div>
                   </td>
                   <td className="px-3 py-4">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="info" className="text-xs">
                       {employee.type_contrat}
                     </Badge>
                   </td>
@@ -450,39 +450,60 @@ export default function DemandesAdhesionPage() {
                     </div>
                   </td>
                   <td className="px-3 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    <div className="flex items-center gap-1">
+                      {/* Bouton Détails */}
+                      {/* <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleViewDetails(employee);
                         }}
-                        className="flex items-center gap-1"
+                        disabled={false}
+                        className="group relative p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 w-8 h-8 flex items-center justify-center"
+                        title="Voir les détails"
                       >
                         <Eye className="h-3 w-3" />
-                        Détails
-                      </Button>
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Voir
+                        </div>
+                      </button> */}
 
-                      <Button
-                        variant="outline"
-                        size="sm"
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleViewDetails(employee);
+                         }}
+                         disabled={false}
+                         className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                         title="Voir les détails"
+                       >
+                         <Eye className="h-4 w-4" />
+                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                           Voir
+                         </div>
+                       </button>
+
+                      {/* Bouton Rejeter */}
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRejectEmployee(employee);
                         }}
                         disabled={rejectingEmployee === employee.id}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                        className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        title="Rejeter l'inscription"
                       >
-                        <LoadingButton
-                          loading={rejectingEmployee === employee.id}
-                        >
-                          <X className="h-3 w-3" />
-                        </LoadingButton>
-                        Rejeter
-                      </Button>
+                        {rejectingEmployee === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Rejeter
+                        </div>
+                      </button>
 
-                      <Button
+                      {/* Bouton Créer */}
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCreateAccount(employee.id);
@@ -490,24 +511,26 @@ export default function DemandesAdhesionPage() {
                         disabled={
                           creatingAccount === employee.id || !employee.email
                         }
-                        className={`${
+                        className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
                           !employee.email
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-green-600 hover:bg-green-700"
-                        } flex items-center gap-1`}
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                            : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                        }`}
                         title={
                           !employee.email
                             ? "Email requis pour créer un compte"
-                            : ""
+                            : "Créer le compte"
                         }
                       >
-                        <LoadingButton
-                          loading={creatingAccount === employee.id}
-                        >
-                          <UserPlus className="h-3 w-3" />
-                        </LoadingButton>
-                        Créer
-                      </Button>
+                        {creatingAccount === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                        ) : (
+                          <UserPlus className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          {!employee.email ? "Email requis" : "Créer"}
+                        </div>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -532,7 +555,7 @@ export default function DemandesAdhesionPage() {
       {/* Modal des détails */}
       {isModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-transparent border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col backdrop-blur-sm">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
               <div>
@@ -570,10 +593,10 @@ export default function DemandesAdhesionPage() {
                     {selectedEmployee.poste}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant={selectedEmployee.actif ? "default" : "secondary"}>
+                    <Badge variant={selectedEmployee.actif ? "success" : "error"}>
                       {selectedEmployee.actif ? "Actif" : "Inactif"}
                     </Badge>
-                    <Badge variant="outline">
+                    <Badge variant="info">
                       {selectedEmployee.type_contrat}
                     </Badge>
                   </div>
@@ -582,35 +605,35 @@ export default function DemandesAdhesionPage() {
 
               {/* Informations en grille */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedEmployee.email || "Non renseigné"}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Type de contrat</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedEmployee.type_contrat}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'embauche</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(selectedEmployee.date_embauche)}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire net</p>
                   <p className="font-medium text-green-600 dark:text-green-400">
                     {formatSalary(selectedEmployee.salaire_net)}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'ajout</p>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(selectedEmployee.created_at)}
@@ -670,7 +693,7 @@ export default function DemandesAdhesionPage() {
                   className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
                     !selectedEmployee.email
                       ? "bg-gray-400 cursor-not-allowed text-white"
-                      : "bg-green-600 hover:bg-green-700 text-white"
+                      : "bg-orange-600 hover:bg-orange-700 text-white"
                   }`}
                   title={
                     !selectedEmployee.email
@@ -694,7 +717,7 @@ export default function DemandesAdhesionPage() {
       {/* Modal de confirmation de rejet */}
       {isRejectModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col">
+          <div className="bg-transparent border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col backdrop-blur-sm">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-red-50 to-orange-50/30 dark:from-red-900/20 dark:to-orange-900/10">
               <div>
@@ -747,7 +770,7 @@ export default function DemandesAdhesionPage() {
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Expliquez pourquoi cette inscription est rejetée..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-white resize-none"
+                  className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-transparent text-white resize-none backdrop-blur-sm"
                   rows={4}
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400">

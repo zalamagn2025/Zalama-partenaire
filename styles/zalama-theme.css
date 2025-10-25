@@ -26,7 +26,8 @@
 :root {
   /* Couleurs principales bleu ZaLaMa (très sombre, presque noir) */
   --zalama-bg-dark: #0a1525; /* Fond principal - bleu très sombre */
-  --zalama-bg-darker: #061020; /* Sidebar - encore plus sombre */
+  --zalama-bg-darker: #061020; /* Fond de page - très sombre */
+  --zalama-bg-darker-light: #0e1e36; /* Header & Sidebar - plus clair */
   --zalama-bg-light: #0e1e36; /* Cards, hover - un peu plus clair */
   --zalama-bg-lighter: #1a2c4e; /* Hover plus clair */
   --zalama-header-blue: #0c1d3b; /* Header - bleu profond avec une touche de richesse */
@@ -66,7 +67,7 @@
 }
 
 body {
-  background: var(--zalama-bg-dark);
+  background: var(--zalama-bg-darker);
   color: var(--zalama-gray);
 }
 
@@ -89,14 +90,15 @@ body {
 }
 
 .card {
-  background: var(--zalama-card);
+  background: transparent;
   border: 1px solid var(--zalama-border);
   border-radius: 0.5rem;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   overflow: hidden;
   height: fit-content;
   display: flex;
   flex-direction: column;
+  backdrop-filter: blur(10px);
 }
 
 /* Optimisation des espaces dans les cartes du dashboard */
@@ -117,8 +119,8 @@ body {
 }
 
 .sidebar {
-  background: var(--zalama-bg-darker);
-  border-right: 1px solid var(--zalama-border);
+  background: var(--zalama-bg-darker-light);
+  border-right: 1px solid rgba(255, 255, 255, 0.4);
   transition: width 0.3s ease;
 }
 
@@ -506,10 +508,11 @@ button[class*="bg-slate-"]:hover {
 div[class*="bg-white"],
 div[class*="bg-gray-50"],
 div[class*="bg-gray-100"] {
-  background: var(--zalama-card) !important;
+  background: transparent !important;
   border: 1px solid var(--zalama-border) !important;
   border-radius: 0.5rem !important;
-  box-shadow: 0 2px 12px 0 var(--zalama-shadow) !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 /* Styles pour les headers de formulaires */
@@ -540,9 +543,10 @@ div[class*="text-gray-"] {
 /* Styles pour les tables */
 table[class*="bg-white"],
 table[class*="bg-gray-"] {
-  background: var(--zalama-card) !important;
+  background: transparent !important;
   border: 1px solid var(--zalama-border) !important;
   border-radius: 0.5rem !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 th[class*="bg-gray-"],
@@ -555,10 +559,11 @@ td[class*="bg-gray-"] {
 /* Styles pour les modales */
 div[class*="modal"],
 div[class*="Modal"] {
-  background: var(--zalama-card) !important;
+  background: transparent !important;
   border: 1px solid var(--zalama-border) !important;
   border-radius: 0.5rem !important;
-  box-shadow: 0 4px 20px 0 var(--zalama-shadow) !important;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 /* Styles pour les overlays de modales */
@@ -571,11 +576,12 @@ div[class*="Overlay"] {
 div[class*="notification"],
 div[class*="alert"],
 div[class*="toast"] {
-  background: var(--zalama-card) !important;
+  background: transparent !important;
   border: 1px solid var(--zalama-border) !important;
   color: var(--zalama-text) !important;
   border-radius: 0.5rem !important;
-  box-shadow: 0 2px 12px 0 var(--zalama-shadow) !important;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1) !important;
+  backdrop-filter: blur(10px) !important;
 }
 
 /* Styles spécifiques pour les sections du dashboard principal */

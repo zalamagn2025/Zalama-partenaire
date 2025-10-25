@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { Clock, User, CreditCard, Calendar, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface Remboursement {
   employe_id: string;
@@ -13,6 +15,7 @@ interface Remboursement {
     id: string;
     nom: string;
     prenom: string;
+    photo_url?: string;
   };
   montant_total_remboursement: number;
   nombre_remboursements: number;
@@ -42,6 +45,7 @@ export default function RemboursementsRecents({
   remboursements: propRemboursements, 
   isLoading: propIsLoading 
 }: RemboursementsRecentsProps) {
+  const router = useRouter();
   const { session } = useEdgeAuth();
   const [localRemboursements, setLocalRemboursements] = useState<Remboursement[]>([]);
   const [localIsLoading, setLocalIsLoading] = useState(false);
@@ -106,6 +110,10 @@ export default function RemboursementsRecents({
     });
   };
 
+  const handleViewAllRemboursements = () => {
+    router.push("/dashboard/remboursements");
+  };
+
   const getStatusIcon = (statut: string) => {
     switch (statut) {
       case "EN_ATTENTE":
@@ -119,16 +127,16 @@ export default function RemboursementsRecents({
     }
   };
 
-  const getStatusColor = (statut: string) => {
+  const getStatusVariant = (statut: string) => {
     switch (statut) {
       case "EN_ATTENTE":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
+        return "warning";
       case "REMBOURSE":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+        return "success";
       case "EN_RETARD":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+        return "error";
       default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
+        return "default";
     }
   };
 
@@ -149,7 +157,7 @@ export default function RemboursementsRecents({
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+      <div className="bg-transparent border border-[var(--zalama-border)] backdrop-blur-sm rounded-lg shadow p-6">
         <div className="flex items-center justify-center h-32">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -158,7 +166,7 @@ export default function RemboursementsRecents({
   }
 
   return (
-    <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+    <div className="bg-transparent border border-[var(--zalama-border)] backdrop-blur-sm rounded-lg shadow p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-gray-600 dark:text-white text-base font-semibold">
           Remboursements récents
@@ -178,17 +186,43 @@ export default function RemboursementsRecents({
           </div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="divide-y divide-gray-200 dark:divide-gray-700">
           {displayedRemboursements.map((remboursement, index) => (
             <div
               key={remboursement.employe_id}
-              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700"
+              className="flex items-center justify-between py-3 px-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors duration-200"
             >
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                    <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
+                  {remboursement.employe.photo_url ? (
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                      <img
+                        src={remboursement.employe.photo_url}
+                        alt={`${remboursement.employe.prenom} ${remboursement.employe.nom}`}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          // En cas d'erreur de chargement, afficher les initiales
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            parent.innerHTML = `
+                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                                ${remboursement.employe.prenom.charAt(0)}${remboursement.employe.nom.charAt(0)}
+                              </span>
+                            `;
+                          }
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        {remboursement.employe.prenom.charAt(0)}
+                        {remboursement.employe.nom.charAt(0)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
@@ -196,9 +230,9 @@ export default function RemboursementsRecents({
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     {getStatusIcon(remboursement.statut_global)}
-                    <span className={`inline-flex px-2 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(remboursement.statut_global)}`}>
+                    <Badge variant={getStatusVariant(remboursement.statut_global) as any}>
                       {getStatusText(remboursement.statut_global)}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
               </div>
@@ -215,7 +249,10 @@ export default function RemboursementsRecents({
 
           {compact && remboursements.length > 5 && (
             <div className="text-center pt-2">
-              <button className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium">
+              <button 
+                onClick={handleViewAllRemboursements}
+                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm font-medium transition-colors duration-200 cursor-pointer"
+              >
                 Voir tous les remboursements ({remboursements.length})
               </button>
             </div>

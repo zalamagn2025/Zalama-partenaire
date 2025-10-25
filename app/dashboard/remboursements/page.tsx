@@ -808,11 +808,6 @@ export default function RemboursementsPage() {
                   Données du mois en cours
                 </span>
               )}
-              {statistics && (
-                <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                  Statistiques Edge Function
-                </span>
-              )}
               <button
                 onClick={loadCurrentMonthData}
                 disabled={edgeFunctionLoading}

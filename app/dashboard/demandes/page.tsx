@@ -800,7 +800,7 @@ export default function DemandesPage() {
           <div>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-                Demandes de Services
+                Demandes d'avance
               </h1>
               {currentMonthData && (
                 <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
@@ -821,7 +821,7 @@ export default function DemandesPage() {
               </button>
             </div>
             <p className="text-[var(--zalama-text)]/60 mt-1">
-              Gérez les demandes d'avance sur salaire et de prêts P2P de vos
+              Gérez les demandes d'avance sur salaire
               employés
             </p>
           </div>
