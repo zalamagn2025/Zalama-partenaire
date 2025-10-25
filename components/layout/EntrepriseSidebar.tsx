@@ -31,7 +31,7 @@ const getNavItems = () => [
     href: `/dashboard/demandes-adhesion`,
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
-  { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
+  { label: "Demande d'avance", icon: FileText, href: `/dashboard/demandes` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Paiements
   {

@@ -6,7 +6,8 @@ import { Users, Calendar, RefreshCw, Filter, Loader2 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { toast } from "sonner";
+import Pagination from "@/components/ui/Pagination";
+import { Badge } from "@/components/ui/badge";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   LineChart,
@@ -148,6 +149,9 @@ export default function FinancesPage() {
   // États pour les mois et années actifs
   const [activeMonths, setActiveMonths] = useState<number[]>([]);
   const [activeYears, setActiveYears] = useState<number[]>([]);
+  
+  // État pour afficher/masquer les filtres
+  const [showFilters, setShowFilters] = useState(false);
 
   // Charger les demandes d'avance de salaire dynamiquement
   useEffect(() => {
@@ -374,7 +378,6 @@ export default function FinancesPage() {
       }
     } catch (e) {
       console.error("Erreur lors du chargement des données financières:", e);
-      toast.error("Erreur lors du chargement des données financières");
     } finally {
       setIsLoading(false);
     }
@@ -609,7 +612,6 @@ export default function FinancesPage() {
 
       if (!statsData.success) {
         console.error("Erreur Edge Function:", statsData.message);
-        toast.error("Erreur lors du chargement des données financières");
         return;
       }
 
@@ -646,13 +648,11 @@ export default function FinancesPage() {
       }
 
       console.log("✅ Données financières chargées avec succès:", data);
-      toast.success("Données financières mises à jour avec succès");
     } catch (error) {
       console.error(
         "Erreur lors du chargement des données Edge Functions:",
         error
       );
-      toast.error("Erreur lors du chargement des données financières");
     } finally {
       setEdgeFunctionLoading(false);
     }
@@ -726,7 +726,6 @@ export default function FinancesPage() {
           "Erreur lors du chargement des remboursements:",
           response.message
         );
-        toast.error("Erreur lors du chargement des remboursements");
         return;
       }
 
@@ -765,7 +764,6 @@ export default function FinancesPage() {
         return;
       }
 
-      toast.error("Erreur lors du chargement des remboursements");
     }
   };
 
@@ -941,21 +939,15 @@ export default function FinancesPage() {
     link.click();
     document.body.removeChild(link);
 
-    toast.success("Export CSV réussi");
   };
 
   // Si en cours de chargement, afficher un état de chargement
   if (loading || isLoading) {
     return (
-      <div className="p-3 space-y-4 w-full max-w-full overflow-hidden animate-pulse">
-        {/* Skeleton pour l'en-tête */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-8 w-48"></div>
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-8 w-32"></div>
-          </div>
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-64"></div>
-        </div>
+      <div className="p-6 space-y-6 w-full max-w-full overflow-hidden animate-pulse">
+        
+        {/* Skeleton pour les filtres avancés */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
 
         {/* Skeleton pour les 4 cartes principales */}
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
@@ -964,18 +956,13 @@ export default function FinancesPage() {
           ))}
         </div>
 
-        {/* Skeleton pour les 2 statistiques supplémentaires */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {[...Array(2)].map((_, i) => (
-            <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-28"></div>
-          ))}
+        {/* Skeleton pour la carte unique (Nombre d'employés) */}
+        <div className="grid grid-cols-1 gap-3">
+          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-28"></div>
         </div>
 
-        {/* Skeleton pour les filtres */}
-        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
-
         {/* Skeleton pour les graphiques */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
           <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-80"></div>
         </div>
@@ -1024,34 +1011,140 @@ export default function FinancesPage() {
   }
 
   return (
-    <div className="p-3 space-y-4 w-full max-w-full overflow-hidden">
-      {/* En-tête Finances */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="text-xl sm:text-2xl font-bold text-white">Finances</h1>
-          <div className="flex items-center gap-2">
-            {currentMonthData && (
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                Données du mois en cours
-              </span>
-            )}
-            <button
-              onClick={() => loadFinancesData()}
-              disabled={edgeFunctionLoading}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              title="Actualiser les données du mois en cours"
-            >
-              <RefreshCw
-                className={`h-4 w-4 text-gray-500 ${
-                  edgeFunctionLoading ? "animate-spin" : ""
-                }`}
-              />
-            </button>
+    <div className="p-6 space-y-6 w-full max-w-full overflow-hidden">
+
+      {/* Filtres avancés - Style identique à la page dashboard */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => loadFinancesData(filters)}
+                disabled={edgeFunctionLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {edgeFunctionLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
+            </div>
           </div>
         </div>
-        <p className="text-sm text-gray-400">
-          Entreprise: {session.partner.company_name}
-        </p>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={filters.mois || ""}
+              onChange={(e) => {
+                const mois = e.target.value ? parseInt(e.target.value) : null;
+                // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                if (mois && !filters.annee) {
+                  const newFilters = {
+                    ...filters,
+                    mois,
+                    annee: new Date().getFullYear(),
+                  };
+                  setFilters(newFilters);
+                  loadFinancesData(newFilters);
+                  loadTransactionsWithFilters(newFilters);
+                } else {
+                  applyFilter("mois", mois);
+                }
+              }}
+              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+            >
+              <option value="">Tous les mois</option>
+              {activeMonths.length > 0
+                ? activeMonths.map((month) => (
+                    <option key={month} value={month}>
+                      {new Date(0, month - 1).toLocaleString("fr-FR", {
+                        month: "long",
+                      })}
+                    </option>
+                  ))
+                : Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString("fr-FR", {
+                        month: "long",
+                      })}
+                    </option>
+                  ))}
+            </select>
+          </div>
+
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={filters.annee || ""}
+              onChange={(e) =>
+                applyFilter(
+                  "annee",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
+              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+            >
+              <option value="">Toutes les années</option>
+              {activeYears.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={filters.status || ""}
+              onChange={(e) => applyFilter("status", e.target.value || null)}
+              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PAYE">Payé</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="ANNULE">Annulé</option>
+            </select>
+          </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {edgeFunctionLoading && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
       </div>
 
       {/* Cartes principales finances */}
@@ -1088,7 +1181,7 @@ export default function FinancesPage() {
       </div>
 
       {/* Statistiques supplémentaires */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <StatCard
           title="Nombre d'employés ayant eu une demande approuvée ce mois-ci"
           value={stats.nbEmployesApprouves}
@@ -1154,132 +1247,8 @@ export default function FinancesPage() {
         )}
       </div>
 
-      {/* Filtres avancés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtres avancés
-          </h3>
-          <div className="flex gap-2">
-            <button
-              onClick={resetFilters}
-              className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Réinitialiser
-            </button>
-            <button
-              onClick={() => loadFinancesData(filters)}
-              disabled={edgeFunctionLoading}
-              className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
-              {edgeFunctionLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : null}
-              Actualiser
-            </button>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {/* Filtre par mois */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Mois
-            </label>
-            <select
-              value={filters.mois || ""}
-              onChange={(e) => {
-                const mois = e.target.value ? parseInt(e.target.value) : null;
-                // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                if (mois && !filters.annee) {
-                  const newFilters = {
-                    ...filters,
-                    mois,
-                    annee: new Date().getFullYear(),
-                  };
-                  setFilters(newFilters);
-                  loadFinancesData(newFilters);
-                  loadTransactionsWithFilters(newFilters);
-                } else {
-                  applyFilter("mois", mois);
-                }
-              }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Tous les mois</option>
-              {activeMonths.length > 0
-                ? activeMonths.map((month) => (
-                    <option key={month} value={month}>
-                      {new Date(0, month - 1).toLocaleString("fr-FR", {
-                        month: "long",
-                      })}
-                    </option>
-                  ))
-                : Array.from({ length: 12 }, (_, i) => (
-                    <option key={i + 1} value={i + 1}>
-                      {new Date(0, i).toLocaleString("fr-FR", {
-                        month: "long",
-                      })}
-                    </option>
-                  ))}
-            </select>
-          </div>
-
-          {/* Filtre par année */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Année
-            </label>
-            <select
-              value={filters.annee || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "annee",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Toutes les années</option>
-              {activeYears.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtre par statut */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Statut
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) => applyFilter("status", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="PAYE">Payé</option>
-              <option value="EN_ATTENTE">En attente</option>
-              <option value="EN_RETARD">En retard</option>
-              <option value="ANNULE">Annulé</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Indicateur de filtres actifs supprimé */}
-        {edgeFunctionLoading && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-            Mise à jour des données...
-          </div>
-        )}
-      </div>
-
       {/* Tableau des transactions */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             Historique des remboursements ({filteredTransactions.length}{" "}
@@ -1295,17 +1264,17 @@ export default function FinancesPage() {
           <table className="min-w-full dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
                   Méthode
                 </th>
 
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Montant Total
                 </th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
@@ -1322,7 +1291,7 @@ export default function FinancesPage() {
                 </th> */}
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentTransactions.length > 0 ? (
                 currentTransactions.map((transaction) => {
                   // Déterminer le type basé sur le statut
@@ -1347,10 +1316,10 @@ export default function FinancesPage() {
                       key={transaction.id}
                       className="hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
+                      <td className="px-3 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         {formatDate(transaction.date_creation)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
+                      <td className="px-3 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         <div className="flex flex-col">
                           <span>
                             {transaction.employe
@@ -1364,7 +1333,7 @@ export default function FinancesPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-2 text-xs sm:text-sm text-gray-900 dark:text-white hidden md:table-cell">
+                      <td className="px-3 py-4 text-xs sm:text-sm text-gray-900 dark:text-white hidden md:table-cell">
                         <div
                           className="max-w-xs truncate"
                           title={
@@ -1377,26 +1346,27 @@ export default function FinancesPage() {
                         </div>
                       </td>
 
-                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
+                      <td className="px-3 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white">
                         {gnfFormatter(
                           transaction.montant_total_remboursement || 0
                         )}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white hidden sm:table-cell">
+                      <td className="px-3 py-4 whitespace-nowrap text-xs sm:text-sm text-gray-900 dark:text-white hidden sm:table-cell">
                         {gnfFormatter(transaction.frais_service || 0)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap hidden sm:table-cell">
-                        <span
-                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      <td className="px-3 py-4 whitespace-nowrap hidden sm:table-cell">
+                        <Badge
+                          variant={
                             statusDisplay === "Payé"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                              ? "success"
                               : statusDisplay === "En attente"
-                              ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          }`}
+                              ? "warning"
+                              : "error"
+                          }
+                          className="text-xs"
                         >
                           {statusDisplay}
-                        </span>
+                        </Badge>
                       </td>
                       {/* <td className="px-3 py-2 whitespace-nowrap text-xs sm:text-sm text-gray-500 dark:text-gray-400 hidden lg:table-cell">
                         <div
@@ -1434,66 +1404,14 @@ export default function FinancesPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white dark:bg-[var(--zalama-card)] px-3 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setCurrentPage(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Précédent
-              </button>
-              <button
-                onClick={() => setCurrentPage(currentPage + 1)}
-                disabled={currentPage === totalPages}
-                className="ml-2 relative inline-flex items-center px-3 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Suivant
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-                  Affichage de{" "}
-                  <span className="font-medium">
-                    {indexOfFirstTransaction + 1}
-                  </span>{" "}
-                  à{" "}
-                  <span className="font-medium">
-                    {Math.min(
-                      indexOfLastTransaction,
-                      filteredTransactions.length
-                    )}
-                  </span>{" "}
-                  sur{" "}
-                  <span className="font-medium">
-                    {filteredTransactions.length}
-                  </span>{" "}
-                  résultats
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                    (page) => (
-                      <button
-                        key={page}
-                        onClick={() => setCurrentPage(page)}
-                        className={`relative inline-flex items-center px-3 py-1 border text-xs font-medium ${
-                          currentPage === page
-                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  )}
-                </nav>
-              </div>
-            </div>
-          </div>
+        {filteredTransactions.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredTransactions.length}
+            itemsPerPage={transactionsPerPage}
+            onPageChange={setCurrentPage}
+          />
         )}
       </div>
     </div>

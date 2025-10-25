@@ -110,7 +110,7 @@ export default function EntrepriseHeader() {
     if (pathname.includes("/employes")) return "Gestion des Employés";
     if (pathname.includes("/finances")) return "Finances";
     if (pathname.includes("/statistiques")) return "Statistiques";
-    if (pathname.includes("/demandes")) return "Demandes";
+    if (pathname.includes("/demandes")) return "Gestion des avances";
     if (pathname.includes("/alertes")) return "Alertes";
     if (pathname.includes("/parametres")) return "Paramètres";
 
