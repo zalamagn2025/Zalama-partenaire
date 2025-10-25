@@ -17,6 +17,8 @@ import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import type { Employee } from "@/lib/supabase";
 
@@ -338,15 +340,7 @@ export default function EmployesPage() {
 
   if (loading || isLoading || statisticsLoading) {
     return (
-      <div className="space-y-6 animate-pulse">
-        {/* Skeleton pour l'en-tête */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-80"></div>
-          </div>
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-6 w-64 mt-1"></div>
-        </div>
-
+      <div className="p-6 space-y-6 max-w-full overflow-hidden animate-pulse">
         {/* Skeleton pour les statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -398,32 +392,7 @@ export default function EmployesPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* En-tête */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Users className="h-8 w-8 text-blue-600" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Gestion des Employés
-            </h1>
-          </div>
-          <button
-            onClick={loadCurrentMonthData}
-            className="flex items-center px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors"
-            title="Actualiser les données du mois en cours"
-          >
-            <RefreshCw
-              className={`h-4 w-4 text-gray-500 ${
-                edgeFunctionLoading ? "animate-spin" : ""
-              }`}
-            />
-          </button>
-        </div>
-        <p className="text-gray-600 dark:text-gray-400 mt-1">
-          {session?.partner?.company_name} -{" "}
-          {statisticsLoading ? "..." : totalEmployeesFromStats} employés total
-        </p>
-      </div>
+      
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -586,8 +555,8 @@ export default function EmployesPage() {
       </div>
 
       {/* Tableau des employés */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div className="overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
+        <div className="overflow-x-auto">
           <table className="w-full table-fixed dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
@@ -614,28 +583,26 @@ export default function EmployesPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentEmployees.map((employee) => (
                 <tr
                   key={employee.id}
                   className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <td className="px-2 py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-8 w-8">
-                        <div className="h-8 w-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                            {employee.prenom.charAt(0)}
-                            {employee.nom.charAt(0)}
-                          </span>
-                        </div>
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                          {employee.prenom.charAt(0)}
+                          {employee.nom.charAt(0)}
+                        </span>
                       </div>
-                      <div className="ml-3 min-w-0">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <div>
+                        <div className="font-medium text-sm text-gray-900 dark:text-white">
                           {employee.prenom} {employee.nom}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {employee.email}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {employee.genre || "Non renseigné"}
                         </div>
                       </div>
                     </div>
@@ -650,42 +617,43 @@ export default function EmployesPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-2 py-4">
-                    <span className="inline-flex px-1 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                  <td className="px-3 py-4">
+                    <Badge variant="info" className="text-xs">
                       {employee.type_contrat}
-                    </span>
+                    </Badge>
                   </td>
-                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
-                    <div className="truncate">
+                  <td className="px-3 py-4">
+                    <div className="text-sm font-medium text-green-600 dark:text-green-400">
                       {employee.salaire_net
                         ? formatSalary(employee.salaire_net)
                         : "Non défini"}
                     </div>
                   </td>
-                  <td className="px-2 py-4 text-sm text-gray-900 dark:text-white">
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                     <div className="truncate">
                       {employee.date_embauche
                         ? formatDate(employee.date_embauche)
                         : "Non définie"}
                     </div>
                   </td>
-                  <td className="px-2 py-4">
-                    <span
-                      className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${
-                        employee.actif
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                          : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                      }`}
+                  <td className="px-3 py-4">
+                    <Badge
+                      variant={employee.actif ? "success" : "error"}
+                      className="text-xs"
                     >
                       {employee.actif ? "Actif" : "Inactif"}
-                    </span>
+                    </Badge>
                   </td>
-                  <td className="px-2 py-4 text-right text-sm font-medium">
+                  <td className="px-2 py-4 text-center text-sm font-medium">
                     <button
                       onClick={() => openViewModal(employee)}
-                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                      className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                      title="Voir les détails"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="h-4 w-4" />
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                        Voir
+                      </div>
                     </button>
                   </td>
                 </tr>
@@ -695,60 +663,14 @@ export default function EmployesPage() {
         </div>
 
         {/* Pagination */}
-        {totalPagesClient > 1 && (
-          <div className="bg-white dark:bg-[var(--zalama-card)] px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-[var(--zalama-card)] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Précédent
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage === totalPagesClient}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-[var(--zalama-card)] hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Suivant
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Affichage de{" "}
-                  <span className="font-medium">
-                    {(currentPage - 1) * employeesPerPage + 1}
-                  </span>{" "}
-                  à{" "}
-                  <span className="font-medium">
-                    {Math.min(currentPage * employeesPerPage, totalEmployees)}
-                  </span>{" "}
-                  sur <span className="font-medium">{totalEmployees}</span>{" "}
-                  employés
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  {Array.from({ length: totalPagesClient }, (_, i) => i + 1).map(
-                    (page) => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          currentPage === page
-                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                            : "bg-[var(--zalama-card)] border-gray-300 text-gray-500 hover:bg-gray-50"
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    )
-                  )}
-                </nav>
-              </div>
-            </div>
-          </div>
+        {filteredEmployees.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPagesClient}
+            totalItems={filteredEmployees.length}
+            itemsPerPage={employeesPerPage}
+            onPageChange={handlePageChange}
+          />
         )}
       </div>
 
