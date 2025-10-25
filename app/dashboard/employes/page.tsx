@@ -12,6 +12,11 @@ import {
   TrendingUp,
   AlertTriangle,
   X,
+  User,
+  Mail,
+  Phone,
+  FileText,
+  DollarSign,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
@@ -677,20 +682,25 @@ export default function EmployesPage() {
       {/* Modal de visualisation des détails */}
       {isViewModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Détails de l'employé
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {selectedEmployee.prenom} {selectedEmployee.nom}
-                </p>
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Détails de l'employé
+                  </h2>
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    Informations complètes de l'employé
+                  </p>
+                </div>
               </div>
               <button
                 onClick={closeViewModal}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -698,166 +708,176 @@ export default function EmployesPage() {
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* En-tête avec photo et nom */}
+              <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      {selectedEmployee.prenom.charAt(0)}
+                      {selectedEmployee.nom.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">
+                      {selectedEmployee.prenom} {selectedEmployee.nom}
+                    </h3>
+                    <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                      {selectedEmployee.poste}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge
+                    variant={selectedEmployee.actif ? "success" : "error"}
+                    className="text-xs"
+                  >
+                    {selectedEmployee.actif ? "Actif" : "Inactif"}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Informations en grille */}
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Prénom
-                    </label>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {selectedEmployee.prenom}
+                {/* Email - prend toute la largeur */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedEmployee.email || "Non renseigné"}
+                  </p>
+                </div>
+
+                {/* Autres informations en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.telephone ? `+224${selectedEmployee.telephone}` : "Non renseigné"}
                     </p>
                   </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                      Nom
-                    </label>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {selectedEmployee.nom}
+
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                        <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Type de contrat</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.type_contrat}
                     </p>
                   </div>
-                </div>
-                {/* Informations personnelles */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Informations Personnelles
-                  </h3>
-                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white break-all">
-                          {selectedEmployee.email || "Non défini"}
-                        </p>
+
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Téléphone</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.telephone || "Non défini"}
-                        </p>
-                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Genre</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.genre || "Non défini"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Statut</p>
-                        <span
-                          className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                            selectedEmployee.actif
-                              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                              : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                          }`}
-                        >
-                          {selectedEmployee.actif ? "Actif" : "Inactif"}
-                        </span>
-                      </div>
-                    </div>
-                    {selectedEmployee.adresse && (
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Adresse</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.adresse}
-                        </p>
-                      </div>
-                    )}
+                    <p className="font-medium text-green-600 dark:text-green-400">
+                      {selectedEmployee.salaire_net
+                        ? formatSalary(selectedEmployee.salaire_net)
+                        : "Non défini"}
+                    </p>
                   </div>
-                </div>
-                
-                {/* Informations professionnelles */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Informations Professionnelles
-                  </h3>
-                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Poste</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.poste}
-                        </p>
+
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Type de contrat</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.type_contrat}
-                        </p>
-                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
                     </div>
-                    {selectedEmployee.role && (
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Rôle</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {selectedEmployee.role}
-                        </p>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.date_embauche
+                        ? formatDate(selectedEmployee.date_embauche)
+                        : "Non définie"}
+                    </p>
+                  </div>
+
+                  {(selectedEmployee as any).date_expiration && (
+                    <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                          <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'expiration</span>
                       </div>
-                    )}
-                    <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'embauche</p>
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {selectedEmployee.date_embauche
-                          ? formatDate(selectedEmployee.date_embauche)
-                          : "Non définie"}
+                      <p className="font-medium text-orange-600 dark:text-orange-400">
+                        {formatDate((selectedEmployee as any).date_expiration)}
                       </p>
                     </div>
-                  </div>
-                </div>
-                
-                {/* Informations financières */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Informations Financières
-                  </h3>
-                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire net</p>
-                        <p className="text-lg font-bold text-green-600">
-                          {selectedEmployee.salaire_net
-                            ? formatSalary(selectedEmployee.salaire_net)
-                            : "Non défini"}
-                        </p>
-                      </div>
-                      {selectedEmployee.salaire_restant !== undefined && selectedEmployee.salaire_restant !== null && (
-                        <div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire restant</p>
-                          <p className="text-lg font-bold text-blue-600">
-                            {formatSalary(selectedEmployee.salaire_restant)}
-                          </p>
+                  )}
+
+                  {(selectedEmployee as any).last_sign_in_at && (
+                    <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
+                          <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
                         </div>
-                      )}
+                        <span className="text-gray-600 dark:text-gray-400 text-xs">Dernière connexion</span>
+                      </div>
+                      <p className="font-medium text-teal-600 dark:text-teal-400">
+                        {formatDate((selectedEmployee as any).last_sign_in_at)}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
-                
+
                 {/* Informations système */}
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Informations Système
-                  </h3>
-                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date de création</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatDate(selectedEmployee.created_at)}
-                        </p>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-white mb-4">Informations Système</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-gray-100 dark:bg-gray-900/20 rounded-lg">
+                          <Calendar className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                        </div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs">Date de création</span>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Dernière modification</p>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {formatDate(selectedEmployee.updated_at)}
-                        </p>
-                      </div>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {formatDate(selectedEmployee.created_at)}
+                      </p>
                     </div>
+
+
+
+                    {(selectedEmployee as any).status && (
+                      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-slate-100 dark:bg-slate-900/20 rounded-lg">
+                            <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                          </div>
+                          <span className="text-gray-600 dark:text-gray-400 text-xs">Statut général</span>
+                        </div>
+                        <p className="font-medium text-gray-900 dark:text-white">
+                          {(selectedEmployee as any).status}
+                        </p>
+                      </div>
+                    )}
+
                     {selectedEmployee.user_id && (
-                      <div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">ID Utilisateur</p>
-                        <p className="text-xs font-mono text-gray-600 dark:text-gray-400">
+                      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm md:col-span-2">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="p-2 bg-gray-100 dark:bg-gray-900/20 rounded-lg">
+                            <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                          </div>
+                          <span className="text-gray-600 dark:text-gray-400 text-xs">ID Utilisateur</span>
+                        </div>
+                        <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">
                           {selectedEmployee.user_id}
                         </p>
                       </div>
@@ -867,15 +887,6 @@ export default function EmployesPage() {
               </div>
             </div>
             
-            {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={closeViewModal}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors"
-              >
-                Fermer
-              </button>
-            </div>
           </div>
         </div>
       )}
