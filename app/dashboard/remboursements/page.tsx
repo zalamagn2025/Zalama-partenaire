@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Pagination from "@/components/ui/Pagination";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,6 +19,9 @@ import {
   Tooltip,
 } from "chart.js";
 import {
+  RefreshCw,
+  Mail,
+  Phone,
   DollarSign,
   BarChart3,
   Clock,
@@ -790,7 +793,7 @@ export default function RemboursementsPage() {
   return (
     <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
       {/* En-tête professionnel */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--zalama-border)] p-6">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
@@ -882,7 +885,7 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Filtres avancés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -999,8 +1002,8 @@ export default function RemboursementsPage() {
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les employés</option>
-              {activeEmployees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
+              {activeEmployees.map((employee, index) => (
+                <option key={`${employee.id}-${index}`} value={employee.id}>
                   {employee.nom_complet || `${employee.prenom} ${employee.nom}`}
                 </option>
               ))}
@@ -1063,7 +1066,7 @@ export default function RemboursementsPage() {
 
       {/* Statistiques détaillées */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center">
             <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
               <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
@@ -1078,7 +1081,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
               <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -1096,7 +1099,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
@@ -1117,7 +1120,7 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <div className="flex items-center">
             <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -1140,7 +1143,7 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Liste des remboursements regroupés par employé */}
-      <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Remboursements par employé
@@ -1150,36 +1153,36 @@ export default function RemboursementsPage() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)]">
+          <table className="w-full table-fixed dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Total remboursement
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Frais service total
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Nombre de remboursements
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire restant
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Période
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Statut global
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-[var(--zalama-border)]">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentMonthData?.data?.length === 0 && (
                 <tr>
                   <td
@@ -1192,10 +1195,10 @@ export default function RemboursementsPage() {
               )}
               {paginatedEmployees.map((employeeData: any, idx: number) => (
                 <tr
-                  key={employeeData.employe_id}
-                  className="dark:bg-[var(--zalama-card)] transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                  key={`${employeeData.employe_id}-${idx}`}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <td className="px-3 py-2 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {employeeData.employe?.prenom} {employeeData.employe?.nom}
                     </div>
@@ -1206,27 +1209,27 @@ export default function RemboursementsPage() {
                       Salaire: {gnfFormatter(employeeData.employe?.salaire_net)}
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400">
+                  <td className="px-3 py-4 text-sm font-medium text-red-600 dark:text-red-400">
                     {gnfFormatter(employeeData.montant_total_remboursement)}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-500">
+                  <td className="px-3 py-4 text-sm text-gray-500">
                     {gnfFormatter(employeeData.frais_service_total)}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
                       {employeeData.nombre_remboursements}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                  <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                     {gnfFormatter(employeeData.salaire_restant)}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500">
+                  <td className="px-3 py-4 text-xs text-gray-500">
                     <div>{employeeData.periode?.description}</div>
                     <div className="text-xs text-gray-400">
                       {employeeData.periode?.periode_complete}
                     </div>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-4">
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         employeeData.statut_global === "EN_ATTENTE"
@@ -1241,14 +1244,16 @@ export default function RemboursementsPage() {
                       {employeeData.statut_global}
                     </span>
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-4 text-center">
                     <button
                       onClick={() => handleShowEmployeeDetails(employeeData)}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md transition-colors"
+                      className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                       title="Voir les détails des remboursements"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
+                      <Eye className="h-4 w-4" />
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                       Détails
+                      </div>
                     </button>
                   </td>
                 </tr>
@@ -1259,44 +1264,19 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, dataForPagination.length)}{" "}
-              sur {dataForPagination.length} employé(s)
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="h-8 w-8 p-0 border-[var(--zalama-border)] hover:bg-[var(--zalama-blue)]/10"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {currentPage} / {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="h-8 w-8 p-0 border-[var(--zalama-border)] hover:bg-[var(--zalama-blue)]/10"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+      {dataForPagination.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={dataForPagination.length}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Graphiques compacts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Répartition par statut
           </h3>
@@ -1333,7 +1313,7 @@ export default function RemboursementsPage() {
             />
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
           <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
             Par employé
           </h3>
@@ -1385,20 +1365,25 @@ export default function RemboursementsPage() {
       {/* Modal de détail professionnelle */}
       {showDetailModal && selectedRemboursement && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <Receipt className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Détail du remboursement
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Référence: {selectedRemboursement.id || "N/A"}
                 </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1503,13 +1488,18 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
                 onClick={() => setShowDetailModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
               >
+                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  <span className="group-hover:scale-105 transition-all duration-300">
                 Fermer
-              </Button>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1518,23 +1508,28 @@ export default function RemboursementsPage() {
       {/* Modal des informations financières de ZaLaMa */}
       {showFinancialInfoModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <Building className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Informations Financières - ZaLaMa SARL
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Relevé d'identité bancaire et coordonnées de l'entreprise
                 </p>
               </div>
-              <Button
+              </div>
+              <button
                 onClick={() => setShowFinancialInfoModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
-              </Button>
+              </button>
             </div>
             
             {/* Content - Scrollable */}
@@ -1725,13 +1720,18 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
                 onClick={() => setShowFinancialInfoModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
               >
+                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  <span className="group-hover:scale-105 transition-all duration-300">
                 Fermer
-              </Button>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1739,21 +1739,26 @@ export default function RemboursementsPage() {
 
       {/* Modal des détails d'un employé */}
       {showEmployeeDetailsModal && selectedEmployeeDetails && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Détails des remboursements - {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom}
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Détails des remboursements
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Liste complète des remboursements individuels pour cet employé
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom} - Liste complète des remboursements
                 </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowEmployeeDetailsModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1761,45 +1766,89 @@ export default function RemboursementsPage() {
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-10 overflow-y-auto flex-1">
+              {/* En-tête avec photo et nom */}
+              <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      {selectedEmployeeDetails.employe?.prenom?.charAt(0)}
+                      {selectedEmployeeDetails.employe?.nom?.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">
+                      {selectedEmployeeDetails.employe?.prenom} {selectedEmployeeDetails.employe?.nom}
+                    </h3>
+                    <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                      {selectedEmployeeDetails.employe?.poste || "N/A"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge
+                    variant={
+                      selectedEmployeeDetails.statut_global === "PAYE"
+                        ? "success"
+                        : selectedEmployeeDetails.statut_global === "EN_ATTENTE"
+                        ? "warning"
+                        : "error"
+                    }
+                    className="text-xs"
+                  >
+                    {selectedEmployeeDetails.statut_global}
+                  </Badge>
+                </div>
+              </div>
+
               {/* Informations de l'employé */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8">
-                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                  Informations de l'employé
-                </h4>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Nom complet:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.prenom}{" "}
-                      {selectedEmployeeDetails.employe?.nom}
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-white mb-4">Informations de l'employé</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                        <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployeeDetails.employe?.email || "Non renseigné"}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Email:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.email}
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployeeDetails.employe?.telephone || "Non renseigné"}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Téléphone:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.telephone}
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
+                    </div>
+                    <p className="font-medium text-green-600 dark:text-green-400">
+                      {gnfFormatter(selectedEmployeeDetails.employe?.salaire_net)}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Salaire net:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {gnfFormatter(
-                        selectedEmployeeDetails.employe?.salaire_net
-                      )}
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                        <Receipt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Total remboursement</span>
+                    </div>
+                    <p className="font-medium text-red-600 dark:text-red-400">
+                      {gnfFormatter(selectedEmployeeDetails.montant_total_remboursement)}
                     </p>
                   </div>
                 </div>
@@ -1880,7 +1929,7 @@ export default function RemboursementsPage() {
                   {selectedEmployeeDetails.remboursements_detailes?.map(
                     (remb: any, index: number) => (
                       <div
-                        key={remb.id}
+                        key={`${remb.id}-${index}`}
                         className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
                       >
                         {/* En-tête du remboursement */}
@@ -1948,13 +1997,18 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
                 onClick={() => setShowEmployeeDetailsModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
               >
+                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  <span className="group-hover:scale-105 transition-all duration-300">
                 Fermer
-              </Button>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

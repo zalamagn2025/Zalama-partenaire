@@ -16,6 +16,7 @@ import {
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import {
   LineChart,
@@ -396,16 +397,6 @@ export default function AvisPage() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredAvis.slice(indexOfFirstItem, indexOfLastItem);
 
-  // Fonction pour changer de page
-  const paginate = (pageNumber: number) => {
-    if (pageNumber > 0 && pageNumber <= totalPages) {
-      setCurrentPage(pageNumber);
-      const newOffset = (pageNumber - 1) * itemsPerPage;
-      updateFilter("offset", newOffset);
-      // Scroll vers le haut de la page
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
 
   // Utiliser les statistiques de l'edge fonction si disponibles, sinon calculer localement
   const stats = statistics
@@ -1001,87 +992,21 @@ export default function AvisPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between mt-6">
-        <div className="text-sm text-[var(--zalama-text)]/70">
-          {pagination.total === 0
-            ? "Aucun avis trouvé"
-            : pagination.total === 1
-            ? "1 avis trouvé"
-            : `Affichage de ${indexOfFirstItem + 1} à ${Math.min(
-                indexOfLastItem,
-                pagination.total
-              )} sur ${pagination.total} avis`}
-        </div>
-        {pagination.total > 0 && (
-          <div className="flex gap-1">
-            <button
-              onClick={() => paginate(currentPage - 1)}
-              disabled={currentPage === 1}
-              className={`px-3 py-1 rounded border ${
-                currentPage === 1
-                  ? "border-[var(--zalama-border)]/30 bg-[var(--zalama-bg-light)]/50 text-[var(--zalama-text)]/30 cursor-not-allowed"
-                  : "border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]/80"
-              }`}
-            >
-              Précédent
-            </button>
-
-            {/* Affichage des boutons de pagination */}
-            {[...Array(totalPages)].map((_, index) => {
-              // Afficher au maximum 5 boutons de pagination
-              if (
-                totalPages <= 5 ||
-                // Toujours afficher la première page
-                index === 0 ||
-                // Toujours afficher la dernière page
-                index === totalPages - 1 ||
-                // Afficher les pages autour de la page courante
-                (index >= currentPage - 2 && index <= currentPage + 0)
-              ) {
-                return (
-                  <button
-                    key={index}
-                    onClick={() => paginate(index + 1)}
-                    className={`px-3 py-1 rounded border ${
-                      currentPage === index + 1
-                        ? "border-[var(--zalama-border)] bg-[var(--zalama-blue)] text-white"
-                        : "border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]/80"
-                    }`}
-                  >
-                    {index + 1}
-                  </button>
-                );
-              } else if (
-                (index === 1 && currentPage > 3) ||
-                (index === totalPages - 2 && currentPage < totalPages - 2)
-              ) {
-                // Afficher des points de suspension pour indiquer des pages non affichées
-                return (
-                  <span
-                    key={index}
-                    className="px-3 py-1 text-[var(--zalama-text)]/70"
-                  >
-                    ...
-                  </span>
-                );
-              }
-              return null;
-            })}
-
-            <button
-              onClick={() => paginate(currentPage + 1)}
-              disabled={currentPage === totalPages || totalPages === 0}
-              className={`px-3 py-1 rounded border ${
-                currentPage === totalPages || totalPages === 0
-                  ? "border-[var(--zalama-border)]/30 bg-[var(--zalama-bg-light)]/50 text-[var(--zalama-text)]/30 cursor-not-allowed"
-                  : "border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)]/80"
-              }`}
-            >
-              Suivant
-            </button>
-          </div>
-        )}
-      </div>
+      {filteredAvis.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={pagination.total}
+          itemsPerPage={itemsPerPage}
+          onPageChange={(page) => {
+            setCurrentPage(page);
+            const newOffset = (page - 1) * itemsPerPage;
+            updateFilter("offset", newOffset);
+            // Scroll vers le haut de la page
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
     </div>
   );
 }

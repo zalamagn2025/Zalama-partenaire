@@ -10,14 +10,13 @@ import {
   Filter, 
   RefreshCw, 
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Eye,
   Download
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import {
   LineChart,
@@ -31,7 +30,6 @@ import {
   BarChart,
   Bar,
 } from "recharts";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -40,15 +38,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { X } from "lucide-react";
 
 // Fonction pour formatter les montants en GNF
@@ -275,30 +266,22 @@ export default function PaiementsPage() {
   const getStatusBadge = (statut: string) => {
     switch (statut) {
       case "PAYE":
-        return <Badge className="bg-green-500">Payé</Badge>;
+        return <Badge variant="success" className="text-xs">Payé</Badge>;
       case "EN_ATTENTE":
-        return <Badge className="bg-yellow-500">En attente</Badge>;
+        return <Badge variant="warning" className="text-xs">En attente</Badge>;
       case "ANNULE":
-        return <Badge className="bg-red-500">Annulé</Badge>;
+        return <Badge variant="error" className="text-xs">Annulé</Badge>;
       case "ECHOUE":
-        return <Badge className="bg-red-600">Échoué</Badge>;
+        return <Badge variant="error" className="text-xs">Échoué</Badge>;
       default:
-        return <Badge className="bg-gray-500">{statut}</Badge>;
+        return <Badge variant="default" className="text-xs">{statut}</Badge>;
     }
   };
 
   if (authLoading || loading) {
     return (
       <div className="p-6 space-y-6 animate-pulse">
-        {/* Skeleton pour l'en-tête */}
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-96"></div>
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-80"></div>
-          </div>
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-32"></div>
-        </div>
-
+      
         {/* Skeleton pour les statistiques */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {[...Array(4)].map((_, i) => (
@@ -343,28 +326,7 @@ export default function PaiementsPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* En-tête */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Historique des Paiements
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Consultez l'historique et les statistiques de vos paiements salariés
-          </p>
-        </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-          className="border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-800 dark:hover:text-orange-300"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-          Actualiser
-        </Button>
-      </div>
-
+      
       {/* Statistiques */}
       {loadingStats ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -406,7 +368,7 @@ export default function PaiementsPage() {
 
           {/* Carte Délai de Remboursement */}
           {statistics.delai_remboursement && (
-            <Card className="p-6 bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 border-orange-200 dark:border-orange-700">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
@@ -426,10 +388,10 @@ export default function PaiementsPage() {
                         <Badge 
                           variant={
                             statistics.jours_restants_remboursement > 7 
-                              ? "default" 
+                              ? "success" 
                               : statistics.jours_restants_remboursement > 0 
-                              ? "secondary" 
-                              : "destructive"
+                              ? "warning" 
+                              : "error"
                           }
                           className={
                             statistics.jours_restants_remboursement > 7
@@ -463,13 +425,13 @@ export default function PaiementsPage() {
                   </span>
                 </div>
               </div>
-            </Card>
+            </div>
           )}
         </>
       ) : null}
 
       {/* Filtres */}
-      <Card className="p-4 bg-[var(--zalama-card)] border-[var(--zalama-border)]">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-4 backdrop-blur-sm">
         <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <Filter className="w-5 h-5 text-gray-500" />
@@ -496,10 +458,10 @@ export default function PaiementsPage() {
             </SelectContent>
           </Select>
         </div>
-      </Card>
+      </div>
 
       {/* Tableau des paiements */}
-      <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="p-4 border-b border-[var(--zalama-border)]">
           <h2 className="text-lg font-semibold text-[var(--zalama-text)]">Liste des Paiements</h2>
         </div>
@@ -515,107 +477,92 @@ export default function PaiementsPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Référence</TableHead>
-                    <TableHead>Employé</TableHead>
-                    <TableHead>Période</TableHead>
-                    <TableHead>Salaire Net</TableHead>
-                    <TableHead>Avances</TableHead>
-                    <TableHead>Montant Payé</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <table className="w-full table-fixed dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-[var(--zalama-card)]">
+                  <tr>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Référence</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Employé</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Période</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Salaire Net</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Avances</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Montant Payé</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Statut</th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
                   {payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-mono text-xs">
+                    <tr key={payment.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-3 py-4 font-mono text-xs text-gray-900 dark:text-white">
                         {payment.reference_paiement}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-3 py-4">
                         {payment.employe ? (
                           <div>
-                            <p className="font-medium">
+                            <p className="font-medium text-sm text-gray-900 dark:text-white">
                               {payment.employe.nom} {payment.employe.prenom}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {payment.employe.poste}
                             </p>
                           </div>
                         ) : (
                           <span className="text-gray-400">N/A</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-sm">
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                         {formatDate(payment.periode_debut)} <br />
-                        <span className="text-gray-500">→ {formatDate(payment.periode_fin)}</span>
-                      </TableCell>
-                      <TableCell className="font-medium">
+                        <span className="text-gray-500 dark:text-gray-400">→ {formatDate(payment.periode_fin)}</span>
+                      </td>
+                      <td className="px-3 py-4 font-medium text-gray-900 dark:text-white">
                         {gnfFormatter(payment.salaire_net)}
-                      </TableCell>
-                      <TableCell className="text-orange-600">
+                      </td>
+                      <td className="px-3 py-4 text-orange-600 dark:text-orange-400">
                         {gnfFormatter(payment.avances_deduites)}
-                      </TableCell>
-                      <TableCell className="font-bold text-green-600">
+                      </td>
+                      <td className="px-3 py-4 font-bold text-green-600 dark:text-green-400">
                         {gnfFormatter(payment.salaire_disponible)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(payment.statut)}</TableCell>
-                      <TableCell className="text-sm">
+                      </td>
+                      <td className="px-3 py-4">{getStatusBadge(payment.statut)}</td>
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                         {formatDate(payment.date_paiement)}
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <button
                           onClick={() => handleViewDetails(payment)}
-                          className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Voir les détails"
                         >
-                          <Eye className="w-4 h-4 mr-1" />
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                           Détails
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                          </div>
+                        </button>
+                      </td>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             </div>
 
             {/* Pagination */}
-            <div className="p-4 border-t flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Page {pagination.page} sur {pagination.totalPages} ({pagination.total} paiements)
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPayments(pagination.page - 1)}
-                  disabled={!pagination.hasPrevious || loading}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Précédent
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPayments(pagination.page + 1)}
-                  disabled={!pagination.hasNext || loading}
-                >
-                  Suivant
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
-              </div>
-            </div>
+            {payments.length > 0 && (
+              <Pagination
+                currentPage={pagination.page}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.total}
+                itemsPerPage={pagination.limit}
+                onPageChange={(page) => fetchPayments(page)}
+              />
+            )}
           </>
         )}
-      </Card>
+      </div>
 
       {/* Graphique de l'évolution mensuelle */}
       {statistics && Object.keys(statistics.paiements_par_mois).length > 0 && (
-        <Card className="p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
           <h2 className="text-lg font-semibold mb-4">Évolution Mensuelle</h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
@@ -641,26 +588,31 @@ export default function PaiementsPage() {
               <Bar dataKey="frais" fill="#6366f1" name="Frais" />
             </BarChart>
           </ResponsiveContainer>
-        </Card>
+        </div>
       )}
 
       {/* Modal de détails du paiement */}
       {isModalOpen && selectedPayment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <Banknote className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Détails du Paiement
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Référence: {selectedPayment.reference_paiement}
                 </p>
+                </div>
               </div>
               <button
                 onClick={handleCloseModal}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -779,16 +731,6 @@ export default function PaiementsPage() {
                 </div>
               )}
 
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
-                onClick={handleCloseModal} 
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                Fermer
-              </Button>
             </div>
           </div>
         </div>
