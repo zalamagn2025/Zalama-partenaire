@@ -127,7 +127,7 @@ export default function EntrepriseSidebar() {
           <Link href="/dashboard" className="flex items-center">
             <div className="relative w-32 h-20 mr-3">
               <Image
-                src="/images/Logo_vertical.svg"
+                src="/images/Logo.svg"
                 alt="ZaLaMa Logo"
                 fill
                 className="object-contain"
