@@ -791,7 +791,7 @@ export default function RemboursementsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* En-tête professionnel */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
         <div className="flex items-center justify-between">
@@ -1260,111 +1260,23 @@ export default function RemboursementsPage() {
               ))}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Pagination */}
-      {dataForPagination.length > 0 && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={dataForPagination.length}
-          itemsPerPage={itemsPerPage}
-          onPageChange={setCurrentPage}
-        />
-      )}
-
-      {/* Graphiques compacts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Répartition par statut
-          </h3>
-          <div className="h-48">
-            <Pie
-              data={{
-                labels: Object.keys(stats),
-                datasets: [
-                  {
-                    data: Object.values(stats),
-                    backgroundColor: [
-                      "#f59e0b",
-                      "#10b981",
-                      "#6b7280",
-                      "#ef4444",
-                    ],
-                    borderWidth: 0,
-                  },
-                ],
-              }}
-              options={{
-                plugins: {
-                  legend: {
-                    position: "bottom",
-                    labels: {
-                      padding: 15,
-                      usePointStyle: true,
-                      font: { size: 11 },
-                    },
-                  },
-                },
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Par employé
-          </h3>
-          <div className="h-48">
-            <Bar
-              data={{
-                labels: Object.keys(employeStats).map(
-                  (name) => name.split(" ")[0]
-                ), // Prenom uniquement
-                datasets: [
-                  {
-                    data: Object.values(employeStats),
-                    backgroundColor: "#6366f1",
-                    borderRadius: 4,
-                    barThickness: 20,
-                  },
-                ],
-              }}
-              options={{
-                indexAxis: "y" as const,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      title: (context) =>
-                        Object.keys(employeStats)[context[0].dataIndex],
-                      label: (context) =>
-                        `${context.parsed.x} remboursement(s)`,
-                    },
-                  },
-                },
-                scales: {
-                  x: {
-                    display: false,
-                    grid: { display: false },
-                  },
-                  y: {
-                    grid: { display: false },
-                    ticks: { font: { size: 10 } },
-                  },
-                },
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
+        {dataForPagination.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={dataForPagination.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       {/* Modal de détail professionnelle */}
       {showDetailModal && selectedRemboursement && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
           <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
@@ -1507,7 +1419,7 @@ export default function RemboursementsPage() {
 
       {/* Modal des informations financières de ZaLaMa */}
       {showFinancialInfoModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
           <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
@@ -1739,7 +1651,7 @@ export default function RemboursementsPage() {
 
       {/* Modal des détails d'un employé */}
       {showEmployeeDetailsModal && selectedEmployeeDetails && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
           <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
@@ -1749,10 +1661,10 @@ export default function RemboursementsPage() {
                 </div>
               <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    Détails des remboursements
+                    Détails de l'employé
                 </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                    {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom} - Liste complète des remboursements
+                    Informations complètes de l'employé
                 </p>
                 </div>
               </div>
@@ -1765,7 +1677,7 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Content - Scrollable */}
-            <div className="p-6 space-y-10 overflow-y-auto flex-1">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
@@ -1785,37 +1697,29 @@ export default function RemboursementsPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge
-                    variant={
-                      selectedEmployeeDetails.statut_global === "PAYE"
-                        ? "success"
-                        : selectedEmployeeDetails.statut_global === "EN_ATTENTE"
-                        ? "warning"
-                        : "error"
-                    }
-                    className="text-xs"
-                  >
-                    {selectedEmployeeDetails.statut_global}
+                  <Badge variant="info" className="text-xs">
+                    {selectedEmployeeDetails.nombre_remboursements} remboursement(s)
                   </Badge>
                 </div>
               </div>
 
-              {/* Informations de l'employé */}
+              {/* Informations en grille */}
               <div className="space-y-4">
-                <h4 className="text-lg font-semibold text-white mb-4">Informations de l'employé</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                        <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                {/* Email - prend toute la largeur */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.email || "Non renseigné"}
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedEmployeeDetails.employe?.email || "Non renseigné"}
                     </p>
                   </div>
 
+                {/* Autres informations en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
@@ -1993,21 +1897,6 @@ export default function RemboursementsPage() {
                     )
                   )}
                 </div>
-              </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
-              <div className="flex items-center gap-4">
-                <button
-                onClick={() => setShowEmployeeDetailsModal(false)} 
-                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
-              >
-                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
-                  <span className="group-hover:scale-105 transition-all duration-300">
-                Fermer
-                  </span>
-                </button>
               </div>
             </div>
           </div>

@@ -560,37 +560,6 @@ export default function PaiementsPage() {
         )}
       </div>
 
-      {/* Graphique de l'évolution mensuelle */}
-      {statistics && Object.keys(statistics.paiements_par_mois).length > 0 && (
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
-          <h2 className="text-lg font-semibold mb-4">Évolution Mensuelle</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={Object.entries(statistics.paiements_par_mois).map(
-                ([mois, data]) => ({
-                  mois: new Date(mois + "-01").toLocaleDateString("fr-FR", {
-                    month: "short",
-                    year: "numeric",
-                  }),
-                  salaires: data.montant_salaires,
-                  avances: data.montant_avances,
-                  frais: data.montant_frais,
-                })
-              )}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mois" />
-              <YAxis />
-              <Tooltip formatter={(value: number) => gnfFormatter(value)} />
-              <Legend />
-              <Bar dataKey="salaires" fill="#10b981" name="Salaires" />
-              <Bar dataKey="avances" fill="#f59e0b" name="Avances déduites" />
-              <Bar dataKey="frais" fill="#6366f1" name="Frais" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
       {/* Modal de détails du paiement */}
       {isModalOpen && selectedPayment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">

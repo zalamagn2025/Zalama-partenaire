@@ -32,24 +32,25 @@ const getNavItems = () => [
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
   { label: "Demande d'avance", icon: FileText, href: `/dashboard/demandes` },
-  { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Paiements
   {
     label: "Paiements",
     icon: Banknote,
     href: `/dashboard/paiements`,
   },
-  // Ajout du lien Paiements des Salaires
-  {
-    label: "Paiements des Salaires",
-    icon: DollarSign,
-    href: `/dashboard/payment-salary`,
-  },
   // Ajout du lien Remboursements
   {
     label: "Remboursements",
     icon: BarChart2,
     href: `/dashboard/remboursements`,
+  },
+  { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
+  { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
+  // Ajout du lien Paiements des Salaires
+  {
+    label: "Paiements des Salaires",
+    icon: DollarSign,
+    href: `/dashboard/payment-salary`,
   },
   // Ajout du lien Test Djomy
   /* {
@@ -58,7 +59,6 @@ const getNavItems = () => [
     href: `/dashboard/remboursements-test`,
   }, */
   /* { label: "Documents", icon: FolderOpen, href: `/dashboard/documents` }, */
-  { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
   { label: "Paramètres", icon: Settings, href: `/dashboard/parametres` },
 ];
 

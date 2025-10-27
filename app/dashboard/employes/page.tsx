@@ -17,6 +17,9 @@ import {
   Phone,
   FileText,
   DollarSign,
+  MapPin,
+  Hash,
+  UserCheck,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import StatCard from "@/components/dashboard/StatCard";
@@ -765,6 +768,41 @@ export default function EmployesPage() {
                     </p>
                   </div>
 
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-pink-100 dark:bg-pink-900/20 rounded-lg">
+                        <UserCheck className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Genre</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {(selectedEmployee as any).genre || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                        <MapPin className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Adresse</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {(selectedEmployee as any).adresse || "Non renseignée"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-cyan-100 dark:bg-cyan-900/20 rounded-lg">
+                        <Hash className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Matricule</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {(selectedEmployee as any).matricule || "Non renseigné"}
+                    </p>
+                  </div>
 
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">

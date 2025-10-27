@@ -104,15 +104,22 @@ export default function EntrepriseHeader() {
 
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {
+    console.log("🔍 Current pathname:", pathname); // Debug log
     if (!pathname) return "Tableau de Bord";
 
-    if (pathname === "/dashboard") return "Tableau de Bord";
+    // Vérifier les sous-pages en premier (plus spécifiques)
+    if (pathname.includes("/demandes-adhesion")) return "Demandes d'Adhésion";
+    if (pathname.includes("/demandes")) return "Gestion des avances";
+    if (pathname.includes("/paiements")) return "Gestion des paiements";
+    if (pathname.includes("/remboursements")) return "Gestion des remboursements";
     if (pathname.includes("/employes")) return "Gestion des Employés";
     if (pathname.includes("/finances")) return "Finances";
     if (pathname.includes("/statistiques")) return "Statistiques";
-    if (pathname.includes("/demandes")) return "Gestion des avances";
     if (pathname.includes("/alertes")) return "Alertes";
     if (pathname.includes("/parametres")) return "Paramètres";
+    
+    // Page principale du dashboard en dernier
+    if (pathname === "/dashboard") return "Tableau de Bord";
 
     return "Tableau de Bord";
   };
@@ -210,17 +217,6 @@ export default function EntrepriseHeader() {
           </button>
 
           <button
-            className="relative p-2 rounded-full hover:bg-[var(--zalama-card)]/40 backdrop-blur-sm transition-all duration-200 focus:outline-none"
-            aria-label="Voir les notifications"
-            onClick={toggleNotifications}
-          >
-            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors" />
-            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-500/70 opacity-75"></span>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
-              {unreadCount}
-            </span>
-          </button>
-          <button
             onClick={toggleTheme}
             className="p-2 rounded-full bg-[var(--zalama-card)]/60 backdrop-blur-sm hover:bg-[var(--zalama-card)]/80 hover:scale-110 hover:shadow-md border border-[var(--zalama-border)]/30 transition-all duration-200 focus:outline-none"
             aria-label={
@@ -234,6 +230,18 @@ export default function EntrepriseHeader() {
             ) : (
               <Moon className="w-5 h-5 text-gray-500 dark:text-gray-300" />
             )}
+          </button>
+
+          <button
+            className="relative p-2 rounded-full hover:bg-[var(--zalama-card)]/40 backdrop-blur-sm transition-all duration-200 focus:outline-none"
+            aria-label="Voir les notifications"
+            onClick={toggleNotifications}
+          >
+            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors" />
+            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-500/70 opacity-75"></span>
+            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
+              {unreadCount}
+            </span>
           </button>
 
         </div>
