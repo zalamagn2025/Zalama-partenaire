@@ -1079,6 +1079,12 @@ class EdgeFunctionService {
     const queryString = params.toString();
     const url = queryString ? `?${queryString}` : "";
 
+    // Vérifier que le token est bien défini
+    if (!this.accessToken) {
+      console.error('❌ Token manquant dans getPaymentEmployees');
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
     const config: RequestInit = {
       method: "GET",
       headers: {
@@ -1087,9 +1093,18 @@ class EdgeFunctionService {
       },
     };
 
+    console.log('🔐 Appel payment-employees avec token:', this.accessToken.substring(0, 20) + '...');
+
     try {
       const response = await fetch(`${PAYMENT_EMPLOYEES_URL}${url}`, config);
+      
+      // Lire le JSON une seule fois
       const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('❌ Erreur HTTP:', response.status, response.statusText);
+        console.error('❌ Détails erreur:', data);
+      }
 
       // Retourner la réponse complète même en cas d'erreur pour permettre la gestion détaillée
       return data;
