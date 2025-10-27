@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { useEdgeAuthContext } from '@/contexts/EdgeAuthContext';
-import { supabase } from '@/lib/supabase';
 import { Notification } from './types';
 import NotificationHeader from './NotificationHeader';
 import NotificationList from './NotificationList';
@@ -24,31 +23,45 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
   
   // Charger les notifications filtrées par user_id (admin connecté)
   const loadNotifications = async () => {
-    if (!session?.admin?.id) return;
+    if (!session?.admin?.id) {
+      console.log('Pas de session admin disponible pour charger les notifications');
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const { data: notifs, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', session.admin.id)
-        .order('date_creation', { ascending: false })
-        .limit(20);
-      if (error) {
-        console.error('Erreur lors du chargement des notifications:', error);
+      const response = await fetch(`/api/proxy/notifications?user_id=${session.admin.id}&limit=20`, {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erreur HTTP: ${response.status}`);
       }
-      const notifList: Notification[] = (notifs || []).map((notif) => ({
-        id: notif.id,
-        title: notif.titre,
-        message: notif.message,
-        type: notif.type, // On garde le type exact de la table
-        timestamp: new Date(notif.date_creation),
-        read: notif.lu,
-        link: undefined
-      }));
-      setNotifications(notifList);
+
+      const data = await response.json();
+      
+      if (data.success && Array.isArray(data.data)) {
+        const notifList: Notification[] = data.data.map((notif: any) => ({
+          id: notif.id,
+          title: notif.titre,
+          message: notif.message,
+          type: notif.type,
+          timestamp: new Date(notif.date_creation),
+          read: notif.lu,
+          link: undefined
+        }));
+        setNotifications(notifList);
+      } else {
+        console.error('Format de données inattendu:', data);
+        setNotifications([]);
+      }
     } catch (error) {
       console.error('Erreur lors du chargement des notifications:', error);
-      toast.error('Erreur lors du chargement des notifications');
+      toast.error(`Erreur lors du chargement des notifications: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }

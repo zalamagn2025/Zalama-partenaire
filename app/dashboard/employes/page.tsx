@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   Users,
   Search,
@@ -599,11 +600,21 @@ export default function EmployesPage() {
                 >
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                          {employee.prenom.charAt(0)}
-                          {employee.nom.charAt(0)}
-                        </span>
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {(employee as any).photo_url ? (
+                          <Image
+                            src={(employee as any).photo_url}
+                            alt={`${employee.prenom} ${employee.nom}`}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            {employee.prenom.charAt(0)}
+                            {employee.nom.charAt(0)}
+                          </span>
+                        )}
                       </div>
                       <div>
                         <div className="font-medium text-sm text-gray-900 dark:text-white">
@@ -714,11 +725,21 @@ export default function EmployesPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                      {selectedEmployee.prenom.charAt(0)}
-                      {selectedEmployee.nom.charAt(0)}
-                    </span>
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    {(selectedEmployee as any).photo_url ? (
+                      <Image
+                        src={(selectedEmployee as any).photo_url}
+                        alt={`${selectedEmployee.prenom} ${selectedEmployee.nom}`}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                        {selectedEmployee.prenom.charAt(0)}
+                        {selectedEmployee.nom.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-white">

@@ -110,7 +110,7 @@ export default function EntrepriseHeader() {
     // Vérifier les sous-pages en premier (plus spécifiques)
     if (pathname.includes("/demandes-adhesion")) return "Demandes d'Adhésion";
     if (pathname.includes("/demandes")) return "Gestion des avances";
-    if (pathname.includes("/paiements")) return "Gestion des paiements";
+    if (pathname.includes("/paiements")) return "Paiement de salaire";
     if (pathname.includes("/remboursements")) return "Gestion des remboursements";
     if (pathname.includes("/employes")) return "Gestion des Employés";
     if (pathname.includes("/finances")) return "Finances";

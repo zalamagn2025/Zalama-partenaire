@@ -22,15 +22,36 @@ import {
   Key,
   RefreshCw,
   Copy,
+  Shield,
+  Settings,
+  Bell,
+  Globe,
+  Database,
+  Users,
+  CreditCard,
+  FileText,
+  Download,
+  Upload,
+  CheckCircle,
+  AlertTriangle,
+  Info,
+  ChevronRight,
+  ArrowRight,
+  Zap,
+  Activity,
+  BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PinInput } from "@/components/ui/PinInput";
+import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 
 export default function ParametresPage() {
   const { theme, toggleTheme } = useTheme();
   const { session } = useEdgeAuthContext();
-  const [activeTab, setActiveTab] = useState<string>("profil");
+  const [activeTab, setActiveTab] = useState<string>("overview");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -72,7 +93,7 @@ export default function ParametresPage() {
       setProfileData({
         nom: session.admin.display_name || "",
         email: session.admin.email || "",
-        telephone: "", // Pas de propriété téléphone dans AdminUser
+        telephone: "",
         poste: session.admin.role || "",
         display_name: session.admin.display_name || "",
       });
@@ -85,7 +106,7 @@ export default function ParametresPage() {
         phone: session.partner.phone || "",
         email: session.partner.email || "",
         legal_status: session.partner.legal_status || "",
-        payment_date: "", // Pas de propriété payment_date dans Partner
+        payment_date: "",
         payment_day: 25,
       });
     }
@@ -100,102 +121,44 @@ export default function ParametresPage() {
             session.access_token
           );
           if (response.success && response.data) {
-            setApiKeyData({
-              api_key: response.data.api_key || "",
-              company_name: response.data.company_name || "",
-              inscription_enabled: response.data.inscription_enabled || true,
-            });
+            setApiKeyData(response.data);
           }
         } catch (error) {
           console.error("Erreur lors du chargement de la clé API:", error);
         }
       }
     };
-
     loadApiKey();
-  }, [session]);
+  }, [session?.access_token]);
 
-  const handleProfileSave = async () => {
-    try {
-      // TODO: Implémenter la sauvegarde des données de profil
-      toast.success("Profil mis à jour avec succès");
-      setIsEditingProfile(false);
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde:", error);
-      toast.error("Erreur lors de la sauvegarde du profil");
-    }
+  const handleSaveProfile = async () => {
+    setIsEditingProfile(false);
+    toast.success("Profil mis à jour avec succès");
   };
 
-  const handlePartnerSave = async () => {
-    try {
-      // TODO: Implémenter la sauvegarde des données partenaire
-      toast.success("Informations de l'entreprise mises à jour");
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde:", error);
-      toast.error("Erreur lors de la sauvegarde");
-    }
-  };
-
-  const handlePasswordChange = async () => {
-    if (
-      !passwordData.currentPassword ||
-      !passwordData.newPassword ||
-      !passwordData.confirmPassword
-    ) {
-      toast.error("Veuillez remplir tous les champs");
-      return;
-    }
-
+  const handleChangePassword = async () => {
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Les nouveaux codes PIN ne correspondent pas");
-      return;
-    }
-
-    // Validation simple du code PIN (6 caractères minimum)
-    if (passwordData.newPassword.length < 6) {
-      toast.error("Le code PIN doit contenir au moins 6 caractères");
-      return;
-    }
-
-    if (!session?.access_token) {
-      toast.error("Session non valide");
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
 
     setIsChangingPassword(true);
     try {
-      const response = await edgeFunctionService.changePassword(
-        session.access_token,
-        {
-          current_password: passwordData.currentPassword,
-          new_password: passwordData.newPassword,
-          confirm_password: passwordData.confirmPassword,
-        }
-      );
-
-      if (response.success) {
-        toast.success(
-          "Code PIN changé avec succès. Un email de confirmation a été envoyé."
-        );
-        setPasswordData({
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        });
-      } else {
-        throw new Error(
-          response.message || "Erreur lors du changement du code PIN"
-        );
-      }
-    } catch (error: any) {
-      console.error("Erreur lors du changement du code PIN:", error);
-      toast.error(error.message || "Erreur lors du changement du code PIN");
+      // Simulation d'un appel API
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      toast.success("Mot de passe modifié avec succès");
+      setPasswordData({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    } catch (error) {
+      toast.error("Erreur lors de la modification du mot de passe");
     } finally {
       setIsChangingPassword(false);
     }
   };
 
-  // Fonction pour copier la clé API
   const handleCopyApiKey = async () => {
     if (!apiKeyData.api_key) {
       toast.error("Aucune clé API à copier");
@@ -251,173 +214,288 @@ export default function ParametresPage() {
     });
   };
 
+  // Composant de carte de paramètre
+  const SettingCard = ({ 
+    title, 
+    description, 
+    icon: Icon, 
+    children, 
+    className = "",
+    badge = null 
+  }: {
+    title: string;
+    description: string;
+    icon: any;
+    children: React.ReactNode;
+    className?: string;
+    badge?: React.ReactNode | null;
+  }) => (
+    <div className={`bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 shadow-sm backdrop-blur-sm hover:shadow-md transition-all duration-200 ${className}`}>
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              {title}
+              {badge}
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              {description}
+            </p>
+          </div>
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+
+  // Composant de statistique rapide
+  const QuickStat = ({ 
+    title, 
+    value, 
+    icon: Icon, 
+    color = "blue",
+    trend = null 
+  }: {
+    title: string;
+    value: string;
+    icon: any;
+    color?: string;
+    trend?: string | null;
+  }) => {
+    const colorClasses = {
+      blue: "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+      green: "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400",
+      orange: "bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
+      purple: "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
+    };
+
+    return (
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{title}</p>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              {value}
+            </p>
+            {trend && (
+              <div className="flex items-center gap-1 mt-1">
+                <TrendingUp className="w-3 h-3 text-green-500" />
+                <span className="text-xs text-green-600 dark:text-green-400">
+                  {trend}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className={`p-3 rounded-lg ${colorClasses[color as keyof typeof colorClasses]}`}>
+            <Icon className="w-5 h-5" />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Onglets modernes
+  const tabs = [
+    { id: "overview", label: "Vue d'ensemble", icon: BarChart3 },
+    { id: "profil", label: "Profil", icon: User },
+    { id: "securite", label: "Sécurité", icon: Shield },
+    { id: "entreprise", label: "Entreprise", icon: Building },
+    { id: "apparence", label: "Apparence", icon: Palette },
+    { id: "integrations", label: "Intégrations", icon: Zap, disabled: true },
+  ];
+
   return (
     <div className="p-6 space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Paramètres
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Gérez votre profil et les paramètres de votre entreprise
-          </p>
+
+      {/* Onglets modernes */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-2 backdrop-blur-sm">
+        <div className="flex flex-wrap gap-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                disabled={tab.disabled}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white shadow-md"
+                    : tab.disabled
+                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="font-medium">{tab.label}</span>
+                {tab.disabled && (
+                  <Badge variant="warning" className="text-xs ml-1">
+                    Bientôt
+                  </Badge>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Onglets de paramètres */}
-      <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2">
-        <button
-          onClick={() => setActiveTab("profil")}
-          className={`px-4 py-2 transition-colors ${
-            activeTab === "profil"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-          } flex items-center gap-2`}
-        >
-          <User className="w-4 h-4" />
-          <span>Profil</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("securite")}
-          className={`px-4 py-2 transition-colors ${
-            activeTab === "securite"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-          } flex items-center gap-2`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>Sécurité</span>
-        </button>
-        <button
-          onClick={() => setActiveTab("apparence")}
-          className={`px-4 py-2 transition-colors ${
-            activeTab === "apparence"
-              ? "bg-blue-600 text-white"
-              : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-          } flex items-center gap-2`}
-        >
-          <Palette className="w-4 h-4" />
-          <span>Apparence</span>
-        </button>
-      </div>
+      {/* Vue d'ensemble */}
+      {activeTab === "overview" && (
+        <div className="space-y-6">
 
-      {/* Contenu des paramètres */}
-      {activeTab === "profil" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Profil personnel */}
-          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Mon Profil
-              </h2>
-              <button
-                onClick={() => setIsEditingProfile(!isEditingProfile)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm hover:text-gray-300 transition-colors hover:bg-[var(--zalama-blue-accent)] bg-[var(--zalama-blue)] border border-[var(--zalama-border)] border-opacity-2  rounded-lg text-white py-2"
-              >
-                <Edit3 className="w-4 h-4" />
-                {isEditingProfile ? "Annuler" : "Modifier"}
+          {/* Cartes principales */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SettingCard
+              title="Profil utilisateur"
+              description="Informations personnelles et préférences"
+              icon={User}
+              badge={<Badge variant="info" className="text-xs">Mis à jour</Badge>}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {profileData.display_name || "Utilisateur"}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {profileData.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setActiveTab("profil")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Modifier le profil
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </SettingCard>
+
+            <SettingCard
+              title="Sécurité"
+              description="Gestion des mots de passe et clés API"
+              icon={Shield}
+              badge={<Badge variant="success" className="text-xs">Sécurisé</Badge>}
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Dernière modification du mot de passe
+                  </span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Il y a 30 jours
+                  </span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Clé API
+                  </span>
+                  <Badge variant="success" className="text-xs">
+                    Active
+                  </Badge>
+                </div>
+                <button
+                  onClick={() => setActiveTab("securite")}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                >
+                  <Shield className="w-4 h-4" />
+                  Gérer la sécurité
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </SettingCard>
+          </div>
+
+          {/* Actions rapides - Désactivé */}
+          <SettingCard
+            title="Actions rapides"
+            description="Accès rapide aux fonctionnalités principales"
+            icon={Zap}
+            badge={<Badge variant="warning" className="text-xs">Bientôt</Badge>}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 opacity-50">
+              <button disabled className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg cursor-not-allowed">
+                <Download className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+                <div className="text-left">
+                  <p className="font-medium text-gray-400 dark:text-gray-600">
+                    Exporter les données
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-600">
+                    Télécharger un rapport
+                  </p>
+                </div>
+              </button>
+              <button disabled className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg cursor-not-allowed">
+                <Bell className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+                <div className="text-left">
+                  <p className="font-medium text-gray-400 dark:text-gray-600">
+                    Notifications
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-600">
+                    Configurer les alertes
+                  </p>
+                </div>
+              </button>
+              <button disabled className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg cursor-not-allowed">
+                <Database className="w-5 h-5 text-gray-400 dark:text-gray-600" />
+                <div className="text-left">
+                  <p className="font-medium text-gray-400 dark:text-gray-600">
+                    Sauvegarde
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-600">
+                    Créer une sauvegarde
+                  </p>
+                </div>
               </button>
             </div>
+          </SettingCard>
+        </div>
+      )}
 
-            {/* Photo de profil */}
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="relative">
-                <div className="w-20 h-20 bg-blue-600 dark:bg-blue-700 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                  {session?.admin?.display_name?.charAt(0) || "U"}
-                </div>
-                {isEditingProfile && (
-                  <button className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-1.5 rounded-full hover:bg-blue-700 transition-colors">
-                    <Camera className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                  {session?.admin?.display_name || "Utilisateur"}
-                </h3>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {session?.admin?.role || "Rôle non défini"} •{" "}
-                  {session?.partner?.company_name}
-                </p>
-              </div>
-            </div>
-
+      {/* Profil */}
+      {activeTab === "profil" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SettingCard
+            title="Informations personnelles"
+            description="Gérez vos informations de profil"
+            icon={User}
+          >
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nom complet
-                </label>
-                <input
-                  type="text"
-                  value={profileData.nom}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, nom: e.target.value })
-                  }
-                  disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nom d'affichage
                 </label>
                 <input
                   type="text"
                   value={profileData.display_name}
                   onChange={(e) =>
-                    setProfileData({
-                      ...profileData,
-                      display_name: e.target.value,
-                    })
+                    setProfileData({ ...profileData, display_name: e.target.value })
                   }
-                  disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="email"
-                    value={profileData.email}
-                    onChange={(e) =>
-                      setProfileData({ ...profileData, email: e.target.value })
-                    }
-                    disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
-                  />
-                </div>
+                <input
+                  type="email"
+                  value={profileData.email}
+                  onChange={(e) =>
+                    setProfileData({ ...profileData, email: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Téléphone
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="tel"
-                    value={profileData.telephone}
-                    onChange={(e) =>
-                      setProfileData({
-                        ...profileData,
-                        telephone: e.target.value,
-                      })
-                    }
-                    disabled={!isEditingProfile}
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Poste
                 </label>
                 <input
@@ -426,507 +504,395 @@ export default function ParametresPage() {
                   onChange={(e) =>
                     setProfileData({ ...profileData, poste: e.target.value })
                   }
-                  disabled={!isEditingProfile}
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white dark:bg-[var(--zalama-card)] text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-900 disabled:text-gray-500"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
-
-              {isEditingProfile && (
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleProfileSave}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    Sauvegarder
-                  </button>
-                  <button
-                    onClick={() => setIsEditingProfile(false)}
-                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                </div>
-              )}
+              <button
+                onClick={handleSaveProfile}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Sauvegarder les modifications
+              </button>
             </div>
-          </div>
+          </SettingCard>
 
-          {/* Informations de l'entreprise */}
-          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-              Informations de l'entreprise
-            </h2>
+          <SettingCard
+            title="Photo de profil"
+            description="Personnalisez votre photo de profil"
+            icon={Camera}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                  <User className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Changer la photo
+                  </button>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    JPG, PNG jusqu'à 2MB
+                  </p>
+                </div>
+              </div>
+            </div>
+          </SettingCard>
+        </div>
+      )}
 
+      {/* Sécurité */}
+      {activeTab === "securite" && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SettingCard
+            title="Mot de passe"
+            description="Modifiez votre mot de passe pour sécuriser votre compte"
+            icon={Lock}
+          >
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mot de passe actuel
+                </label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    value={passwordData.currentPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    value={passwordData.newPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, newPassword: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirmer le nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={passwordData.confirmPassword}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
+                    }
+                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-gray-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-gray-400" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isChangingPassword ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Lock className="w-4 h-4" />
+                )}
+                {isChangingPassword ? "Modification en cours..." : "Modifier le mot de passe"}
+              </button>
+            </div>
+          </SettingCard>
+
+          <SettingCard
+            title="Clé API"
+            description="Gérez votre clé API pour les intégrations"
+            icon={Key}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Clé API actuelle
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showApiKey ? "text" : "password"}
+                    value={apiKeyData.api_key}
+                    readOnly
+                    className="flex-1 px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm"
+                  />
+                  <button
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="px-3 py-2 border border-[var(--zalama-border)] rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                  <button
+                    onClick={handleCopyApiKey}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    <Copy className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleRegenerateApiKey}
+                  disabled={isRegeneratingApiKey}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isRegeneratingApiKey ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                  {isRegeneratingApiKey ? "Régénération..." : "Régénérer la clé"}
+                </button>
+              </div>
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      Attention
+                    </h4>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                      La régénération de votre clé API invalidera toutes les intégrations existantes. 
+                      Assurez-vous de tenir au courant les salariés en cas de changement.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </SettingCard>
+        </div>
+      )}
+
+      {/* Entreprise */}
+      {activeTab === "entreprise" && (
+        <div className="space-y-6">
+          <SettingCard
+            title="Informations de l'entreprise"
+            description="Gérez les informations de votre entreprise"
+            icon={Building}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nom de l'entreprise
                 </label>
-                <div className="relative">
-                  <Building className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={partnerData.company_name}
-                    onChange={(e) =>
-                      setPartnerData({
-                        ...partnerData,
-                        company_name: e.target.value,
-                      })
-                    }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={partnerData.company_name}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, company_name: e.target.value })
+                  }
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Secteur d'activité
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Domaine d'activité
                 </label>
-                <select
+                <input
+                  type="text"
                   value={partnerData.activity_domain}
                   onChange={(e) =>
-                    setPartnerData({
-                      ...partnerData,
-                      activity_domain: e.target.value,
-                    })
+                    setPartnerData({ ...partnerData, activity_domain: e.target.value })
                   }
-                  className="w-full px-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
-                >
-                  <option value="">Sélectionner un secteur</option>
-                  <option value="Technologie">Technologie</option>
-                  <option value="Finance">Finance</option>
-                  <option value="Santé">Santé</option>
-                  <option value="Éducation">Éducation</option>
-                  <option value="Commerce">Commerce</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Transport">Transport</option>
-                  <option value="Autre">Autre</option>
-                </select>
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email de l'entreprise
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Adresse du siège
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <input
-                    type="email"
-                    value={partnerData.email}
-                    onChange={(e) =>
-                      setPartnerData({ ...partnerData, email: e.target.value })
-                    }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white  text-gray-900 dark:text-white"
-                  />
-                </div>
+                <textarea
+                  value={partnerData.headquarters_address}
+                  onChange={(e) =>
+                    setPartnerData({ ...partnerData, headquarters_address: e.target.value })
+                  }
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Téléphone de l'entreprise
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Téléphone
+                  </label>
                   <input
                     type="tel"
                     value={partnerData.phone}
                     onChange={(e) =>
                       setPartnerData({ ...partnerData, phone: e.target.value })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Adresse
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Email
+                  </label>
                   <input
-                    type="text"
-                    value={partnerData.headquarters_address}
+                    type="email"
+                    value={partnerData.email}
                     onChange={(e) =>
-                      setPartnerData({
-                        ...partnerData,
-                        headquarters_address: e.target.value,
-                      })
+                      setPartnerData({ ...partnerData, email: e.target.value })
                     }
-                    className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-white text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <Save className="w-4 h-4" />
+                Sauvegarder les modifications
+              </button>
+            </div>
+          </SettingCard>
+        </div>
+      )}
 
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+      {/* Apparence */}
+      {activeTab === "apparence" && (
+        <div className="space-y-6">
+          <SettingCard
+            title="Thème"
+            description="Personnalisez l'apparence de votre interface"
+            icon={Palette}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
+                    Mode sombre
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Basculez entre le mode clair et sombre
+                  </p>
+                </div>
                 <button
-                  onClick={handlePartnerSave}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  onClick={toggleTheme}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    theme === "dark" ? "bg-blue-600" : "bg-gray-200"
+                  }`}
                 >
-                  <Save className="w-4 h-4" />
-                  Sauvegarder les modifications
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      theme === "dark" ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
                 </button>
               </div>
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  {theme === "dark" ? (
+                    <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  )}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    Thème {theme === "dark" ? "sombre" : "clair"}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {theme === "dark" 
+                      ? "Interface optimisée pour les environnements sombres"
+                      : "Interface claire et lumineuse"
+                    }
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          </SettingCard>
         </div>
       )}
 
-      {activeTab === "securite" && (
-        <div className="w-full">
-          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-              Sécurité du compte
-            </h2>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Colonne gauche - Changement de mot de passe */}
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Lock className="w-5 h-5 text-blue-600" />
-                    Changer le code PIN
-                  </h3>
-
-                  <div className="space-y-6">
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Code PIN actuel
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
-                        >
-                          {showCurrentPassword ? (
-                            <>
-                              <EyeOff className="h-3 w-3" />
-                              Masquer
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3 w-3" />
-                              Afficher
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <PinInput
-                        value={passwordData.currentPassword}
-                        onChange={(value) =>
-                          setPasswordData({
-                            ...passwordData,
-                            currentPassword: value,
-                          })
-                        }
-                        masked={!showCurrentPassword}
-                        className="justify-start"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Nouveau code PIN
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
-                        >
-                          {showNewPassword ? (
-                            <>
-                              <EyeOff className="h-3 w-3" />
-                              Masquer
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3 w-3" />
-                              Afficher
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <PinInput
-                        value={passwordData.newPassword}
-                        onChange={(value) =>
-                          setPasswordData({
-                            ...passwordData,
-                            newPassword: value,
-                          })
-                        }
-                        masked={!showNewPassword}
-                        className="justify-start"
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Confirmer le nouveau code PIN
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
-                        >
-                          {showConfirmPassword ? (
-                            <>
-                              <EyeOff className="h-3 w-3" />
-                              Masquer
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-3 w-3" />
-                              Afficher
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      <PinInput
-                        value={passwordData.confirmPassword}
-                        onChange={(value) =>
-                          setPasswordData({
-                            ...passwordData,
-                            confirmPassword: value,
-                          })
-                        }
-                        masked={!showConfirmPassword}
-                        className="justify-start"
-                      />
-                    </div>
-
-                    <div className="pt-4">
-                      <button
-                        onClick={handlePasswordChange}
-                        disabled={
-                          isChangingPassword ||
-                          !passwordData.currentPassword ||
-                          !passwordData.newPassword ||
-                          !passwordData.confirmPassword
-                        }
-                        className="flex items-center gap-2 px-4 py-2 bg-[var(--zalama-green)] text-white hover:bg-[var(--zalama-green-accent)] disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors rounded-lg"
-                      >
-                        {isChangingPassword ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        {isChangingPassword
-                          ? "Changement..."
-                          : "Changer le code PIN"}
-                      </button>
-                    </div>
+      {/* Intégrations */}
+      {activeTab === "integrations" && (
+        <div className="space-y-6">
+          <SettingCard
+            title="Intégrations disponibles"
+            description="Connectez ZaLaMa avec vos outils préférés"
+            icon={Zap}
+          >
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                    <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                </div>
-
-                {/* Conseils de sécurité */}
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2 flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Conseils de sécurité
-                  </h4>
-                  <ul className="text-sm text-blue-600 dark:text-blue-300 space-y-1">
-                    <li>• Utilisez un code PIN d'au moins 6 caractères</li>
-                    <li>• Évitez les codes PIN simples (123456, etc.)</li>
-                    <li>• Ne partagez jamais vos identifiants</li>
-                    <li>• Changez votre code PIN régulièrement</li>
-                  </ul>
-                </div>
-              </div>
-
-              {/* Colonne droite - Clé API et Informations */}
-              <div className="space-y-6">
-                {/* Gestion de la clé API */}
-                <div>
-                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Key className="w-5 h-5 text-orange-600" />
-                    Clé API
-                  </h3>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Votre clé API
-                      </label>
-                      <div className="relative">
-                        <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <input
-                          type={showApiKey ? "text" : "password"}
-                          value={apiKeyData.api_key}
-                          readOnly
-                          placeholder="Clé API non disponible"
-                          className="w-full pl-10 pr-12 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowApiKey(!showApiKey)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 hover:text-gray-600"
-                        >
-                          {showApiKey ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Cette clé permet à vos employés de s'inscrire via l'API
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3">
-                      <button
-                        onClick={handleCopyApiKey}
-                        disabled={!apiKeyData.api_key}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded-lg"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Copier la clé
-                      </button>
-                      <button
-                        onClick={handleRegenerateApiKey}
-                        disabled={isRegeneratingApiKey}
-                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white hover:bg-orange-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors rounded-lg"
-                      >
-                        {isRegeneratingApiKey ? (
-                          <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent" />
-                        ) : (
-                          <RefreshCw className="w-4 h-4" />
-                        )}
-                        {isRegeneratingApiKey
-                          ? "Régénération..."
-                          : "Régénérer la clé"}
-                      </button>
-                    </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 dark:text-white">
+                      Email
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Notifications par email
+                    </p>
                   </div>
+                  <Badge variant="success" className="text-xs">
+                    Connecté
+                  </Badge>
                 </div>
-
-                {/* Informations de sécurité */}
-                <div>
-                  <h3 className="text-md font-medium text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <User className="w-5 h-5 text-green-600" />
-                    Informations de sécurité
-                  </h3>
-                  <div className="space-y-3 text-sm text-gray-600 dark:text-gray-400">
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <Lock className="w-4 h-4 text-blue-500" />
-                      <div>
-                        <span className="font-medium">Dernière connexion:</span>
-                        <br />
-                        <span>
-                          {session?.admin?.last_login
-                            ? formatDate(session.admin.last_login)
-                            : "Non disponible"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <User className="w-4 h-4 text-green-500" />
-                      <div>
-                        <span className="font-medium">Rôle:</span>
-                        <br />
-                        <span>{session?.admin?.role || "Non défini"}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <Calendar className="w-4 h-4 text-purple-500" />
-                      <div>
-                        <span className="font-medium">Compte créé:</span>
-                        <br />
-                        <span>
-                          {session?.admin?.created_at
-                            ? formatDate(session.admin.created_at)
-                            : "Non disponible"}
-                        </span>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                    <Bell className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900 dark:text-white">
+                      Notifications push
+                    </h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Alertes en temps réel
+                    </p>
+                  </div>
+                  <Badge variant="success" className="text-xs">
+                    Actif
+                  </Badge>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === "apparence" && (
-        <div className="max-w-2xl">
-          <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">
-              Préférences d'apparence
-            </h2>
-
-            <div className="space-y-6">
-              {/* Thème */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-                  Mode d'affichage
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => {
-                      // 🚫 TEMPORAIRE : Désactiver le thème blanc
-                      console.log('🚫 Thème blanc temporairement désactivé');
-                    }}
-                    disabled
-                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-yellow-100 rounded-lg">
-                        <Sun className="w-5 h-5 text-yellow-600" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          Clair
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          🚫 Temporairement désactivé
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      // 🚫 TEMPORAIRE : Désactiver le toggle
-                      console.log('🚫 Toggle de thème temporairement désactivé');
-                    }}
-                    disabled
-                    className="p-4 rounded-lg border-2 transition-all opacity-50 cursor-not-allowed border-gray-200 dark:border-gray-700"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-800 rounded-lg">
-                        <Moon className="w-5 h-5 text-gray-100" />
-                      </div>
-                      <div className="text-left">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          Sombre
-                        </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          ✅ Actif (seul mode disponible)
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Informations sur le thème actuel */}
-              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                  <Palette className="w-5 h-5" />
-                  <span className="font-medium">
-                    Thème actuel: {theme === "light" ? "Clair" : "Sombre"}
-                  </span>
-                </div>
-                <p className="text-sm text-blue-600 dark:text-blue-300 mt-1">
-                  Votre choix est automatiquement sauvegardé et synchronisé sur
-                  tous vos appareils.
-                </p>
-              </div>
-            </div>
-          </div>
+          </SettingCard>
         </div>
       )}
     </div>

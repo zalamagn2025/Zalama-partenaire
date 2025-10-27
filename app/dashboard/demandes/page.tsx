@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   FileText,
   CheckCircle,
@@ -306,6 +307,12 @@ export default function DemandesPage() {
           employeesMap.size,
           "employés"
         );
+        // Debug: vérifier si les photos sont présentes
+        const employeesWithPhotos = Array.from(employeesMap.values()).filter(emp => emp.photo_url);
+        console.log("📸 Employés avec photos:", employeesWithPhotos.length, "sur", employeesMap.size);
+        if (employeesWithPhotos.length > 0) {
+          console.log("📸 Exemple de photo:", employeesWithPhotos[0].photo_url);
+        }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
@@ -763,10 +770,10 @@ export default function DemandesPage() {
           <div className="space-y-3">
             {/* En-tête du tableau */}
             <div className="grid grid-cols-6 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
-              {[...Array(6)].map((_, i) => (
+            {[...Array(6)].map((_, i) => (
                 <div key={i} className="bg-gray-300 dark:bg-gray-700 rounded h-5"></div>
               ))}
-            </div>
+                  </div>
             {/* Lignes du tableau */}
             {[...Array(6)].map((_, i) => (
               <div key={i} className="grid grid-cols-6 gap-4 py-3">
@@ -801,159 +808,159 @@ export default function DemandesPage() {
                 <Filter className="h-3 w-3" />
                 {showFilters ? "Masquer" : "Afficher"}
               </button>
-              <button
-                onClick={resetFilters}
-                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Réinitialiser
-              </button>
-              <button
-                onClick={() => loadSalaryDemandsData(filters)}
-                disabled={edgeFunctionLoading}
-                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-              >
+            <button
+              onClick={resetFilters}
+              className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Réinitialiser
+            </button>
+            <button
+              onClick={() => loadSalaryDemandsData(filters)}
+              disabled={edgeFunctionLoading}
+              className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+            >
                 {edgeFunctionLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : null}
                 Actualiser
-              </button>
+            </button>
             </div>
           </div>
         </div>
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-            {/* Filtre par mois */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Mois
-              </label>
-              <select
-                value={filters.mois || ""}
-                onChange={(e) =>
-                  applyFilter(
-                    "mois",
-                    e.target.value ? parseInt(e.target.value) : null
-                  )
-                }
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={filters.mois || ""}
+              onChange={(e) =>
+                applyFilter(
+                  "mois",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Tous les mois</option>
-                {activityPeriods?.mois?.map((mois: number) => (
-                  <option key={mois} value={mois}>
-                    {new Date(0, mois - 1).toLocaleString("fr-FR", {
-                      month: "long",
-                    })}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtre par année */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Année
-              </label>
-              <select
-                value={filters.annee || ""}
-                onChange={(e) =>
-                  applyFilter(
-                    "annee",
-                    e.target.value ? parseInt(e.target.value) : null
-                  )
-                }
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Toutes les années</option>
-                {activityPeriods?.annees?.map((annee: number) => (
-                  <option key={annee} value={annee}>
-                    {annee}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtre par statut */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Statut
-              </label>
-              <select
-                value={filters.status || ""}
-                onChange={(e) => applyFilter("status", e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="En attente RH/Responsable">
-                  En attente RH/Responsable
+            >
+              <option value="">Tous les mois</option>
+              {activityPeriods?.mois?.map((mois: number) => (
+                <option key={mois} value={mois}>
+                  {new Date(0, mois - 1).toLocaleString("fr-FR", {
+                    month: "long",
+                  })}
                 </option>
-                <option value="Validé">Validé</option>
-                <option value="Rejeté">Rejeté</option>
-              </select>
-            </div>
+              ))}
+            </select>
+          </div>
 
-            {/* Filtre par catégorie */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Catégorie
-              </label>
-              <select
-                value={filters.categorie || ""}
-                onChange={(e) => applyFilter("categorie", e.target.value || null)}
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={filters.annee || ""}
+              onChange={(e) =>
+                applyFilter(
+                  "annee",
+                  e.target.value ? parseInt(e.target.value) : null
+                )
+              }
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Toutes les catégories</option>
-                <option value="mono-mois">Mono-mois</option>
-                <option value="multi-mois">Multi-mois</option>
-              </select>
-            </div>
+            >
+              <option value="">Toutes les années</option>
+              {activityPeriods?.annees?.map((annee: number) => (
+                <option key={annee} value={annee}>
+                  {annee}
+                </option>
+              ))}
+            </select>
+          </div>
 
-            {/* Filtre par type de motif */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Type de motif
-              </label>
-              <select
-                value={filters.type_motif || ""}
-                onChange={(e) =>
-                  applyFilter("type_motif", e.target.value || null)
-                }
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={filters.status || ""}
+              onChange={(e) => applyFilter("status", e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Tous les motifs</option>
-                <option value="sante">Santé</option>
-                <option value="education">Éducation</option>
-                <option value="transport">Transport</option>
-                <option value="logement">Logement</option>
-                <option value="alimentation">Alimentation</option>
-                <option value="autre">Autre</option>
-              </select>
-            </div>
+            >
+              <option value="">Tous les statuts</option>
+              <option value="En attente RH/Responsable">
+                En attente RH/Responsable
+              </option>
+              <option value="Validé">Validé</option>
+              <option value="Rejeté">Rejeté</option>
+            </select>
+          </div>
 
-            {/* Filtre par statut de remboursement */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Statut remboursement
-              </label>
-              <select
-                value={filters.statut_remboursement || ""}
-                onChange={(e) =>
-                  applyFilter("statut_remboursement", e.target.value || null)
-                }
+          {/* Filtre par catégorie */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Catégorie
+            </label>
+            <select
+              value={filters.categorie || ""}
+              onChange={(e) => applyFilter("categorie", e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Tous les statuts</option>
-                <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
-                <option value="EN_ATTENTE">En attente</option>
-                <option value="PAYE">Payé</option>
-                <option value="EN_RETARD">En retard</option>
-                <option value="ANNULE">Annulé</option>
-              </select>
-            </div>
+            >
+              <option value="">Toutes les catégories</option>
+              <option value="mono-mois">Mono-mois</option>
+              <option value="multi-mois">Multi-mois</option>
+            </select>
+          </div>
+
+          {/* Filtre par type de motif */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Type de motif
+            </label>
+            <select
+              value={filters.type_motif || ""}
+              onChange={(e) =>
+                applyFilter("type_motif", e.target.value || null)
+              }
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+            >
+              <option value="">Tous les motifs</option>
+              <option value="sante">Santé</option>
+              <option value="education">Éducation</option>
+              <option value="transport">Transport</option>
+              <option value="logement">Logement</option>
+              <option value="alimentation">Alimentation</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+
+          {/* Filtre par statut de remboursement */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut remboursement
+            </label>
+            <select
+              value={filters.statut_remboursement || ""}
+              onChange={(e) =>
+                applyFilter("statut_remboursement", e.target.value || null)
+              }
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
+              <option value="EN_ATTENTE">En attente</option>
+              <option value="PAYE">Payé</option>
+              <option value="EN_RETARD">En retard</option>
+              <option value="ANNULE">Annulé</option>
+            </select>
+          </div>
           </div>
         )}
-      </div>
-      
+        </div>
+
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
         {stats.map((stat, index) => (
@@ -1043,11 +1050,31 @@ export default function DemandesPage() {
                   >
                     <td className="px-3 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                            {demande.demandeur.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
-                          </span>
-                        </div>
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {(() => {
+                            const employeeData = employeesData.get(demande.employe_id);
+                            const photoUrl = employeeData?.photo_url || (demande.employees as any)?.photo_url;
+                            console.log(`🔍 Demande ${demande.id}:`, {
+                              employe_id: demande.employe_id,
+                              hasEmployeeData: !!employeeData,
+                              photoUrl: photoUrl,
+                              employeesPhotoUrl: (demande.employees as any)?.photo_url
+                            });
+                            return photoUrl ? (
+                              <Image
+                                src={photoUrl}
+                                alt={demande.demandeur}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : (
+                              <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                                {demande.demandeur.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
+                              </span>
+                            );
+                          })()}
+                          </div>
                         <div>
                           <div className="font-medium text-sm text-gray-900 dark:text-white">
                             {demande.demandeur}
@@ -1181,11 +1208,11 @@ export default function DemandesPage() {
                 ))}
               </tbody>
             </table>
-            </div>
           </div>
+      </div>
         )}
 
-        {/* Pagination */}
+      {/* Pagination */}
         {filteredDemandes.length > 0 && (
           <Pagination
             currentPage={currentPage}
@@ -1207,13 +1234,13 @@ export default function DemandesPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
-                <div>
+              <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                    Détails de la demande
-                  </h2>
+                  Détails de la demande
+                </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                    Référence: {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
-                  </p>
+                  Référence: {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
+                </p>
                 </div>
               </div>
               <button
@@ -1229,26 +1256,40 @@ export default function DemandesPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                      {selectedDemande.employe
-                        ? `${selectedDemande.employe.prenom.charAt(0)}${selectedDemande.employe.nom.charAt(0)}`
-                        : selectedDemande.demandeur
-                        ? selectedDemande.demandeur.split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2)
-                        : "??"}
-                    </span>
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    {(() => {
+                      const employeeData = employeesData.get(selectedDemande.employe_id);
+                      const photoUrl = employeeData?.photo_url || (selectedDemande.employees as any)?.photo_url;
+                      return photoUrl ? (
+                        <Image
+                          src={photoUrl}
+                          alt={selectedDemande.demandeur || "Employé"}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                          {selectedDemande.employees
+                            ? `${selectedDemande.employees.prenom.charAt(0)}${selectedDemande.employees.nom.charAt(0)}`
+                            : selectedDemande.demandeur
+                            ? selectedDemande.demandeur.split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2)
+                            : "??"}
+                        </span>
+                      );
+                    })()}
                   </div>
-                  <div>
+              <div>
                     <h3 className="text-2xl font-bold text-white">
-                      {selectedDemande.employe
-                        ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}`
+                      {selectedDemande.employees
+                        ? `${selectedDemande.employees.prenom} ${selectedDemande.employees.nom}`
                         : selectedDemande.demandeur || "N/A"}
                     </h3>
                     <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
-                      {selectedDemande.employe?.poste || selectedDemande.poste || "N/A"}
+                      {selectedDemande.employees?.poste || selectedDemande.poste || "N/A"}
                     </p>
                   </div>
-                </div>
+                  </div>
                 <div className="flex items-center gap-3">
                   <Badge
                     variant={
@@ -1278,8 +1319,8 @@ export default function DemandesPage() {
                       ? "Multi-mois"
                       : selectedDemande.categorie || "N/A"}
                   </Badge>
-                </div>
-              </div>
+                  </div>
+                  </div>
 
               {/* Informations en grille */}
               <div className="space-y-4">
@@ -1288,13 +1329,13 @@ export default function DemandesPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                       <MailWarning className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                    </div>
+                </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedDemande.employe?.email || "Non renseigné"}
                   </p>
-                </div>
+              </div>
 
                 {/* Autres informations en grille */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1302,9 +1343,9 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
-                      </div>
+                  </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
-                    </div>
+                  </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.employe?.telephone || "Non renseigné"}
                     </p>
@@ -1314,9 +1355,9 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                         <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                      </div>
+                  </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Montant demandé</span>
-                    </div>
+                  </div>
                     <p className="font-medium text-green-600 dark:text-green-400">
                       {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
                     </p>
@@ -1326,21 +1367,21 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                         <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                      </div>
+                </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Type de motif</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}
                     </p>
-                  </div>
+              </div>
 
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
-                      </div>
+                  </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date de création</span>
-                    </div>
+                  </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.date_creation_premiere
                         ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR")
@@ -1348,14 +1389,14 @@ export default function DemandesPage() {
                         ? new Date(selectedDemande.date).toLocaleDateString("fr-FR")
                         : "Non définie"}
                     </p>
-                  </div>
+                </div>
 
                   {selectedDemande.demandes_detailes?.[0]?.date_validation && (
                     <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
                           <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-                        </div>
+              </div>
                         <span className="text-gray-600 dark:text-gray-400 text-xs">Date de validation</span>
                       </div>
                       <p className="font-medium text-teal-600 dark:text-teal-400">
@@ -1391,7 +1432,7 @@ export default function DemandesPage() {
                     </p>
                   </div>
                 )}
-              </div>
+                </div>
             </div>
           </div>
         </div>

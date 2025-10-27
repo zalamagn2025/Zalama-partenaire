@@ -32,9 +32,9 @@ const getNavItems = () => [
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
   { label: "Demande d'avance", icon: FileText, href: `/dashboard/demandes` },
-  // Ajout du lien Paiements
+  // Ajout du lien Paiement de salaire
   {
-    label: "Paiements",
+    label: "Paiement de salaire",
     icon: Banknote,
     href: `/dashboard/paiements`,
   },
@@ -46,12 +46,6 @@ const getNavItems = () => [
   },
   { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
   { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
-  // Ajout du lien Paiements des Salaires
-  {
-    label: "Paiements des Salaires",
-    icon: DollarSign,
-    href: `/dashboard/payment-salary`,
-  },
   // Ajout du lien Test Djomy
   /* {
     label: "Test Djomy",
