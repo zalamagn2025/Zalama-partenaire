@@ -1853,68 +1853,80 @@ export default function RemboursementsPage() {
                 <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Remboursements individuels
                 </h4>
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {selectedEmployeeDetails.remboursements_detailes?.map(
                     (remb: any, index: number) => (
                       <div
                         key={`${remb.id}-${index}`}
-                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+                        className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-5 shadow-sm backdrop-blur-sm"
                       >
                         {/* En-tête du remboursement */}
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-[var(--zalama-border)]/30">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-semibold text-sm">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[var(--zalama-orange)] to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
                               {index + 1}
                             </div>
                             <div>
-                              <h5 className="font-semibold text-gray-900 dark:text-white">
+                              <h5 className="font-semibold text-white">
                                 Remboursement #{index + 1}
                               </h5>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Date: {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
+                              <p className="text-xs text-[var(--zalama-text-secondary)]">
+                                {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total dû</p>
-                            <span className="font-bold text-xl text-gray-900 dark:text-white">
+                            <p className="text-xs text-[var(--zalama-text-secondary)] mb-1">Total dû</p>
+                            <span className="font-bold text-xl text-orange-500">
                               {gnfFormatter(remb.montant_total_remboursement)}
                             </span>
                           </div>
                         </div>
 
                         {/* Détails financiers en cartes */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant demandé</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                          <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Montant demandé</p>
+                            </div>
+                            <p className="text-base font-bold text-blue-900 dark:text-blue-100">
                               {gnfFormatter(remb.montant_transaction)}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Frais service (6,5%)</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-3 border border-purple-200 dark:border-purple-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CreditCard className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                              <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Frais service (6,5%)</p>
+                            </div>
+                            <p className="text-base font-bold text-purple-900 dark:text-purple-100">
                               {gnfFormatter(remb.montant_transaction * 0.065)}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant reçu</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 border border-green-200 dark:border-green-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                              <p className="text-xs text-green-700 dark:text-green-300 font-medium">Montant reçu</p>
+                            </div>
+                            <p className="text-base font-bold text-green-900 dark:text-green-100">
                               {gnfFormatter(
                                 remb.montant_transaction - remb.montant_transaction * 0.065
                               )}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Remboursement dû</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-3 border border-orange-200 dark:border-orange-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Receipt className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+                              <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Remboursement dû</p>
+                            </div>
+                            <p className="text-base font-bold text-orange-900 dark:text-orange-100">
                               {gnfFormatter(remb.montant_total_remboursement)}
                             </p>
                           </div>
                         </div>
 
                         {/* Statut */}
-                        <div className="flex items-center justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-center pt-4 border-t border-[var(--zalama-border)]/30">
                           {getStatusBadge(remb.statut)}
                         </div>
                       </div>
