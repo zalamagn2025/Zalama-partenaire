@@ -245,7 +245,7 @@ export default function LoginPage() {
                     }}
                     required
                     disabled={isLoading}
-                    className={emailError ? "border-red-500" : ""}
+                    className={emailError ? "border-red-500" : "focus-visible:border-[var(--zalama-orange)] focus-visible:ring-orange-500/50"}
                   />
                   {emailError && (
                     <p className="text-sm text-red-500 mt-1">{emailError}</p>
@@ -383,6 +383,7 @@ export default function LoginPage() {
                       onChange={(e) => setResetEmail(e.target.value)}
                       required
                       disabled={isResettingPin}
+                      className="focus-visible:border-[var(--zalama-orange)] focus-visible:ring-orange-500/50"
                     />
                     <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
