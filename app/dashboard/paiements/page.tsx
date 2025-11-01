@@ -1184,6 +1184,19 @@ export default function PaymentSalaryPage() {
                     </p>
                   </div>
 
+                {/* Avances déduites */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Avances déduites</span>
+                  </div>
+                  <p className="font-medium text-orange-600 dark:text-orange-400">
+                    {formatAmount(selectedPayment.avances_deduites || 0)} GNF
+                    </p>
+                  </div>
+
                 {/* Période */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
@@ -1196,14 +1209,14 @@ export default function PaymentSalaryPage() {
                     {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : 
                      `${formatDate(selectedPayment.periode_debut)} - ${formatDate(selectedPayment.periode_fin)}`}
                   </p>
-              </div>
-
+            </div>
+            
                 {/* Statut */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                  </div>
+            </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Statut</span>
                   </div>
                   <Badge variant={getStatusBadgeVariant(selectedPayment.statut)} className="text-xs">
