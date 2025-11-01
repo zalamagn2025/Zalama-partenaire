@@ -25,7 +25,6 @@ import {
   Clock,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -272,31 +271,78 @@ export default function AvisPage() {
   return (
     <div className="p-6 space-y-6">
       {/* En-tête avec statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-          title="Total Avis"
-          value={totalAvis.toString()}
-          icon={MessageSquare}
-          color="blue"
-        />
-        <StatCard
-          title="Note Moyenne"
-          value={averageNote.toFixed(1)}
-          icon={Star}
-          color="yellow"
-        />
-        <StatCard
-          title="Avis Approuvés"
-          value={approvedAvis.toString()}
-          icon={ThumbsUp}
-          color="green"
-        />
-        <StatCard
-          title="En Attente"
-          value={pendingAvis.toString()}
-          icon={Clock}
-          color="orange"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        {/* Total Avis */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <MessageSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Total</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {totalAvis}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Total Avis
+            </p>
+          </div>
+        </div>
+
+        {/* Note Moyenne */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-5 border border-yellow-200 dark:border-yellow-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">Moyenne</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+              {averageNote.toFixed(1)}
+            </p>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+              Note Moyenne
+            </p>
+          </div>
+        </div>
+
+        {/* Avis Approuvés */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <ThumbsUp className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Approuvés</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {approvedAvis}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Avis Approuvés
+            </p>
+          </div>
+        </div>
+
+        {/* En Attente */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {pendingAvis}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              En Attente
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Filtres et recherche */}
