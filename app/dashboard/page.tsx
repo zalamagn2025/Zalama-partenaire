@@ -388,10 +388,18 @@ export default function EntrepriseDashboardPage() {
       {/* En-tête du tableau de bord */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${partnerInfo?.logo_url ? 'bg-white border-2 border-gray-200' : 'bg-blue-900'}`}>
+          <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${
+            partnerInfo?.logo_url 
+              ? partnerInfo.logo_url.toLowerCase().endsWith('.png')
+                ? 'bg-white border-2 border-gray-300 shadow-sm'
+                : 'bg-transparent border-2 border-gray-600'
+              : 'bg-blue-900'
+          }`}>
             {partnerInfo?.logo_url ? (
               <>
-                <div className="absolute inset-0 bg-white rounded-lg"></div>
+                {partnerInfo.logo_url.toLowerCase().endsWith('.png') && (
+                  <div className="absolute inset-0 bg-white rounded-lg"></div>
+                )}
                 <Image
                   src={partnerInfo.logo_url}
                   alt={`Logo ${partnerInfo.company_name}`}
@@ -491,10 +499,10 @@ export default function EntrepriseDashboardPage() {
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
               Filtres avancés
-            </h3>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowFilters(!showFilters)}
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
                 className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
                 <Filter className="h-3 w-3" />
@@ -505,17 +513,17 @@ export default function EntrepriseDashboardPage() {
                 className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Réinitialiser
-              </button>
-              <button
-                onClick={() => loadDashboardData()}
-                disabled={isLoading}
+            </button>
+            <button
+              onClick={() => loadDashboardData()}
+              disabled={isLoading}
                 className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
               >
                 {isLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : null}
                 Actualiser
-              </button>
+            </button>
             </div>
           </div>
         </div>
@@ -704,9 +712,9 @@ export default function EntrepriseDashboardPage() {
                     financialPerformance?.a_rembourser_mois
                       ? Math.min(
                           (financialPerformance.a_rembourser_mois /
-                            financialPerformance.debloque_mois) *
+                          financialPerformance.debloque_mois) *
                             100,
-                          100
+                        100
                         )
                       : 0
                   }%`,
