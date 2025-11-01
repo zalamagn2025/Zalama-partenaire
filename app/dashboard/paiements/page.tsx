@@ -759,21 +759,24 @@ export default function PaymentSalaryPage() {
 
   // Page principale des paiements
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 min-h-screen" style={{ background: 'var(--zalama-bg-dark)' }}>
       {/* En-tête avec titre et bouton d'action */}
       <div className="flex items-center justify-between">
               <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-3xl font-bold" style={{ color: 'var(--zalama-text)' }}>
             Paiement de salaire
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="mt-1" style={{ color: 'var(--zalama-text-secondary)' }}>
             Gérez les paiements de salaire de vos employés
                 </p>
               </div>
               <button
           onClick={() => setShowPaymentPage(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 hover:scale-105 shadow-lg"
-              >
+          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          style={{ background: 'var(--zalama-orange)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--zalama-orange-dark)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
+        >
           <Plus className="w-5 h-5" />
           <span className="font-medium">Effectuer un paiement</span>
               </button>

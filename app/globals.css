@@ -2,6 +2,35 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ===== Variables CSS ZaLaMa ===== */
+:root {
+  /* Couleurs principales ZaLaMa */
+  --zalama-orange: #FF671F;
+  --zalama-orange-dark: #e55a1a;
+  --zalama-blue: #3b82f6;
+  --zalama-blue-accent: #60a5fa;
+  --zalama-blue-dark: #1e40af;
+  --zalama-success: #10b981;
+  --zalama-warning: #f59e0b;
+  --zalama-danger: #ef4444;
+  --zalama-green: #10b981;
+  --zalama-red: #ef4444;
+  --zalama-info: #06b6d4;
+  --zalama-purple: #8b5cf6;
+  
+  /* Fond de page et cartes */
+  --zalama-bg-dark: #0a1525;
+  --zalama-bg-darker: #061020;
+  --zalama-bg-light: #0e1e36;
+  --zalama-bg-lighter: #1a2c4e;
+  --zalama-header-blue: #0c1d3b;
+  --zalama-card: #0c1a2e;
+  --zalama-border: #1e3a70;
+  --zalama-text: #e5e7ef;
+  --zalama-text-secondary: #a0aec0;
+  --zalama-shadow: rgba(0, 0, 0, 0.3);
+}
+
 /* Fallbacks pour la compatibilité navigateur */
 @supports not (color: oklch(0 0 0)) {
   :root {
