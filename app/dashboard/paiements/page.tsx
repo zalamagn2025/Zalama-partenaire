@@ -1016,11 +1016,14 @@ export default function PaymentSalaryPage() {
                   <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Employé
                   </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
                   <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Mois payé
                   </th>
                   <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Montant
+                    Salaire reçu
                   </th>
                   <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Avances déduites
@@ -1069,6 +1072,9 @@ export default function PaymentSalaryPage() {
                   </div>
                   </div>
                   </div>
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(payment.employe?.salaire_net || payment.salaire_net || 0)} GNF
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {getMonthName(payment.mois_paye || '')}
