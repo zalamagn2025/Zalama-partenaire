@@ -733,7 +733,7 @@ export default function EntrepriseDashboardPage() {
             </h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
               <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
                 Total paiements effectués
@@ -755,6 +755,18 @@ export default function EntrepriseDashboardPage() {
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
                 à {paymentSalaryStats.employes_payes_distincts || 0} employés
+              </span>
+            </div>
+
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Total à rembourser
+              </span>
+              <span className="text-xl font-bold dark:text-white">
+                {gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                Salaire + Frais (6%)
               </span>
             </div>
             
