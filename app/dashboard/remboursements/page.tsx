@@ -91,13 +91,13 @@ type Remboursement = {
 const getStatusBadge = (statut: string) => {
   switch (statut) {
     case "PAYE":
-      return <Badge className="bg-green-500">Payé</Badge>;
+      return <Badge className="bg-green-500 dark:bg-green-600 text-white">Payé</Badge>;
     case "EN_ATTENTE":
-      return <Badge className="bg-yellow-500">En attente</Badge>;
+      return <Badge className="bg-orange-500 dark:bg-orange-600 text-white">En attente</Badge>;
     case "EN_RETARD":
-      return <Badge className="bg-red-500">En retard</Badge>;
+      return <Badge className="bg-red-500 dark:bg-red-600 text-white">En retard</Badge>;
     default:
-      return <Badge className="bg-gray-500">{statut}</Badge>;
+      return <Badge className="bg-gray-500 dark:bg-gray-600 text-white">{statut}</Badge>;
   }
 };
 
