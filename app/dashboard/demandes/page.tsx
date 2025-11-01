@@ -1526,7 +1526,9 @@ export default function DemandesPage() {
                 )}
 
                 {/* Plan de remboursement pour multi-mois */}
-                {selectedDemande.categorie === "multi-mois" && selectedDemande.num_installments && selectedDemande.num_installments > 1 && (
+                {(() => {
+                  const numInstallments = selectedDemande.demandes_detailes?.[0]?.num_installments || selectedDemande.num_installments;
+                  return selectedDemande.categorie === "multi-mois" && numInstallments && numInstallments > 1 && (
                   <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -1537,7 +1539,7 @@ export default function DemandesPage() {
                           Plan de remboursement Multi-mois
                         </h4>
                         <p className="text-xs text-purple-600 dark:text-purple-400">
-                          {selectedDemande.num_installments} mensualités
+                          {numInstallments} mensualités
                         </p>
                       </div>
                     </div>
@@ -1545,7 +1547,7 @@ export default function DemandesPage() {
                     <div className="space-y-2">
                       {(() => {
                         const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
-                        const nbMois = selectedDemande.num_installments || 1;
+                        const nbMois = numInstallments || 1;
                         const montantParMois = Math.floor(montantTotal / nbMois);
                         const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
                         
@@ -1595,7 +1597,8 @@ export default function DemandesPage() {
                       </div>
                     </div>
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Bouton télécharger le reçu */}
                 {(selectedDemande.demandes_detailes?.[0]?.receipt_url || selectedDemande.receipt_url) && (
