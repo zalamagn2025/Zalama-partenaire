@@ -1140,10 +1140,10 @@ export default function PaymentSalaryPage() {
                 </div>
               <div>
                   <h3 className="text-xl font-bold text-white">
-                    {selectedPayment.employe?.prenom} {selectedPayment.employe?.nom}
+                    Détails du paiement
                 </h3>
                   <p className="text-[var(--zalama-text-secondary)] text-sm mt-0.5">
-                    Salaire net: {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
+                    Informations complètes du paiement
                   </p>
                   </div>
                   </div>
@@ -1157,17 +1157,25 @@ export default function PaymentSalaryPage() {
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Email - prend toute la largeur */}
+              {/* Informations employé - prend toute la largeur */}
               <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                    <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                  <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Employé</span>
                       </div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {selectedPayment.employe?.email || "Non renseigné"}
-                </p>
+                <div className="space-y-2">
+                  <p className="font-bold text-lg text-gray-900 dark:text-white">
+                    {selectedPayment.employe?.prenom} {selectedPayment.employe?.nom}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Email:</span> {selectedPayment.employe?.email || "Non renseigné"}
+                  </p>
+                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                    Salaire net: {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
+                  </p>
+                </div>
                 </div>
 
               {/* Autres informations en grille */}
