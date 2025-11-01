@@ -291,7 +291,7 @@ export default function PaymentSalaryPage() {
   };
 
   // Mois disponibles pour le filtre
-  const availableMonths = Array.from(new Set(payments.map(p => p.mois_paye).filter(Boolean))).sort();
+  const availableMonths = Array.from(new Set(payments.map(p => p.mois_paye).filter((m): m is string => Boolean(m)))).sort();
 
   // Fonctions pour la gestion des employés sélectionnés
   const toggleEmployeeSelection = (employeeId: string) => {
@@ -1009,16 +1009,19 @@ export default function PaymentSalaryPage() {
                   <th className="w-1/6 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Employé
                   </th>
-                  <th className="w-1/6 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Mois payé
                   </th>
-                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Montant
                   </th>
-                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Avances déduites
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Statut
                   </th>
-                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date de paiement
                   </th>
                   <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -1061,10 +1064,13 @@ export default function PaymentSalaryPage() {
                   </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {getMonthName(payment.mois_paye)}
+                      {getMonthName(payment.mois_paye || '')}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
                       {formatAmount(payment.montant)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
+                      {formatAmount(payment.avances_deduites || 0)} GNF
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
