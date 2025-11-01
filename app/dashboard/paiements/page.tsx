@@ -280,6 +280,14 @@ export default function PaymentSalaryPage() {
     return new Intl.NumberFormat('fr-FR').format(amount);
   };
 
+  // Fonction pour formater le numéro de téléphone
+  const formatPhoneNumber = (phone: string | undefined) => {
+    if (!phone) return "Non renseigné";
+    // Supprimer tous les espaces et le préfixe +224 s'il existe déjà
+    const cleanPhone = phone.replace(/\s/g, '').replace(/^\+?224/, '');
+    return `+224 ${cleanPhone}`;
+  };
+
   // Fonction pour formater la date
   const formatDate = (dateString: string) => {
     if (!dateString) return "N/A";
@@ -1189,7 +1197,7 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                 </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedPayment.employe?.telephone ? `+224${selectedPayment.employe.telephone}` : "Non renseigné"}
+                    {formatPhoneNumber(selectedPayment.employe?.telephone)}
                   </p>
               </div>
 
