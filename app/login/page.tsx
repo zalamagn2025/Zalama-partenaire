@@ -209,6 +209,18 @@ export default function LoginPage() {
         {!showForgotPin ? (
           <Card>
             <CardHeader>
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="/images/Logo.svg" 
+                  alt="ZaLaMa Logo" 
+                  className="h-16 w-auto"
+                  onError={(e) => {
+                    // Fallback si le logo SVG n'existe pas
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/images/logo-fav.png";
+                  }}
+                />
+              </div>
               <CardTitle className="text-center text-2xl font-bold">
                 Connexion
               </CardTitle>
@@ -301,7 +313,11 @@ export default function LoginPage() {
               </CardContent>
 
               <CardFooter className="flex flex-col space-y-4 mt-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[var(--zalama-orange)] hover:bg-orange-600 text-white" 
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
