@@ -759,14 +759,14 @@ export default function PaymentSalaryPage() {
 
   // Page principale des paiements
   return (
-    <div className="p-6 space-y-6 min-h-screen" style={{ background: 'var(--zalama-bg-dark)' }}>
+    <div className="p-6">
       {/* En-tête avec titre et bouton d'action */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-6">
               <div>
-          <h1 className="text-3xl font-bold" style={{ color: 'var(--zalama-text)' }}>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Paiement de salaire
           </h1>
-          <p className="mt-1" style={{ color: 'var(--zalama-text-secondary)' }}>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gérez les paiements de salaire de vos employés
                 </p>
               </div>
