@@ -1,6 +1,5 @@
 "use client";
 
-import StatCard from "@/components/dashboard/StatCard";
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
@@ -609,32 +608,77 @@ export default function EntrepriseDashboardPage() {
 
       {/* Cartes statistiques principales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <StatCard
-          title="Employés actifs/Total"
-          value={`${statistics?.active_employees || 0}/${
-            statistics?.total_employees || 0
-          }`}
-          icon={Users}
-          color="orange"
-        />
-        <StatCard
-          title="Demandes totales"
-          value={statistics?.total_demandes || 0}
-          icon={FileText}
-          color="purple"
-        />
-        <StatCard
-          title="Demandes par employé"
-          value={statistics?.demandes_per_employee || "0.0"}
-          icon={ClipboardList}
-          color="orange"
-        />
-        <StatCard
-          title="Note moyenne"
-          value={statistics?.average_rating || "0.0"}
-          icon={Star}
-          color="green"
-        />
+        {/* Employés actifs/Total */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Employés</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {`${statistics?.active_employees || 0}/${statistics?.total_employees || 0}`}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Employés actifs/Total
+              </p>
+            </div>
+        </div>
+
+        {/* Demandes totales */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Demandes</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {statistics?.total_demandes || 0}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Demandes totales
+              </p>
+            </div>
+        </div>
+
+        {/* Demandes par employé */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Moyenne</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {statistics?.demandes_per_employee || "0.0"}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Demandes par employé
+              </p>
+            </div>
+      </div>
+
+        {/* Note moyenne */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Avis</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {statistics?.average_rating || "0.0"}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Note moyenne
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Performance financière - Avances */}
