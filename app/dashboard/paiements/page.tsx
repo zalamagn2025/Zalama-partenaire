@@ -772,10 +772,10 @@ export default function PaymentSalaryPage() {
               </div>
               <button
           onClick={() => setShowPaymentPage(true)}
-          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-lg"
+          disabled
+          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 shadow-lg opacity-50 cursor-not-allowed"
           style={{ background: 'var(--zalama-orange)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = 'var(--zalama-orange-dark)'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
+          title="Fonctionnalité temporairement désactivée"
         >
           <Plus className="w-5 h-5" />
           <span className="font-medium">Effectuer un paiement</span>
