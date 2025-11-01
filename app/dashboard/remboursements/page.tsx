@@ -1783,54 +1783,59 @@ export default function RemboursementsPage() {
               </div>
 
               {/* Résumé des remboursements */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-8">
-                <h4 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-8">
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 shadow-sm backdrop-blur-sm">
+                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[var(--zalama-orange)]" />
                   Résumé des remboursements
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-blue-200 dark:border-blue-800">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">
-                        {selectedEmployeeDetails.nombre_remboursements}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-200 dark:border-blue-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        Remboursements
-                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Remboursements</p>
                     </div>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      {selectedEmployeeDetails.nombre_remboursements}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-red-200 dark:border-red-800">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3 break-words">
-                        {gnfFormatter(
-                          selectedEmployeeDetails.montant_total_remboursement
-                        )}
+                  <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-4 border border-orange-200 dark:border-orange-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       </div>
-                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
-                        Total à rembourser
-                      </div>
+                      <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Total à rembourser</p>
                     </div>
+                    <p className="text-xl font-bold text-orange-900 dark:text-orange-100 break-words">
+                      {gnfFormatter(
+                        selectedEmployeeDetails.montant_total_remboursement
+                      )}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-300 dark:border-gray-700">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400 mb-3 break-words">
-                        {gnfFormatter(
-                          selectedEmployeeDetails.frais_service_total
-                        )}
+                  <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-4 border border-purple-200 dark:border-purple-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Frais service
-                      </div>
+                      <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Frais service</p>
                     </div>
+                    <p className="text-xl font-bold text-purple-900 dark:text-purple-100 break-words">
+                      {gnfFormatter(
+                        selectedEmployeeDetails.frais_service_total
+                      )}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-emerald-200 dark:border-emerald-800">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-3 break-words">
-                        {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                  <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border border-green-200 dark:border-green-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                       </div>
-                      <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                        Salaire restant
-                      </div>
+                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">Salaire restant</p>
                     </div>
+                    <p className="text-xl font-bold text-green-900 dark:text-green-100 break-words">
+                      {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                    </p>
                   </div>
                 </div>
               </div>
