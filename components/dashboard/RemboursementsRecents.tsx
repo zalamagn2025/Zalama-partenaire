@@ -186,11 +186,11 @@ export default function RemboursementsRecents({
           </div>
         </div>
       ) : (
-        <div className="divide-y divide-gray-200 dark:divide-gray-700">
+        <div className="space-y-3">
           {displayedRemboursements.map((remboursement, index) => (
             <div
               key={remboursement.employe_id}
-              className="flex items-center justify-between py-3 px-0 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors duration-200"
+              className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors duration-200 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
             >
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
