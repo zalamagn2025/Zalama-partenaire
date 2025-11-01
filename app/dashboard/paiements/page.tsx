@@ -783,7 +783,7 @@ export default function PaymentSalaryPage() {
             </div>
             
       {/* Statistiques détaillées */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {/* Total Paiements */}
         <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
@@ -858,7 +858,7 @@ export default function PaymentSalaryPage() {
               </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm mb-6">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Barre de recherche */}
           <div className="relative flex-1 max-w-md">
