@@ -145,12 +145,19 @@ export default function PaymentSalaryPage() {
       console.log('📊 Données paiements reçues:', data);
       
       if (data.success) {
-        // Mapper les données pour ajouter mois_paye et montant
-        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
-          ...payment,
-          mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
-          montant: payment.salaire_disponible || 0
-        }));
+        // Mapper les données pour ajouter mois_paye, montant et montant_total_remboursement
+        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => {
+          const salaireDisponible = payment.salaire_disponible || 0;
+          const frais = salaireDisponible * 0.06; // 6% de frais
+          const montantTotalRemboursement = salaireDisponible + frais;
+          
+          return {
+            ...payment,
+            mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
+            montant: salaireDisponible,
+            montant_total_remboursement: montantTotalRemboursement
+          };
+        });
         
         setPayments(mappedPayments);
         console.log('✅ Paiements chargés:', mappedPayments.length, 'paiements');
