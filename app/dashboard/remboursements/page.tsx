@@ -1066,32 +1066,32 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Statistiques détaillées */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
               <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">
                 Total en attente
               </div>
-              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+              <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
                 {gnfFormatter(totalRemboursements)}
               </div>
             </div>
           </div>
         </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                 Total remboursements
               </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-white">
+              <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
                 {statistics?.total_remboursements ||
                   (currentMonthData?.data
                     ? currentMonthData.data.length
@@ -1100,16 +1100,16 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wide">
                 En attente
               </div>
-              <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+              <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
                 {statistics?.remboursements_en_attente ||
                   (currentMonthData?.data
                     ? currentMonthData.data.filter(
@@ -1121,16 +1121,16 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+        <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">
                 Payés
               </div>
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              <div className="text-lg font-bold text-green-900 dark:text-green-100">
                 {statistics?.remboursements_payes ||
                   (currentMonthData?.data
                     ? currentMonthData.data.filter(
