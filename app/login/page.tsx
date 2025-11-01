@@ -336,6 +336,18 @@ export default function LoginPage() {
         ) : (
           <Card>
             <CardHeader>
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="/images/Logo.svg" 
+                  alt="ZaLaMa Logo" 
+                  className="h-16 w-auto"
+                  onError={(e) => {
+                    // Fallback si le logo SVG n'existe pas
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/images/logo-fav.png";
+                  }}
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -394,7 +406,7 @@ export default function LoginPage() {
               <CardFooter className="flex flex-col space-y-4 mt-4">
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-[var(--zalama-orange)] hover:bg-orange-600 text-white"
                   disabled={isResettingPin}
                 >
                   {isResettingPin ? (
