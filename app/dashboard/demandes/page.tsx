@@ -533,6 +533,7 @@ export default function DemandesPage() {
         d.statut ||
         "Non défini",
       type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
+      employe: employe, // ✅ Ajouter les données de l'employé pour accéder au salaire_net
     };
   });
 
@@ -1175,7 +1176,7 @@ export default function DemandesPage() {
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {(() => {
                           const employeeData = employeesData.get(demande.employe_id);
-                          const salaireNet = employeeData?.salaire_net || (demande as any).salaire_net || 0;
+                          const salaireNet = employeeData?.salaire_net || (demande as any).employe?.salaire_net || 0;
                           return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
                         })()}
                       </div>
