@@ -95,17 +95,17 @@ const getStatusBadge = (statut: string) => {
   switch (statutUpper) {
     case "PAYE":
     case "PAYÉ":
-      return <Badge className="bg-green-500">Payé</Badge>;
+      return <Badge variant="success" className="bg-green-500 text-white border-0">Payé</Badge>;
     case "EN_ATTENTE":
     case "EN ATTENTE":
     case "ATTENTE":
-      return <Badge className="bg-yellow-500">En attente</Badge>;
+      return <Badge variant="warning" className="bg-yellow-500 text-white border-0">En attente</Badge>;
     case "EN_RETARD":
     case "EN RETARD":
     case "RETARD":
-      return <Badge className="bg-red-500">En retard</Badge>;
+      return <Badge variant="error" className="bg-red-500 text-white border-0">En retard</Badge>;
     default:
-      return <Badge className="bg-gray-500">{statut}</Badge>;
+      return <Badge variant="default" className="bg-gray-500 text-white border-0">{statut}</Badge>;
   }
 };
 
