@@ -151,7 +151,7 @@ export default function DocumentsPage() {
                       >
                         <div className="flex items-center space-x-2">
                           <Badge
-                            variant="secondary"
+                            variant="default"
                             className={
                               type === "pdf"
                                 ? "bg-red-100 text-red-700"

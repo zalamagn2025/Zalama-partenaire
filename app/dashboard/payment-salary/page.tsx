@@ -1153,7 +1153,7 @@ export default function PaymentSalaryPage() {
                     <TableCell>
                       {employee.deja_paye ? (
                         <Badge
-                          variant="secondary"
+                          variant="success"
                           style={{
                             background: "var(--zalama-success)",
                             color: "white",
@@ -1174,7 +1174,7 @@ export default function PaymentSalaryPage() {
                         </Badge>
                       ) : (
                         <Badge
-                          variant="destructive"
+                          variant="error"
                           style={{
                             background: "var(--zalama-danger)",
                             color: "white",
