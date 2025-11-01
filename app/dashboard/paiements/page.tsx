@@ -1025,17 +1025,17 @@ export default function PaymentSalaryPage() {
                   <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Employé
                   </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Salaire Net
-                  </th>
                   <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Mois payé
                   </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Salaire reçu
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
                   </th>
                   <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Avances déduites
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire reçu
                   </th>
                   <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Statut
@@ -1082,17 +1082,17 @@ export default function PaymentSalaryPage() {
                   </div>
                   </div>
                     </td>
-                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                      {formatAmount(payment.employe?.salaire_net || payment.salaire_net || 0)} GNF
-                    </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {getMonthName(payment.mois_paye || '')}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                      {formatAmount(payment.montant)} GNF
+                      {formatAmount(payment.employe?.salaire_net || payment.salaire_net || 0)} GNF
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
                       {formatAmount(payment.avances_deduites || 0)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(payment.montant)} GNF
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
@@ -1180,14 +1180,36 @@ export default function PaymentSalaryPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-medium">Email:</span> {selectedPayment.employe?.email || "Non renseigné"}
                   </p>
-                  <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-                    Salaire net: {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
-                  </p>
                 </div>
                 </div>
 
               {/* Autres informations en grille */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Salaire Net */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire Net</span>
+                  </div>
+                  <p className="font-medium text-orange-600 dark:text-orange-400">
+                    {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
+                    </p>
+                  </div>
+                {/* Mois payé */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                      <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Mois payé</span>
+                </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : "N/A"}
+                  </p>
+              </div>
+
                 {/* Phone Card */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
@@ -1227,20 +1249,6 @@ export default function PaymentSalaryPage() {
                     </p>
                   </div>
 
-                {/* Période */}
-                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
-                      <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Période</span>
-                  </div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : 
-                     `${formatDate(selectedPayment.periode_debut)} - ${formatDate(selectedPayment.periode_fin)}`}
-                  </p>
-            </div>
-            
                 {/* Statut */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
