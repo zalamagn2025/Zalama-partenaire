@@ -23,7 +23,6 @@ import {
   UserCheck,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -404,37 +403,88 @@ export default function EmployesPage() {
       
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total des employés"
-          value={statisticsLoading ? "..." : totalEmployeesFromStats}
-          icon={Users}
-          color="blue"
-        />
-        <StatCard
-          title="Employés actifs"
-          value={statisticsLoading ? "..." : activeEmployees}
-          total={totalEmployeesFromStats}
-          icon={Calendar}
-          color="green"
-        />
-        <StatCard
-          title="Employés inactifs"
-          value={
-            statisticsLoading
-              ? "..."
-              : statistics?.statistics?.inactive_employees || 0
-          }
-          total={totalEmployeesFromStats}
-          icon={TrendingUp}
-          color="yellow"
-        />
-        <StatCard
-          title="Taux d'activation"
-          value={statisticsLoading ? "..." : `${retentionRate}%`}
-          icon={AlertTriangle}
-          color="purple"
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* Total Employés */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Total</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {statisticsLoading ? "..." : totalEmployeesFromStats}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Total des employés
+            </p>
+          </div>
+        </div>
+
+        {/* Employés Actifs */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <UserCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Actifs</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {statisticsLoading ? "..." : activeEmployees}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Employés actifs
+              {totalEmployeesFromStats > 0 && (
+                <span className="ml-1 text-xs">
+                  ({Math.round((activeEmployees / totalEmployeesFromStats) * 100)}%)
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Employés Inactifs */}
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-5 border border-red-200 dark:border-red-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <Badge variant="error" className="text-xs">Inactifs</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-red-900 dark:text-red-100">
+              {statisticsLoading ? "..." : (statistics?.statistics?.inactive_employees || 0)}
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+              Employés inactifs
+              {totalEmployeesFromStats > 0 && (
+                <span className="ml-1 text-xs">
+                  ({Math.round(((statistics?.statistics?.inactive_employees || 0) / totalEmployeesFromStats) * 100)}%)
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+
+        {/* Taux d'activation */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Taux</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {statisticsLoading ? "..." : `${retentionRate}%`}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Taux d'activation
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Filtres et recherche */}
