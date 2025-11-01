@@ -48,10 +48,14 @@ import { toast } from "sonner";
 type Payment = {
   id: string;
   employe_id: string;
-  montant: number;
+  salaire_disponible: number;
+  montant?: number; // Alias pour compatibilité
   statut: string;
   date_paiement: string;
-  mois_paye: string;
+  periode_debut: string;
+  periode_fin: string;
+  mois_paye?: string; // Calculé à partir de periode_debut
+  reference_paiement: string;
   created_at: string;
   employe?: {
     id: string;
@@ -72,7 +76,8 @@ type Employee = {
   email: string;
   telephone: string;
   photo_url?: string;
-  salaire_mensuel?: number;
+  salaire_net?: number;
+  salaire_mensuel?: number; // Alias pour compatibilité
 };
 
 export default function PaymentSalaryPage() {
@@ -121,10 +126,10 @@ export default function PaymentSalaryPage() {
     try {
       console.log('🔄 Chargement des paiements...');
       const response = await fetch("/api/proxy/payments?action=list&page=1&limit=100", {
-        headers: {
+          headers: {
           Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
+            "Content-Type": "application/json",
+          },
       });
 
       if (!response.ok) {
@@ -133,9 +138,17 @@ export default function PaymentSalaryPage() {
 
       const data = await response.json();
       console.log('📊 Données paiements reçues:', data);
+      
       if (data.success) {
-        setPayments(Array.isArray(data.data) ? data.data : []);
-        console.log('✅ Paiements chargés:', data.data?.length || 0, 'paiements');
+        // Mapper les données pour ajouter mois_paye et montant
+        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
+          ...payment,
+          mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
+          montant: payment.salaire_disponible || 0
+        }));
+        
+        setPayments(mappedPayments);
+        console.log('✅ Paiements chargés:', mappedPayments.length, 'paiements');
       } else {
         throw new Error(data.message || "Erreur lors du chargement des paiements");
       }
@@ -149,10 +162,10 @@ export default function PaymentSalaryPage() {
   const loadEmployees = async () => {
     try {
       const response = await fetch("/api/proxy/employees", {
-        headers: {
+          headers: {
           Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
+            "Content-Type": "application/json",
+          },
       });
 
       if (!response.ok) {
@@ -161,7 +174,15 @@ export default function PaymentSalaryPage() {
 
       const data = await response.json();
       if (data.success) {
-        setEmployees(Array.isArray(data.data) ? data.data : []);
+        // Mapper les données pour ajouter salaire_mensuel à partir de salaire_net
+        const employeesData = data.data?.employees || data.data || [];
+        const mappedEmployees = (Array.isArray(employeesData) ? employeesData : []).map((emp: any) => ({
+          ...emp,
+          salaire_mensuel: emp.salaire_net || 0
+        }));
+        
+        setEmployees(mappedEmployees);
+        console.log('✅ Employés chargés:', mappedEmployees.length, 'employés');
       } else {
         throw new Error(data.message || "Erreur lors du chargement des employés");
       }
@@ -194,17 +215,20 @@ export default function PaymentSalaryPage() {
 
   // Statistiques
   const totalPayments = payments.length;
-  const totalAmount = payments.reduce((sum, payment) => sum + (payment.montant || 0), 0);
-  const completedPayments = payments.filter(p => p.statut === "completed").length;
-  const pendingPayments = payments.filter(p => p.statut === "pending").length;
+  const totalAmount = payments.reduce((sum, payment) => sum + (payment.montant || payment.salaire_disponible || 0), 0);
+  const completedPayments = payments.filter(p => p.statut === "PAYE" || p.statut === "completed").length;
+  const pendingPayments = payments.filter(p => p.statut === "EN_ATTENTE" || p.statut === "pending").length;
 
   // Fonction pour obtenir la couleur du badge selon le statut
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
+      case "PAYE":
       case "completed":
         return "success";
+      case "EN_ATTENTE":
       case "pending":
         return "warning";
+      case "ECHOUE":
       case "failed":
         return "error";
       default:
@@ -212,8 +236,29 @@ export default function PaymentSalaryPage() {
     }
   };
 
+  // Fonction pour obtenir le label du statut
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "PAYE":
+        return "Payé";
+      case "EN_ATTENTE":
+        return "En attente";
+      case "ECHOUE":
+        return "Échoué";
+      case "completed":
+        return "Effectué";
+      case "pending":
+        return "En attente";
+      case "failed":
+        return "Échoué";
+      default:
+        return status;
+    }
+  };
+
   // Fonction pour formater le montant
-  const formatAmount = (amount: number) => {
+  const formatAmount = (amount: number | undefined | null) => {
+    if (!amount || isNaN(amount)) return '0';
     return new Intl.NumberFormat('fr-FR').format(amount);
   };
 
@@ -297,8 +342,8 @@ export default function PaymentSalaryPage() {
                 </div>
                 <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-16"></div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
         </div>
       </div>
     );
@@ -481,10 +526,10 @@ export default function PaymentSalaryPage() {
                             )}
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              </div>
+            ))}
+          </div>
+        </div>
               </div>
             )}
 
@@ -726,31 +771,31 @@ export default function PaymentSalaryPage() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard
-          title="Total Paiements"
+          <StatCard
+            title="Total Paiements"
           value={totalPayments.toString()}
           icon={CreditCard}
-          color="blue"
-        />
-        <StatCard
+            color="blue"
+          />
+          <StatCard
           title="Montant Total"
           value={`${formatAmount(totalAmount)} GNF`}
           icon={DollarSign}
-          color="green"
-        />
-        <StatCard
+            color="green"
+          />
+          <StatCard
           title="Paiements Effectués"
           value={completedPayments.toString()}
           icon={CheckCircle}
           color="green"
-        />
-        <StatCard
+          />
+          <StatCard
           title="En Attente"
           value={pendingPayments.toString()}
           icon={Clock}
           color="orange"
-        />
-      </div>
+          />
+        </div>
 
       {/* Filtres et recherche */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
@@ -766,7 +811,7 @@ export default function PaymentSalaryPage() {
               className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
-
+          
           {/* Filtres avancés */}
           <div className="flex items-center gap-3">
             <div className="relative">
@@ -797,7 +842,7 @@ export default function PaymentSalaryPage() {
                         <option value="pending">En attente</option>
                         <option value="failed">Échoué</option>
                       </select>
-                    </div>
+        </div>
 
                     {/* Filtre par mois */}
                     <div>
@@ -816,8 +861,8 @@ export default function PaymentSalaryPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
-
+        </div>
+        
                     {/* Filtre par employé */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -835,7 +880,7 @@ export default function PaymentSalaryPage() {
                           </option>
                         ))}
                       </select>
-                    </div>
+          </div>
 
                     {/* Boutons d'action */}
                     <div className="flex gap-2 pt-2">
@@ -855,7 +900,7 @@ export default function PaymentSalaryPage() {
                       >
                         Appliquer
                       </button>
-                    </div>
+          </div>
                   </div>
                 </div>
               )}
@@ -893,9 +938,9 @@ export default function PaymentSalaryPage() {
           </h3>
           <p className="text-gray-500 dark:text-gray-400">
             Aucun paiement ne correspond aux critères de recherche.
-          </p>
-        </div>
-      ) : (
+                            </p>
+                          </div>
+                        ) : (
         <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
             <table className="w-full table-fixed dark:divide-gray-700">
@@ -963,13 +1008,11 @@ export default function PaymentSalaryPage() {
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
-                        {payment.statut === "completed" ? "Effectué" : 
-                         payment.statut === "pending" ? "En attente" : 
-                         payment.statut === "failed" ? "Échoué" : payment.statut}
+                        {getStatusLabel(payment.statut)}
                       </Badge>
                     </td>
                     <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(payment.date_paiement)}
+                        {formatDate(payment.date_paiement)}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <button
@@ -990,9 +1033,9 @@ export default function PaymentSalaryPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
 
-          {/* Pagination */}
+            {/* Pagination */}
           {filteredPayments.length > 0 && (
             <Pagination
               currentPage={currentPage}
@@ -1002,7 +1045,7 @@ export default function PaymentSalaryPage() {
               onPageChange={setCurrentPage}
             />
           )}
-        </div>
+              </div>
       )}
 
       {/* Modal de détails du paiement */}
@@ -1015,7 +1058,7 @@ export default function PaymentSalaryPage() {
                 <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
                   <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
-                <div>
+              <div>
                   <h3 className="text-xl font-bold text-white">
                     Détails du paiement
                   </h3>
@@ -1041,11 +1084,11 @@ export default function PaymentSalaryPage() {
                     <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
-                </div>
+                  </div>
                 <p className="font-medium text-gray-900 dark:text-white">
                   {selectedPayment.employe?.email || "Non renseigné"}
                 </p>
-              </div>
+                  </div>
 
               {/* Autres informations en grille */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1054,37 +1097,38 @@ export default function PaymentSalaryPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                       <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                   </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedPayment.employe?.telephone ? `+224${selectedPayment.employe.telephone}` : "Non renseigné"}
                   </p>
-                </div>
+              </div>
 
                 {/* Montant */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                       <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    </div>
+                  </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Montant</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatAmount(selectedPayment.montant)} GNF
+                    {formatAmount(selectedPayment.montant || selectedPayment.salaire_disponible)} GNF
                   </p>
                 </div>
 
-                {/* Mois payé */}
+                {/* Période */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                       <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Mois payé</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Période</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {getMonthName(selectedPayment.mois_paye)}
+                    {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : 
+                     `${formatDate(selectedPayment.periode_debut)} - ${formatDate(selectedPayment.periode_fin)}`}
                   </p>
                 </div>
 
@@ -1097,9 +1141,7 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Statut</span>
                   </div>
                   <Badge variant={getStatusBadgeVariant(selectedPayment.statut)} className="text-xs">
-                    {selectedPayment.statut === "completed" ? "Effectué" : 
-                     selectedPayment.statut === "pending" ? "En attente" : 
-                     selectedPayment.statut === "failed" ? "Échoué" : selectedPayment.statut}
+                    {getStatusLabel(selectedPayment.statut)}
                   </Badge>
                 </div>
 
@@ -1108,26 +1150,26 @@ export default function PaymentSalaryPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
                       <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                    </div>
+                      </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Date de paiement</span>
-                  </div>
+                      </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(selectedPayment.date_paiement)}
                   </p>
-                </div>
+              </div>
 
                 {/* ID du paiement */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-cyan-100 dark:bg-cyan-900/20 rounded-lg">
                       <Hash className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
-                    </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">ID Paiement</span>
                   </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">ID Paiement</span>
+                </div>
                   <p className="font-medium text-gray-900 dark:text-white font-mono text-sm">
                     {selectedPayment.id}
                   </p>
-                </div>
+            </div>
               </div>
             </div>
           </div>
