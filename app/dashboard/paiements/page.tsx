@@ -38,7 +38,6 @@ import {
   Save
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +47,11 @@ import { toast } from "sonner";
 type Payment = {
   id: string;
   employe_id: string;
+  salaire_net: number;
   salaire_disponible: number;
+  avances_deduites: number;
+  montant_total_remboursement: number;
+  frais_intervention?: number;
   montant?: number; // Alias pour compatibilité
   statut: string;
   date_paiement: string;
@@ -56,6 +59,8 @@ type Payment = {
   periode_fin: string;
   mois_paye?: string; // Calculé à partir de periode_debut
   reference_paiement: string;
+  methode_paiement?: string;
+  intervention_zalama?: boolean;
   created_at: string;
   employe?: {
     id: string;
@@ -213,9 +218,14 @@ export default function PaymentSalaryPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
 
-  // Statistiques
+  // Statistiques détaillées
   const totalPayments = payments.length;
-  const totalAmount = payments.reduce((sum, payment) => sum + (payment.montant || payment.salaire_disponible || 0), 0);
+  
+  // Calculs pour les paiements
+  const totalSalaires = payments.reduce((sum, payment) => sum + (payment.salaire_disponible || 0), 0);
+  const totalAvancesDeduites = payments.reduce((sum, payment) => sum + ((payment as any).avances_deduites || 0), 0);
+  const totalRemboursements = payments.reduce((sum, payment) => sum + ((payment as any).montant_total_remboursement || 0), 0);
+  
   const completedPayments = payments.filter(p => p.statut === "PAYE" || p.statut === "completed").length;
   const pendingPayments = payments.filter(p => p.statut === "EN_ATTENTE" || p.statut === "pending").length;
 
@@ -342,8 +352,8 @@ export default function PaymentSalaryPage() {
                 </div>
                 <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-16"></div>
               </div>
-              ))}
-            </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -351,7 +361,7 @@ export default function PaymentSalaryPage() {
 
   // Page d'effectuation de paiement
   if (showPaymentPage) {
-    return (
+  return (
       <div className="p-6 space-y-6">
         {/* Header avec navigation */}
         <div className="flex items-center justify-between">
@@ -363,21 +373,21 @@ export default function PaymentSalaryPage() {
               <ArrowLeft className="w-4 h-4" />
               Retour
             </button>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
                 Effectuer un paiement de salaire
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
                 Sélectionnez les employés et configurez le paiement mensuel
-              </p>
-            </div>
+          </p>
+        </div>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="info" className="text-sm">
               Étape {currentStep} sur 3
             </Badge>
           </div>
-        </div>
+      </div>
 
         {/* Étapes de progression */}
         <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
@@ -387,7 +397,7 @@ export default function PaymentSalaryPage() {
                 currentStep >= 1 ? 'bg-orange-600 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
               }`}>
                 1
-              </div>
+        </div>
               <span className={`text-sm font-medium ${
                 currentStep >= 1 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
               }`}>
@@ -442,8 +452,8 @@ export default function PaymentSalaryPage() {
                         type="text"
                         placeholder="Rechercher un employé..."
                         className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      />
-                    </div>
+          />
+        </div>
                     <button 
                       onClick={selectAllEmployees}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -493,9 +503,9 @@ export default function PaymentSalaryPage() {
                             <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
                               {employee.prenom?.charAt(0)}
                               {employee.nom?.charAt(0)}
-                            </span>
+            </span>
                           )}
-                        </div>
+          </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 dark:text-white truncate">
                             {employee.prenom} {employee.nom}
@@ -565,7 +575,7 @@ export default function PaymentSalaryPage() {
                         <option value="2024-11">Novembre 2024</option>
                         <option value="2024-12">Décembre 2024</option>
                       </select>
-                    </div>
+        </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Date de paiement
@@ -618,25 +628,25 @@ export default function PaymentSalaryPage() {
                           </p>
                         </div>
                       </div>
-                    </div>
-                    
+        </div>
+        
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mois de paiement</label>
                         <p className="text-gray-900 dark:text-white">{getMonthName(paymentMonth)}</p>
-                      </div>
+          </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date de paiement</label>
                         <p className="text-gray-900 dark:text-white">{formatDate(paymentDate)}</p>
-                      </div>
-                      <div>
+          </div>
+                          <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Méthode</label>
                         <p className="text-gray-900 dark:text-white">
                           {paymentMethod === "mobile_money" ? "Mobile Money" :
                            paymentMethod === "bank_transfer" ? "Virement bancaire" :
                            paymentMethod === "cash" ? "Espèces" : "Non sélectionnée"}
-                        </p>
-                      </div>
+                            </p>
+                          </div>
                       <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Employés sélectionnés</label>
                         <p className="text-gray-900 dark:text-white">{selectedEmployees.length} employé(s)</p>
@@ -646,7 +656,7 @@ export default function PaymentSalaryPage() {
                 </div>
               </div>
             )}
-          </div>
+            </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
@@ -660,7 +670,7 @@ export default function PaymentSalaryPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Employés sélectionnés</span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedEmployees.length}</span>
-                </div>
+              </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Montant total</span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{formatAmount(totalAmountSelected)} GNF</span>
@@ -752,50 +762,97 @@ export default function PaymentSalaryPage() {
     <div className="p-6 space-y-6">
       {/* En-tête avec titre et bouton d'action */}
       <div className="flex items-center justify-between">
-        <div>
+              <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Paiement de salaire
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Gérez les paiements de salaire de vos employés
-          </p>
-        </div>
-        <button
+                </p>
+              </div>
+              <button
           onClick={() => setShowPaymentPage(true)}
           className="flex items-center gap-2 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-all duration-200 hover:scale-105 shadow-lg"
-        >
+              >
           <Plus className="w-5 h-5" />
           <span className="font-medium">Effectuer un paiement</span>
-        </button>
-      </div>
-
-      {/* Statistiques */}
+              </button>
+            </div>
+            
+      {/* Statistiques détaillées */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatCard
-            title="Total Paiements"
-          value={totalPayments.toString()}
-          icon={CreditCard}
-            color="blue"
-          />
-          <StatCard
-          title="Montant Total"
-          value={`${formatAmount(totalAmount)} GNF`}
-          icon={DollarSign}
-            color="green"
-          />
-          <StatCard
-          title="Paiements Effectués"
-          value={completedPayments.toString()}
-          icon={CheckCircle}
-          color="green"
-          />
-          <StatCard
-          title="En Attente"
-          value={pendingPayments.toString()}
-          icon={Clock}
-          color="orange"
-          />
+        {/* Total Paiements */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Total</Badge>
+          </div>
+              <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {totalPayments}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Total Paiements
+                    </p>
+                  </div>
         </div>
+
+        {/* Montant Total Salaires */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Salaires</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {formatAmount(totalSalaires)} GNF
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Montant Total Salaires
+            </p>
+          </div>
+        </div>
+
+        {/* Avances Déduites */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">Avances</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {formatAmount(totalAvancesDeduites)} GNF
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Avances Déduites
+            </p>
+          </div>
+        </div>
+
+        {/* Montant Remboursements */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Banknote className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Rembours.</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {formatAmount(totalRemboursements)} GNF
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Montant Remboursements
+            </p>
+                  </div>
+                </div>
+              </div>
 
       {/* Filtres et recherche */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
@@ -828,7 +885,7 @@ export default function PaymentSalaryPage() {
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-lg z-10 p-4">
                   <div className="space-y-4">
                     {/* Filtre par statut */}
-                    <div>
+              <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Statut
                       </label>
@@ -935,11 +992,11 @@ export default function PaymentSalaryPage() {
           <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Aucun paiement trouvé
-          </h3>
+                </h3>
           <p className="text-gray-500 dark:text-gray-400">
             Aucun paiement ne correspond aux critères de recherche.
                             </p>
-                          </div>
+                  </div>
                         ) : (
         <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
@@ -987,18 +1044,18 @@ export default function PaymentSalaryPage() {
                             <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
                               {payment.employe?.prenom?.charAt(0)}
                               {payment.employe?.nom?.charAt(0)}
-                            </span>
+                    </span>
                           )}
-                        </div>
+                  </div>
                         <div>
                           <div className="font-medium text-sm text-gray-900 dark:text-white">
                             {payment.employe?.prenom} {payment.employe?.nom}
-                          </div>
+                  </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
                             {payment.employe?.poste || "N/A"}
-                          </div>
-                        </div>
-                      </div>
+                  </div>
+                  </div>
+                  </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {getMonthName(payment.mois_paye)}
@@ -1026,14 +1083,14 @@ export default function PaymentSalaryPage() {
                         <Eye className="h-4 w-4" />
                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                           Voir
-                        </div>
+                </div>
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            </div>
+              </div>
 
             {/* Pagination */}
           {filteredPayments.length > 0 && (
@@ -1061,19 +1118,19 @@ export default function PaymentSalaryPage() {
               <div>
                   <h3 className="text-xl font-bold text-white">
                     Détails du paiement
-                  </h3>
+                </h3>
                   <p className="text-[var(--zalama-text-secondary)] text-sm mt-0.5">
                     Informations complètes du paiement
                   </p>
-                </div>
-              </div>
+                  </div>
+                  </div>
               <button
                 onClick={() => setShowDetailModal(false)}
                 className="p-1.5 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-4 w-4" />
               </button>
-            </div>
+                  </div>
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
@@ -1082,13 +1139,13 @@ export default function PaymentSalaryPage() {
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                     <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  </div>
+                      </div>
                   <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
-                  </div>
+                      </div>
                 <p className="font-medium text-gray-900 dark:text-white">
                   {selectedPayment.employe?.email || "Non renseigné"}
                 </p>
-                  </div>
+                </div>
 
               {/* Autres informations en grille */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1115,42 +1172,42 @@ export default function PaymentSalaryPage() {
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatAmount(selectedPayment.montant || selectedPayment.salaire_disponible)} GNF
-                  </p>
-                </div>
+                    </p>
+                  </div>
 
                 {/* Période */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                       <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    </div>
+                </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Période</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : 
                      `${formatDate(selectedPayment.periode_debut)} - ${formatDate(selectedPayment.periode_fin)}`}
                   </p>
-                </div>
+              </div>
 
                 {/* Statut */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                       <CheckCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                    </div>
+                  </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Statut</span>
                   </div>
                   <Badge variant={getStatusBadgeVariant(selectedPayment.statut)} className="text-xs">
                     {getStatusLabel(selectedPayment.statut)}
                   </Badge>
-                </div>
-
+            </div>
+            
                 {/* Date de paiement */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
                       <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                      </div>
+            </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Date de paiement</span>
                       </div>
                   <p className="font-medium text-gray-900 dark:text-white">
