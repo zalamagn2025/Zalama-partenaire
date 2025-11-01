@@ -25,7 +25,6 @@ import {
   Eye,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
@@ -963,15 +962,95 @@ export default function DemandesPage() {
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        {stats.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-          />
-        ))}
+        {/* Total demandes */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Total</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {totalDemandes}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Total demandes
+            </p>
+          </div>
+        </div>
+
+        {/* Validées */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Validées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {approvedDemandes}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Validées
+            </p>
+          </div>
+        </div>
+
+        {/* En attente */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-5 border border-yellow-200 dark:border-yellow-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+              {pendingDemandes}
+            </p>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+              En attente
+            </p>
+          </div>
+        </div>
+
+        {/* En attente RH/Responsable */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">RH</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {pendingRHResponsable}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              En attente RH
+            </p>
+          </div>
+        </div>
+
+        {/* Rejetées */}
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-5 border border-red-200 dark:border-red-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <Badge variant="error" className="text-xs">Rejetées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-red-900 dark:text-red-100">
+              {rejectedDemandes}
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+              Rejetées
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Barre de recherche simple */}
