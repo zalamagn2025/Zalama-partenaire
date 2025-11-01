@@ -124,7 +124,7 @@ export default function DocumentsPage() {
                         className="flex items-center justify-between"
                       >
                         <div className="flex items-center space-x-2">
-                          <Badge variant="secondary" className="capitalize">
+                          <Badge variant="default" className="capitalize">
                             {categorie}
                           </Badge>
                         </div>
