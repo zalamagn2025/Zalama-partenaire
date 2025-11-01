@@ -23,6 +23,7 @@ import {
   Calendar,
   Hash,
   Eye,
+  Receipt,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
@@ -1102,6 +1103,9 @@ export default function DemandesPage() {
                     Nom de l'employé
                   </th>
                   <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Catégorie
                   </th>
                   <th className="px-3 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -1165,6 +1169,15 @@ export default function DemandesPage() {
                               </div>
                             )}
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {(() => {
+                          const employeeData = employeesData.get(demande.employe_id);
+                          const salaireNet = employeeData?.salaire_net || (demande as any).salaire_net || 0;
+                          return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
+                        })()}
                       </div>
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -1509,6 +1522,110 @@ export default function DemandesPage() {
                     <p className="text-sm text-gray-700 dark:text-gray-300">
                       {selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif}
                     </p>
+                  </div>
+                )}
+
+                {/* Plan de remboursement pour multi-mois */}
+                {selectedDemande.categorie === "multi-mois" && selectedDemande.num_installments && selectedDemande.num_installments > 1 && (
+                  <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                          Plan de remboursement Multi-mois
+                        </h4>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                          {selectedDemande.num_installments} mensualités
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {(() => {
+                        const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
+                        const nbMois = selectedDemande.num_installments || 1;
+                        const montantParMois = Math.floor(montantTotal / nbMois);
+                        const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
+                        
+                        return Array.from({ length: nbMois }, (_, i) => {
+                          const moisIndex = i + 1;
+                          const montant = moisIndex === nbMois ? dernierMontant : montantParMois;
+                          const dateEcheance = new Date();
+                          dateEcheance.setMonth(dateEcheance.getMonth() + moisIndex);
+                          
+                          return (
+                            <div key={moisIndex} className="flex items-center justify-between p-3 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-purple-200 dark:border-purple-800/20">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                    {moisIndex}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Échéance {moisIndex}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {dateEcheance.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
+                                  {montant.toLocaleString()} GNF
+                                </p>
+                                <p className="text-xs text-purple-600 dark:text-purple-400">
+                                  {Math.round((montant / montantTotal) * 100)}% du total
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
+                        <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                          {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bouton télécharger le reçu */}
+                {(selectedDemande.demandes_detailes?.[0]?.receipt_url || selectedDemande.receipt_url) && (
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                          <Receipt className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-green-900 dark:text-green-100">
+                            Reçu disponible
+                          </h4>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Généré le {selectedDemande.demandes_detailes?.[0]?.receipt_generated_at 
+                              ? new Date(selectedDemande.demandes_detailes[0].receipt_generated_at).toLocaleDateString('fr-FR')
+                              : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={selectedDemande.demandes_detailes?.[0]?.receipt_url || selectedDemande.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span className="text-sm font-medium">Télécharger</span>
+                      </a>
+                    </div>
                   </div>
                 )}
                 </div>
