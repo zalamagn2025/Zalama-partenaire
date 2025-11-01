@@ -70,6 +70,7 @@ type Payment = {
     email: string;
     telephone: string;
     photo_url?: string;
+    salaire_net?: number;
   };
 };
 
@@ -1184,13 +1185,13 @@ export default function PaymentSalaryPage() {
                   </p>
               </div>
 
-                {/* Montant */}
+                {/* Salaire reçu */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                       <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
                   </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Montant</span>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire reçu</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatAmount(selectedPayment.montant || selectedPayment.salaire_disponible)} GNF
