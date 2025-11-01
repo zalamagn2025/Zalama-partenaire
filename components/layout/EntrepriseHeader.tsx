@@ -159,14 +159,17 @@ export default function EntrepriseHeader() {
 
   return (
     <>
-      <header className={`w-full h-20 flex items-center justify-between px-4 md:px-8 border-b border-[var(--zalama-border)]/30 shadow-lg sticky top-0 z-20 transition-all duration-300 ${
-        isScrolled 
-          ? "bg-[var(--zalama-card)]/80 backdrop-blur-xl" 
-          : "bg-[var(--zalama-bg-darker-light)]"
-      }`}>
+      <header 
+        className="w-full h-20 flex items-center justify-between px-4 md:px-8 border-b shadow-lg sticky top-0 z-20 transition-all duration-300"
+        style={{
+          background: isScrolled ? 'rgba(12, 26, 46, 0.8)' : 'var(--zalama-bg-darker)',
+          borderColor: 'var(--zalama-border)',
+          backdropFilter: isScrolled ? 'blur(20px)' : 'none'
+        }}
+      >
         {/* Titre de la page */}
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--zalama-text)' }}>
             {getPageTitle()}
           </h1>
         </div>
@@ -206,19 +209,40 @@ export default function EntrepriseHeader() {
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-full bg-[var(--zalama-card)]/60 backdrop-blur-sm hover:bg-[var(--zalama-card)]/80 hover:scale-110 hover:shadow-md border border-[var(--zalama-border)]/30 transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            className="p-2 rounded-full backdrop-blur-sm hover:scale-110 hover:shadow-md border transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             title="Actualiser les données manuellement"
+            style={{
+              background: 'var(--zalama-bg-light)',
+              borderColor: 'var(--zalama-border)',
+              color: 'var(--zalama-text-secondary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) {
+                e.currentTarget.style.background = 'var(--zalama-bg-lighter)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--zalama-bg-light)';
+            }}
           >
             <RefreshCw
-              className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${
-                isRefreshing ? "animate-spin" : ""
-              }`}
+              className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
             />
           </button>
 
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full bg-[var(--zalama-card)]/60 backdrop-blur-sm hover:bg-[var(--zalama-card)]/80 hover:scale-110 hover:shadow-md border border-[var(--zalama-border)]/30 transition-all duration-200 focus:outline-none"
+            className="p-2 rounded-full backdrop-blur-sm hover:scale-110 hover:shadow-md border transition-all duration-200 focus:outline-none"
+            style={{
+              background: 'var(--zalama-bg-light)',
+              borderColor: 'var(--zalama-border)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--zalama-bg-lighter)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--zalama-bg-light)';
+            }}
             aria-label={
               theme === "dark"
                 ? "Passer en mode clair"
@@ -228,18 +252,27 @@ export default function EntrepriseHeader() {
             {theme === "dark" ? (
               <Sun className="w-5 h-5 text-yellow-400" />
             ) : (
-              <Moon className="w-5 h-5 text-gray-500 dark:text-gray-300" />
+              <Moon className="w-5 h-5" style={{ color: 'var(--zalama-text-secondary)' }} />
             )}
           </button>
 
           <button
-            className="relative p-2 rounded-full hover:bg-[var(--zalama-card)]/40 backdrop-blur-sm transition-all duration-200 focus:outline-none"
+            className="relative p-2 rounded-full backdrop-blur-sm transition-all duration-200 focus:outline-none"
             aria-label="Voir les notifications"
             onClick={toggleNotifications}
+            style={{ color: 'var(--zalama-text-secondary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.color = 'var(--zalama-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--zalama-text-secondary)';
+            }}
           >
-            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors" />
-            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-500/70 opacity-75"></span>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
+            <Bell className="w-6 h-6 transition-colors" />
+            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full opacity-75" style={{ background: 'var(--zalama-danger)' }}></span>
+            <span className="absolute -top-1 -right-1 text-[10px] text-white rounded-full px-1" style={{ background: 'var(--zalama-danger)' }}>
               {unreadCount}
             </span>
           </button>
