@@ -1230,7 +1230,7 @@ export default function RemboursementsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-4 text-sm font-medium text-red-600 dark:text-red-400">
+                  <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
                     {gnfFormatter(employeeData.montant_total_remboursement)}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-500">
@@ -1244,11 +1244,8 @@ export default function RemboursementsPage() {
                   <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                     {gnfFormatter(employeeData.salaire_restant)}
                   </td>
-                  <td className="px-3 py-4 text-xs text-gray-500">
-                    <div>{employeeData.periode?.description}</div>
-                    <div className="text-xs text-gray-400">
-                      {employeeData.periode?.periode_complete}
-                    </div>
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                    {employeeData.periode?.description || employeeData.periode?.periode_complete || 'N/A'}
                   </td>
                   <td className="px-3 py-4">
                     {getStatusBadge(employeeData.statut_global)}
