@@ -1245,7 +1245,7 @@ export default function RemboursementsPage() {
                     {gnfFormatter(employeeData.salaire_restant)}
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                    {employeeData.periode?.description || employeeData.periode?.periode_complete || 'N/A'}
+                    {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
                   </td>
                   <td className="px-3 py-4">
                     {getStatusBadge(employeeData.statut_global)}
