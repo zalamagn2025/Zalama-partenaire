@@ -893,15 +893,24 @@ export default function PaymentSalaryPage() {
             <div className="relative">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm"
+                className="flex items-center gap-2 px-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm relative z-10"
               >
                 <Filter className="w-4 h-4" />
                 Filtres
                 <ChevronDown className="w-4 h-4" />
               </button>
+            </div>
 
-              {showFilters && (
-                <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-lg z-10 p-4">
+            {showFilters && (
+              <>
+                {/* Backdrop transparent pour fermer */}
+                <div 
+                  className="fixed inset-0 z-[999]" 
+                  onClick={() => setShowFilters(false)}
+                />
+                
+                {/* Modal Filtres - Positionné en fixed */}
+                <div className="fixed right-4 top-32 w-80 bg-white dark:bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-lg shadow-2xl z-[1000] p-4">
                   <div className="space-y-4">
                     {/* Filtre par statut */}
               <div>
@@ -979,8 +988,8 @@ export default function PaymentSalaryPage() {
           </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </>
+            )}
 
             <button
               onClick={loadAllData}
@@ -1181,7 +1190,7 @@ export default function PaymentSalaryPage() {
                     <span className="font-medium">Email:</span> {selectedPayment.employe?.email || "Non renseigné"}
                   </p>
                 </div>
-                </div>
+              </div>
 
               {/* Autres informations en grille */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1202,7 +1211,7 @@ export default function PaymentSalaryPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                       <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  </div>
+                </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Mois payé</span>
                 </div>
                   <p className="font-medium text-gray-900 dark:text-white">
@@ -1221,14 +1230,14 @@ export default function PaymentSalaryPage() {
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatPhoneNumber(selectedPayment.employe?.telephone)}
                   </p>
-              </div>
-
+            </div>
+            
                 {/* Salaire reçu */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                       <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
+            </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire reçu</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
