@@ -1140,10 +1140,10 @@ export default function PaymentSalaryPage() {
                 </div>
               <div>
                   <h3 className="text-xl font-bold text-white">
-                    Détails du paiement
+                    {selectedPayment.employe?.prenom} {selectedPayment.employe?.nom}
                 </h3>
                   <p className="text-[var(--zalama-text-secondary)] text-sm mt-0.5">
-                    Informations complètes du paiement
+                    Salaire net: {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
                   </p>
                   </div>
                   </div>
