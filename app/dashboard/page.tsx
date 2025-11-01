@@ -388,26 +388,23 @@ export default function EntrepriseDashboardPage() {
       {/* En-tête du tableau de bord */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${
-            partnerInfo?.logo_url 
-              ? partnerInfo.logo_url.toLowerCase().endsWith('.png')
-                ? 'bg-white border-2 border-gray-300 shadow-sm'
-                : 'bg-transparent border-2 border-gray-600'
-              : 'bg-blue-900'
-          }`}>
+          <div 
+            className="rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden border-2"
+            style={{
+              backgroundColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#ffffff' : 
+                              partnerInfo?.logo_url ? 'transparent' : '#1e40af',
+              borderColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#d1d5db' : 
+                          partnerInfo?.logo_url ? '#4b5563' : 'transparent'
+            }}
+          >
             {partnerInfo?.logo_url ? (
-              <>
-                {partnerInfo.logo_url.toLowerCase().endsWith('.png') && (
-                  <div className="absolute inset-0 bg-white rounded-lg"></div>
-                )}
-                <Image
-                  src={partnerInfo.logo_url}
-                  alt={`Logo ${partnerInfo.company_name}`}
-                  fill
-                  className="object-contain relative z-10 p-1"
-                  sizes="(max-width: 768px) 64px, 64px"
-                />
-              </>
+              <Image
+                src={partnerInfo.logo_url}
+                alt={`Logo ${partnerInfo.company_name}`}
+                fill
+                className="object-contain p-2"
+                sizes="(max-width: 768px) 64px, 64px"
+              />
             ) : (
               <span className="text-white font-bold text-xl">
                 {partnerInfo?.company_name?.slice(0, 1)?.toUpperCase() || "Z"}
