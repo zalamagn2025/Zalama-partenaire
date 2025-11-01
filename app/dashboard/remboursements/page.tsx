@@ -89,12 +89,20 @@ type Remboursement = {
 
 // Fonction pour obtenir le badge de statut
 const getStatusBadge = (statut: string) => {
-  switch (statut) {
+  // Normaliser le statut
+  const statutUpper = statut?.toUpperCase() || '';
+  
+  switch (statutUpper) {
     case "PAYE":
+    case "PAYÉ":
       return <Badge className="bg-green-500">Payé</Badge>;
     case "EN_ATTENTE":
+    case "EN ATTENTE":
+    case "ATTENTE":
       return <Badge className="bg-yellow-500">En attente</Badge>;
     case "EN_RETARD":
+    case "EN RETARD":
+    case "RETARD":
       return <Badge className="bg-red-500">En retard</Badge>;
     default:
       return <Badge className="bg-gray-500">{statut}</Badge>;
