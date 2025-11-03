@@ -149,8 +149,9 @@ export default function PaymentSalaryPage() {
         // Mapper les données pour ajouter mois_paye, montant et montant_total_remboursement
         const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => {
           const salaireDisponible = payment.salaire_disponible || 0;
-          const frais = salaireDisponible * 0.06; // 6% de frais
-          const montantTotalRemboursement = salaireDisponible + frais;
+          const salaireNet = payment.salaire_net || 0;
+          const frais = salaireNet * 0.06; // 6% de frais sur le salaire net
+          const montantTotalRemboursement = salaireNet + frais; // Salaire net + 6%
           
           return {
             ...payment,
@@ -230,7 +231,7 @@ export default function PaymentSalaryPage() {
   const totalPayments = payments.length;
   
   // Calculs pour les paiements
-  const totalSalaires = payments.reduce((sum, payment) => sum + (payment.salaire_disponible || 0), 0);
+  const totalSalaires = payments.reduce((sum, payment) => sum + (payment.salaire_net || 0), 0);
   const totalAvancesDeduites = payments.reduce((sum, payment) => sum + ((payment as any).avances_deduites || 0), 0);
   const totalRemboursements = payments.reduce((sum, payment) => sum + ((payment as any).montant_total_remboursement || 0), 0);
   

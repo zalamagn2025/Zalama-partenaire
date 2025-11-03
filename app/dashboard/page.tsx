@@ -255,6 +255,9 @@ export default function EntrepriseDashboardPage() {
   const partnerInfo = dashboardData?.partner_info;
   const filters = dashboardData?.filters;
   const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
+  
+  // Le montant_total_remboursements est maintenant correctement calculé dans l'Edge Function
+  // Formule: Salaire Net + 6% de frais
 
   // Afficher un message de bienvenue (une seule fois par session)
   useEffect(() => {
@@ -815,7 +818,7 @@ export default function EntrepriseDashboardPage() {
                 {gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                Salaire + Frais (6%)
+                Salaire Net + Frais (6%)
               </span>
             </div>
             
