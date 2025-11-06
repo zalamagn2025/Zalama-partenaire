@@ -1,6 +1,7 @@
 "use client";
 
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
+import AlertModalWrapper from "@/components/AlertModalWrapper";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
   ClipboardList,
@@ -387,7 +388,8 @@ export default function EntrepriseDashboardPage() {
   const hasMontantsData = montantsEvolutionData.some((d: any) => d.montant > 0);
 
   return (
-    <div className="p-6 space-y-6 max-w-full overflow-hidden">
+    <AlertModalWrapper paymentStats={paymentSalaryStats}>
+      <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* En-tête du tableau de bord */}
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
@@ -1033,5 +1035,6 @@ export default function EntrepriseDashboardPage() {
         />
       </div>
     </div>
+    </AlertModalWrapper>
   );
 }
