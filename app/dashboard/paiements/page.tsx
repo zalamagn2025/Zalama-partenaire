@@ -146,10 +146,11 @@ export default function PaymentSalaryPage() {
       
       if (data.success) {
         // Mapper les données pour ajouter mois_paye et montant
+        // ✅ Utiliser salaire_disponible_total (inclut les ajustements)
         const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
           ...payment,
           mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
-          montant: payment.salaire_disponible || 0
+          montant: payment.salaire_disponible_total || payment.salaire_disponible || 0
         }));
         
         setPayments(mappedPayments);
