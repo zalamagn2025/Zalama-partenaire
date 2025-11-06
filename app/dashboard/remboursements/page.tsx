@@ -130,6 +130,13 @@ export default function RemboursementsPage() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
 
+  // ✅ État pour le type de données affichées
+  const [dataType, setDataType] = useState<'tous' | 'avances' | 'paiements'>('tous');
+
+  // États pour les données de paiements de salaire
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [paymentStatistics, setPaymentStatistics] = useState<any>(null);
+
   // États pour les filtres de l'edge function partner-reimbursements
   const [filters, setFilters] = useState({
     mois: null as number | null,
@@ -371,6 +378,8 @@ export default function RemboursementsPage() {
       loadRemboursementsData();
       // Charger les statistiques
       loadStatistics();
+      // ✅ Charger aussi les paiements de salaire
+      loadPaymentHistory();
       // Charger les employés pour avoir les salaires
       fetchEmployees();
     }
@@ -587,6 +596,48 @@ export default function RemboursementsPage() {
       }
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
+    }
+  };
+
+  // ✅ Fonction pour charger les paiements de salaire
+  const loadPaymentHistory = async (customFilters: any = {}) => {
+    if (!session?.access_token) return;
+
+    try {
+      edgeFunctionService.setAccessToken(session.access_token);
+
+      // Combiner les filtres
+      const activeFilters = { ...filters, ...customFilters };
+      
+      // Convertir les filtres pour partner-payment-history
+      const paymentFilters: any = {
+        page: 1,
+        limit: 100
+      };
+      if (activeFilters.mois) paymentFilters.mois = activeFilters.mois;
+      if (activeFilters.annee) paymentFilters.annee = activeFilters.annee;
+      if (activeFilters.employee_id) paymentFilters.employe_id = activeFilters.employee_id;
+      if (activeFilters.status) paymentFilters.statut = activeFilters.status;
+
+      console.log('🔄 Chargement paiements de salaire avec filtres:', paymentFilters);
+
+      // Charger les paiements de salaire
+      const paymentsData = await edgeFunctionService.getPartnerPaymentHistory(paymentFilters);
+
+      if (paymentsData.success && paymentsData.data) {
+        setPaymentHistory(paymentsData.data);
+        console.log('✅ Paiements de salaire chargés:', paymentsData.data.length);
+      }
+
+      // Charger aussi les statistiques
+      const statsData = await edgeFunctionService.getPartnerPaymentHistoryStatistics();
+      if (statsData.success && statsData.data) {
+        setPaymentStatistics(statsData.data);
+        console.log('📊 Statistiques paiements chargées:', statsData.data);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des paiements de salaire:', error);
+      toast.error('Erreur lors du chargement des paiements de salaire');
     }
   };
 
