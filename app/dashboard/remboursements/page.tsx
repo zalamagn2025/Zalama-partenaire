@@ -1327,16 +1327,155 @@ export default function RemboursementsPage() {
         </div>
       </div>
 
-      {/* Liste des remboursements regroupés par employé */}
-      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Remboursements par employé
-          </h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Vue d'ensemble des remboursements regroupés par employé
-          </p>
+      {/* Vue diagrammes pour l'onglet "Tous" */}
+      {dataType === 'tous' ? (
+        <div className="space-y-6">
+          {/* Diagrammes de répartition */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Diagramme Avances vs Paiements */}
+            <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow p-6 backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                Répartition par type
+              </h3>
+              <div className="space-y-4">
+                {/* Avances sur salaire */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Avances sur salaire</span>
+                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                      {currentMonthData?.data?.length || 0} ({((currentMonthData?.data?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${((currentMonthData?.data?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Paiements de salaire */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Paiements de salaire</span>
+                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                      {paymentHistory?.length || 0} ({((paymentHistory?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${((paymentHistory?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Diagramme Statuts */}
+            <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow p-6 backdrop-blur-sm">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                Répartition par statut
+              </h3>
+              <div className="space-y-4">
+                {/* À rembourser */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">À rembourser</span>
+                    <span className="text-sm font-bold text-yellow-600 dark:text-yellow-400">
+                      {statsFiltered.enAttente} ({((statsFiltered.enAttente) / (statsFiltered.total) * 100 || 0).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${((statsFiltered.enAttente) / (statsFiltered.total) * 100 || 0)}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Payés */}
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Remboursés</span>
+                    <span className="text-sm font-bold text-green-600 dark:text-green-400">
+                      {statsFiltered.payes} ({((statsFiltered.payes) / (statsFiltered.total) * 100 || 0).toFixed(0)}%)
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div 
+                      className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
+                      style={{ width: `${((statsFiltered.payes) / (statsFiltered.total) * 100 || 0)}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Diagramme montants */}
+          <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow p-6 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              Montants à rembourser
+            </h3>
+            <div className="space-y-4">
+              {/* Avances */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Avances sur salaire</span>
+                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
+                    {gnfFormatter((currentMonthData?.data || [])
+                      .filter((r: any) => r.statut_global === "EN_ATTENTE")
+                      .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0))}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${(((currentMonthData?.data || [])
+                        .filter((r: any) => r.statut_global === "EN_ATTENTE")
+                        .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0)) / 
+                        (totalRemboursements || 1) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Paiements */}
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Paiements de salaire</span>
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                    {gnfFormatter(paymentStatistics?.montant_total_remboursements || 0)}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                  <div 
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: `${((paymentStatistics?.montant_total_remboursements || 0) / (totalRemboursements || 1) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+      ) : (
+        /* Liste des remboursements regroupés par employé (pour onglets avances et paiements) */
+        <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              Remboursements par employé
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Vue d'ensemble des remboursements regroupés par employé
+            </p>
+          </div>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed dark:divide-gray-700">
             {/* ✅ En-tête adapté selon le type sélectionné */}
@@ -1512,9 +1651,9 @@ export default function RemboursementsPage() {
               ))}
             </tbody>
           </table>
-      </div>
+        </div>
 
-      {/* Pagination */}
+        {/* Pagination */}
         {dataForPagination.length > 0 && (
           <Pagination
             currentPage={currentPage}
@@ -1524,7 +1663,8 @@ export default function RemboursementsPage() {
             onPageChange={setCurrentPage}
           />
         )}
-      </div>
+        </div>
+      )}
 
       {/* Modal de détail professionnelle */}
       {showDetailModal && selectedRemboursement && (
