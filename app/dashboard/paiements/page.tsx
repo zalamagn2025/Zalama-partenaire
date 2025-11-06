@@ -91,6 +91,7 @@ export default function PaymentSalaryPage() {
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [statistics, setStatistics] = useState<any>(null); // ✅ Nouvelles stats depuis l'API
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
@@ -120,7 +121,7 @@ export default function PaymentSalaryPage() {
   const loadAllData = async () => {
     setLoadingData(true);
     try {
-      await Promise.all([loadPayments(), loadEmployees()]);
+      await Promise.all([loadPayments(), loadEmployees(), loadStatistics()]);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
     } finally {
@@ -130,7 +131,6 @@ export default function PaymentSalaryPage() {
 
   const loadPayments = async () => {
     try {
-      console.log('🔄 Chargement des paiements...');
       const response = await fetch("/api/proxy/payments?action=list&page=1&limit=100", {
           headers: {
           Authorization: `Bearer ${session?.access_token}`,
@@ -143,26 +143,16 @@ export default function PaymentSalaryPage() {
       }
 
       const data = await response.json();
-      console.log('📊 Données paiements reçues:', data);
       
       if (data.success) {
-        // Mapper les données pour ajouter mois_paye, montant et montant_total_remboursement
-        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => {
-          const salaireDisponible = payment.salaire_disponible || 0;
-          const salaireNet = payment.salaire_net || 0;
-          const frais = salaireNet * 0.06; // 6% de frais sur le salaire net
-          const montantTotalRemboursement = salaireNet + frais; // Salaire net + 6%
-          
-          return {
-            ...payment,
-            mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
-            montant: salaireDisponible,
-            montant_total_remboursement: montantTotalRemboursement
-          };
-        });
+        // Mapper les données pour ajouter mois_paye et montant
+        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
+          ...payment,
+          mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
+          montant: payment.salaire_disponible || 0
+        }));
         
         setPayments(mappedPayments);
-        console.log('✅ Paiements chargés:', mappedPayments.length, 'paiements');
       } else {
         throw new Error(data.message || "Erreur lors du chargement des paiements");
       }
@@ -170,6 +160,33 @@ export default function PaymentSalaryPage() {
       console.error("Erreur lors du chargement des paiements:", error);
       toast.error("Erreur lors du chargement des paiements");
       setPayments([]);
+    }
+  };
+
+  const loadStatistics = async () => {
+    try {
+      const response = await fetch("/api/proxy/payments?action=statistics", {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des statistiques");
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setStatistics(data.data);
+      } else {
+        throw new Error(data.message || "Erreur lors du chargement des statistiques");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des statistiques:", error);
+      toast.error("Erreur lors du chargement des statistiques");
+      setStatistics(null);
     }
   };
 
@@ -227,16 +244,13 @@ export default function PaymentSalaryPage() {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
 
-  // Statistiques détaillées
-  const totalPayments = payments.length;
-  
-  // Calculs pour les paiements
-  const totalSalaires = payments.reduce((sum, payment) => sum + (payment.salaire_net || 0), 0);
-  const totalAvancesDeduites = payments.reduce((sum, payment) => sum + ((payment as any).avances_deduites || 0), 0);
-  const totalRemboursements = payments.reduce((sum, payment) => sum + ((payment as any).montant_total_remboursement || 0), 0);
-  
-  const completedPayments = payments.filter(p => p.statut === "PAYE" || p.statut === "completed").length;
-  const pendingPayments = payments.filter(p => p.statut === "EN_ATTENTE" || p.statut === "pending").length;
+  // ✅ NOUVELLES STATISTIQUES depuis l'API (pas de calculs locaux)
+  const totalPayments = statistics?.total_paiements || 0;
+  const totalSalaires = statistics?.montant_total_salaires || 0;
+  const totalAvancesDeduites = statistics?.montant_total_avances_deduites || 0;
+  const totalRemboursements = statistics?.montant_total_remboursements || 0;
+  const completedPayments = statistics?.paiements_effectues || 0;
+  const pendingPayments = statistics?.paiements_en_attente || 0;
 
   // Fonction pour obtenir la couleur du badge selon le statut
   const getStatusBadgeVariant = (status: string) => {
