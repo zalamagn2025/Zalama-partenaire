@@ -1122,6 +1122,9 @@ export default function DemandesPage() {
                     Statut
                   </th>
                   <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Remboursement
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -1230,6 +1233,26 @@ export default function DemandesPage() {
                       >
                         {demande.statut}
                       </Badge>
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      {(demande as any).remboursements && (demande as any).remboursements.length > 0 ? (
+                        <Badge
+                          variant={
+                            (demande as any).remboursements[0].statut === "PAYE"
+                              ? "success"
+                              : (demande as any).remboursements[0].statut === "EN_ATTENTE"
+                              ? "warning"
+                              : (demande as any).remboursements[0].statut === "EN_RETARD"
+                              ? "error"
+                              : "default"
+                          }
+                          className="text-xs"
+                        >
+                          {(demande as any).remboursements[0].statut}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">

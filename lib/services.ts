@@ -936,7 +936,7 @@ export class PartnerDataService {
   // Récupérer les demandes d'avance de salaire du partenaire avec leurs transactions
   async getSalaryAdvanceRequests(): Promise<SalaryAdvanceRequest[]> {
     try {
-      // Récupérer les demandes avec les employés
+      // Récupérer les demandes avec les employés ET les remboursements
       const { data: demandes, error: demandesError } = await supabase
         .from("salary_advance_requests")
         .select(
@@ -947,6 +947,12 @@ export class PartnerDataService {
             nom,
             prenom,
             poste
+          ),
+          remboursements!remboursements_demande_avance_id_fkey (
+            id,
+            statut,
+            montant_total_remboursement,
+            date_remboursement_effectue
           )
         `
         )
