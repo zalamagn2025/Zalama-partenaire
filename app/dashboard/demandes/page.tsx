@@ -226,32 +226,33 @@ export default function DemandesPage() {
 
       // Mettre à jour les données locales
       if (demandesData.data && Array.isArray(demandesData.data)) {
-        const firstDemande = demandesData.data[0] as any;
-        console.log("🔍 Première demande brute:", firstDemande);
-        console.log("🔍 Structure employé première demande:", {
-          hasEmploye: !!firstDemande?.employe,
-          employeType: typeof firstDemande?.employe,
-          employeKeys: firstDemande?.employe
-            ? Object.keys(firstDemande.employe)
-            : [],
-          employePrenom: firstDemande?.employe?.prenom,
-          employeNom: firstDemande?.employe?.nom,
-          employeData: firstDemande?.employe,
-          employeStringified: JSON.stringify(firstDemande?.employe),
+        // ✅ APLATIR LES DONNÉES : transformer les données groupées en demandes individuelles
+        const demandesAplaties: any[] = [];
+        
+        demandesData.data.forEach((groupe: any) => {
+          // Pour chaque groupe (employé), extraire les demandes_detailes
+          if (groupe.demandes_detailes && Array.isArray(groupe.demandes_detailes)) {
+            groupe.demandes_detailes.forEach((demande: any) => {
+              demandesAplaties.push({
+                ...demande,
+                // Ajouter les infos de l'employé
+                employe: groupe.employe,
+                employees: groupe.employe, // Compatibilité avec l'ancien format
+                partenaire: groupe.partenaire,
+                // Ajouter le remboursement_info comme remboursement (format attendu par le tableau)
+                remboursement: demande.remboursement_info ? [demande.remboursement_info] : [],
+                remboursements: demande.remboursement_info ? [demande.remboursement_info] : [],
+                // Formater la date pour l'affichage
+                date: demande.date_creation ? new Date(demande.date_creation).toLocaleDateString('fr-FR') : 'N/A'
+              });
+            });
+          }
         });
 
-        // Debug pour toutes les demandes
-        demandesData.data.forEach((demande: any, index: number) => {
-          console.log(`🔍 Demande ${index}:`, {
-            employe_id: demande.employe_id,
-            hasEmploye: !!demande.employe,
-            employeKeys: demande.employe ? Object.keys(demande.employe) : [],
-            employePrenom: demande.employe?.prenom,
-            employeNom: demande.employe?.nom,
-          });
-        });
+        console.log(`✅ ${demandesAplaties.length} demandes individuelles extraites de ${demandesData.data.length} groupes`);
+        console.log('📋 Exemple demande aplatie:', demandesAplaties[0]);
 
-        setDemandesAvance(demandesData.data);
+        setDemandesAvance(demandesAplaties);
       }
 
       console.log(
