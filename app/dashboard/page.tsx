@@ -10,6 +10,7 @@ import {
   Users,
   Filter,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -784,6 +785,27 @@ export default function EntrepriseDashboardPage() {
               Paiements de Salaires
             </h2>
           </div>
+
+          {/* ⚠️ Alerte de retard */}
+          {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1">
+                  <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                    ⚠️ Retard de remboursement ZaLaMa
+                  </h4>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                    Vous avez <strong>{Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours de retard</strong> ({paymentSalaryStats.semaines_retard || 0} semaine{(paymentSalaryStats.semaines_retard || 0) > 1 ? 's' : ''}).
+                    Une pénalité de <strong>{paymentSalaryStats.penalite_retard_pourcentage || 0}%</strong> s'applique, soit <strong>{gnfFormatter(paymentSalaryStats.montant_penalite_retard || 0)}</strong>.
+                  </p>
+                  <p className="text-sm text-red-700 dark:text-red-300 mt-2 font-medium">
+                    💰 Total à rembourser avec pénalité : {gnfFormatter(paymentSalaryStats.montant_total_avec_penalite || paymentSalaryStats.montant_total_remboursements)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
@@ -821,6 +843,37 @@ export default function EntrepriseDashboardPage() {
                 Salaire Net + Frais (6%)
               </span>
             </div>
+
+            {/* Pénalités de retard */}
+            {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+              <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4 backdrop-blur-sm">
+                <span className="text-red-600 dark:text-red-400 text-xs mb-1 block flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  Pénalités de retard
+                </span>
+                <span className="text-xl font-bold text-red-700 dark:text-red-300">
+                  {paymentSalaryStats.montant_penalite_retard ? gnfFormatter(paymentSalaryStats.montant_penalite_retard) : '0 GNF'}
+                </span>
+                <span className="text-xs text-red-600 dark:text-red-400 mt-1 block">
+                  +{paymentSalaryStats.penalite_retard_pourcentage || 0}% ({paymentSalaryStats.semaines_retard || 0} sem.)
+                </span>
+              </div>
+            )}
+
+            {/* Total avec pénalité (si retard) */}
+            {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4 backdrop-blur-sm">
+                <span className="text-orange-600 dark:text-orange-400 text-xs mb-1 block">
+                  Total avec pénalité
+                </span>
+                <span className="text-xl font-bold text-orange-700 dark:text-orange-300">
+                  {paymentSalaryStats.montant_total_avec_penalite ? gnfFormatter(paymentSalaryStats.montant_total_avec_penalite) : gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
+                </span>
+                <span className="text-xs text-orange-600 dark:text-orange-400 mt-1 block">
+                  Montant final à payer
+                </span>
+              </div>
+            )}
             
             {paymentSalaryStats.delai_remboursement && (
               <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
