@@ -836,34 +836,50 @@ export default function RemboursementsPage() {
           .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0)
       };
     } else if (dataType === 'paiements') {
-      // Statistiques uniquement des paiements
+      // Statistiques uniquement des paiements - utiliser paymentStatistics comme dans la page paiements
+      const montantTotalRemboursements = paymentStatistics?.montant_total_remboursements || 0;
+      // ✅ CORRECTION: 
+      // - PAYE = ZaLaMa a payé les employés → À REMBOURSER par le partenaire
+      // - EN_ATTENTE = ZaLaMa n'a pas encore payé → PAS encore à rembourser
+      const paiementsPaye = paiements.filter((p: any) => p.statut === "PAYE");
+      const paiementsEnAttente = paiements.filter((p: any) => p.statut === "EN_ATTENTE");
+      
       return {
         total: paiements.length,
-        enAttente: paiements.filter((p: any) => p.statut === "EN_ATTENTE").length,
-        payes: paiements.filter((p: any) => p.statut === "PAYE").length,
-        montantEnAttente: paiements
-          .filter((p: any) => p.statut === "EN_ATTENTE")
-          .reduce((sum: number, p: any) => sum + Number(p.salaire_disponible || 0), 0)
+        enAttente: paiementsPaye.length, // ✅ Nombre de paiements PAYE = à rembourser
+        payes: 0, // Les paiements "remboursés" ne sont pas trackés ici
+        // ✅ Utiliser montant_total_remboursements de l'API (salaire_net + 6%) comme dans la page paiements
+        montantEnAttente: paiementsPaye.reduce((sum: number, p: any) => {
+            // Pour chaque paiement PAYE, calculer montant_total_remboursement (salaire_net + 6%)
+            const montantRemboursement = p.montant_total_remboursement || 
+                                        Math.round((p.salaire_net || 0) * 1.06);
+            return sum + montantRemboursement;
+          }, 0),
+        // ✅ Montant total à rembourser (tous les paiements PAYE)
+        montantTotal: montantTotalRemboursements
       };
     } else {
       // Statistiques combinées (tous)
       const avancesEnAttente = avances.filter((r: any) => r.statut_global === "EN_ATTENTE");
-      const paiementsEnAttente = paiements.filter((p: any) => p.statut === "EN_ATTENTE");
+      // ✅ Pour les paiements: PAYE = à rembourser (ZaLaMa a payé, attend remboursement du partenaire)
+      const paiementsPaye = paiements.filter((p: any) => p.statut === "PAYE");
       
       return {
         total: avances.length + paiements.length,
-        enAttente: avancesEnAttente.length + paiementsEnAttente.length,
-        payes: avances.filter((r: any) => r.statut_global === "PAYE").length + 
-               paiements.filter((p: any) => p.statut === "PAYE").length,
+        enAttente: avancesEnAttente.length + paiementsPaye.length, // ✅ Avances EN_ATTENTE + Paiements PAYE
+        payes: avances.filter((r: any) => r.statut_global === "PAYE").length,
         montantEnAttente: 
           avancesEnAttente.reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0) +
-          paiementsEnAttente.reduce((sum: number, p: any) => sum + Number(p.salaire_disponible || 0), 0)
+          (paymentStatistics?.montant_total_remboursements || 0)
       };
     }
   };
 
   const statsFiltered = getStatsByType();
-  const totalRemboursements = statsFiltered.montantEnAttente;
+  // ✅ Pour l'onglet paiements, utiliser montantTotal (tous les paiements), sinon montantEnAttente
+  const totalRemboursements = dataType === 'paiements' && (statsFiltered as any).montantTotal 
+    ? (statsFiltered as any).montantTotal 
+    : statsFiltered.montantEnAttente;
 
   // Debug: Log des données pour vérifier
   console.log("🔍 Debug - dataType:", dataType);
@@ -1256,7 +1272,7 @@ export default function RemboursementsPage() {
             </div>
             <div className="ml-3">
               <div className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">
-                Total en attente
+                {dataType === 'paiements' ? 'Total à rembourser' : 'Total en attente'}
               </div>
               <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
                 {gnfFormatter(totalRemboursements)}
@@ -1286,7 +1302,7 @@ export default function RemboursementsPage() {
             </div>
             <div className="ml-3">
               <div className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wide">
-                En attente
+                {dataType === 'paiements' ? 'À rembourser' : 'En attente'}
               </div>
               <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
                 {statsFiltered.enAttente}
