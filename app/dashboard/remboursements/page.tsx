@@ -174,7 +174,7 @@ export default function RemboursementsPage() {
     const avances = currentMonthData?.data || [];
     const paiements = paymentHistory || [];
     
-    console.log('🔍 getFilteredData - dataType:', dataType);
+      console.log('🔍 getFilteredData - dataType:', dataType);
     console.log('🔍 getFilteredData - avances:', avances.length);
     console.log('🔍 getFilteredData - paiements:', paiements.length);
     
@@ -183,6 +183,8 @@ export default function RemboursementsPage() {
     } else if (dataType === 'paiements') {
       console.log('🔍 Transformation des paiements...');
       console.log('🔍 Premier paiement brut:', paiements[0]);
+      console.log('🔍 Premier paiement - salaire_net:', paiements[0]?.salaire_net);
+      console.log('🔍 Premier paiement - employe:', paiements[0]?.employe);
       
       // Transformer les paiements pour avoir la même structure que les avances
       const transformed = paiements.map((payment: any) => {
@@ -1425,7 +1427,7 @@ export default function RemboursementsPage() {
                           {employeeData.employe?.email}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Salaire: {gnfFormatter(employeeData.employe?.salaire_net)}
+                          Salaire: {gnfFormatter(employeeData.salaire_net || employeeData.employe?.salaire_net)}
                         </div>
                       </div>
                     </div>
