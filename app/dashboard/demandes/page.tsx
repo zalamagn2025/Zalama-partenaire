@@ -1510,6 +1510,7 @@ export default function DemandesPage() {
                     </p>
                   </div>
                 </div>
+              </div>
 
                 {/* Motif - prend toute la largeur */}
                 {(selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif) && (
