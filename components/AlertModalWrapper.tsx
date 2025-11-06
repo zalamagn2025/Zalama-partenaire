@@ -71,27 +71,27 @@ export default function AlertModalWrapper({ children, paymentStats }: AlertModal
 
       {/* Modal d'alerte de retard */}
       {showAlert && paymentStats && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-gray-900 border-2 border-red-500 dark:border-red-600 rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-300">
-            {/* Header rouge */}
-            <div className="bg-gradient-to-r from-red-500 to-red-600 p-6">
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[99999] p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[var(--zalama-bg-darker)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-300">
+            {/* Header élégant */}
+            <div className="relative p-6 pb-4 border-b border-gray-200 dark:border-[var(--zalama-border)]/30">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <AlertCircle className="w-8 h-8 text-white" />
+                  <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-xl">
+                    <Clock className="w-7 h-7 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold text-white">
-                      ⚠️ Alerte de Retard
+                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
+                      Échéance de remboursement
                     </h3>
-                    <p className="text-red-100 text-sm mt-1">
-                      Remboursement ZaLaMa en retard
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                      Information importante concernant vos paiements
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={handleClose}
-                  className="p-2 rounded-full hover:bg-white/20 text-white transition-all duration-200 hover:scale-110"
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all duration-200"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -99,103 +99,90 @@ export default function AlertModalWrapper({ children, paymentStats }: AlertModal
             </div>
 
             {/* Content */}
-            <div className="p-6 space-y-6">
-              {/* Message principal */}
-              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-gray-800 dark:text-gray-200 text-base">
-                  Vous avez <strong className="text-red-600 dark:text-red-400">{joursRetard} jours de retard</strong> sur le remboursement de vos paiements de salaires effectués par ZaLaMa.
-                </p>
-                <p className="text-gray-700 dark:text-gray-300 text-sm mt-2">
-                  Cela correspond à <strong>{paymentStats.semaines_retard || 0} semaine{(paymentStats.semaines_retard || 0) > 1 ? 's' : ''} de retard</strong> après le délai autorisé de 2 semaines.
-                </p>
+            <div className="p-6 space-y-5">
+              {/* Message principal - plus subtil */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex-shrink-0">
+                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-gray-800 dark:text-gray-200 text-base leading-relaxed">
+                    Le délai de remboursement de <strong>{joursRetard} jours</strong> est dépassé ({paymentStats.semaines_retard || 0} semaine{(paymentStats.semaines_retard || 0) > 1 ? 's' : ''}) pour vos paiements effectués par ZaLaMa.
+                  </p>
+                </div>
               </div>
 
-              {/* Détails des pénalités */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-                    <span className="text-xs font-medium text-orange-700 dark:text-orange-400">
-                      Pénalité appliquée
+              {/* Détails financiers - design épuré */}
+              <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Montant de base
+                  </span>
+                  <span className="text-base font-semibold text-gray-900 dark:text-white">
+                    {formatAmount(paymentStats.montant_total_remboursements)} GNF
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Pénalité de retard
+                    </span>
+                    <span className="text-xs px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">
+                      +{paymentStats.penalite_retard_pourcentage || 0}%
                     </span>
                   </div>
-                  <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                    +{paymentStats.penalite_retard_pourcentage || 0}%
-                  </p>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                    {paymentStats.semaines_retard || 0} semaine{(paymentStats.semaines_retard || 0) > 1 ? 's' : ''} × 1%
-                  </p>
+                  <span className="text-base font-semibold text-orange-600 dark:text-orange-400">
+                    +{formatAmount(paymentStats.montant_penalite_retard)} GNF
+                  </span>
                 </div>
 
-                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-4 h-4 text-red-600 dark:text-red-400" />
-                    <span className="text-xs font-medium text-red-700 dark:text-red-400">
-                      Montant de la pénalité
-                    </span>
-                  </div>
-                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">
-                    {formatAmount(paymentStats.montant_penalite_retard)} GNF
-                  </p>
-                  <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                    Sur {formatAmount(paymentStats.montant_total_remboursements)} GNF
-                  </p>
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Montant total
+                  </span>
+                  <span className="text-2xl font-bold" style={{ color: "var(--zalama-orange)" }}>
+                    {formatAmount(paymentStats.montant_total_avec_penalite)} GNF
+                  </span>
                 </div>
               </div>
 
-              {/* Total à payer */}
-              <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-6 text-white">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm opacity-90 mb-1">
-                      Montant total à rembourser
-                    </p>
-                    <p className="text-3xl font-bold">
-                      {formatAmount(paymentStats.montant_total_avec_penalite)} GNF
-                    </p>
-                    <p className="text-xs opacity-75 mt-2">
-                      Incluant {formatAmount(paymentStats.montant_total_remboursements)} GNF de base + {formatAmount(paymentStats.montant_penalite_retard)} GNF de pénalité
-                    </p>
-                  </div>
-                  <div className="p-4 bg-white/20 rounded-xl backdrop-blur-sm">
-                    <DollarSign className="w-10 h-10" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Date limite */}
+              {/* Date limite - design minimaliste */}
               {paymentStats.delai_remboursement && (
-                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    <strong>Date limite de remboursement dépassée :</strong>
-                  </p>
-                  <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
+                <div className="flex items-center justify-between p-4 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Échéance dépassée le
+                  </span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
                     {formatDate(paymentStats.delai_remboursement)}
-                  </p>
+                  </span>
                 </div>
               )}
 
-              {/* Message d'action */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p className="text-sm text-blue-800 dark:text-blue-200">
-                  💡 <strong>Action requise :</strong> Veuillez effectuer le remboursement dans les plus brefs délais pour éviter une augmentation de la pénalité.
-                </p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
-                  Chaque semaine supplémentaire de retard ajoute <strong>+1%</strong> au montant total.
+              {/* Info pénalité progressive */}
+              <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  💡 La pénalité augmente de <strong>1%</strong> par semaine de retard supplémentaire.
                 </p>
               </div>
             </div>
 
-            {/* Footer */}
-            <div className="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+            {/* Footer - design épuré */}
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Cette alerte ne s'affichera qu'une seule fois par session
+                Affiché une seule fois par session
               </p>
               <button
                 onClick={handleClose}
-                className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                className="px-6 py-2.5 rounded-lg font-medium transition-all duration-200 hover:scale-105 shadow-sm hover:shadow"
+                style={{ 
+                  background: "var(--zalama-orange)",
+                  color: "white"
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
               >
-                J'ai compris
+                Compris
               </button>
             </div>
           </div>
