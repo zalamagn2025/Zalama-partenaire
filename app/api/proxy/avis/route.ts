@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     console.log('🔄 Proxy Avis - URL:', edgeFunctionUrl);
     console.log('🔄 Proxy Avis - Params:', Object.fromEntries(queryParams.entries()));
 
-    // Appeler l'edge fonction
+    // Appeler l'Edge Function
     const response = await fetch(edgeFunctionUrl, {
       method: 'GET',
       headers: {
@@ -56,26 +56,26 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Erreur Edge Function Avis:', response.status, errorText);
-      return NextResponse.json(
-        { 
-          success: false, 
-          message: `Erreur Edge Function: ${response.status}`,
-          details: errorText
-        },
-        { status: response.status }
-      );
-    }
-
     const data = await response.json();
-    console.log('✅ Proxy Avis - Response:', {
+    
+    console.log('✅ Proxy Avis - Edge Function Response:', {
       success: data.success,
       avisCount: data.data?.avis?.length || 0,
       pagination: data.data?.pagination,
       filters: data.data?.filters
     });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: data.message || `Edge Function failed: ${response.status}`,
+          error: data.error
+        },
+        { status: response.status }
+      );
+    }
+
     return NextResponse.json(data);
 
   } catch (error) {

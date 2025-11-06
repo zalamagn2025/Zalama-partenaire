@@ -205,7 +205,7 @@ export default function DocumentsRapports({
             <FileText className="w-5 h-5 mr-2" />
             Documents et rapports
             {stats && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge variant="default" className="ml-2">
                 {stats.total}
               </Badge>
             )}

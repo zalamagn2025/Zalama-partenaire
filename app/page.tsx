@@ -35,7 +35,7 @@ export default function Home() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="mb-8">
         <Image
-          src="/images/Logo_vertical.svg"
+          src="/images/Logo.svg"
           alt="ZaLaMa Logo"
           width={150}
           height={150}

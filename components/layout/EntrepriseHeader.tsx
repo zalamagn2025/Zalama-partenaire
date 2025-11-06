@@ -2,8 +2,6 @@
 import {
   Bell,
   LogOut,
-  Moon,
-  Sun,
   User,
   RefreshCw,
   Wifi,
@@ -13,7 +11,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import NotificationDrawer from "../../components/dashboard/notifications/NotificationDrawer";
 
@@ -25,23 +22,41 @@ export default function EntrepriseHeader() {
   const [autoRefreshStatus, setAutoRefreshStatus] = useState<
     "active" | "inactive" | "error"
   >("inactive");
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
   const { session, logout, refreshSession } = useEdgeAuthContext();
   const router = useRouter();
+
+  // Effet de scroll pour l'effet glassmorphism
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // Charger le nombre de notifications non lues
   const loadUnreadCount = async () => {
     if (!session?.admin?.id) return;
     try {
-      // Compter les notifications non lues pour cet admin
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", session.admin.id)
-        .eq("lu", false);
-      if (!error) {
-        setUnreadCount(count || 0);
+      // Utiliser le proxy pour compter les notifications non lues
+      const response = await fetch(
+        `/api/proxy/notifications?user_id=${session.admin.id}&lu=false&count=true`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count || 0);
       }
     } catch (error) {
       console.error(
@@ -92,15 +107,22 @@ export default function EntrepriseHeader() {
 
   // Obtenir le titre de la page en fonction du chemin
   const getPageTitle = () => {
+    console.log("🔍 Current pathname:", pathname); // Debug log
     if (!pathname) return "Tableau de Bord";
 
-    if (pathname === "/dashboard") return "Tableau de Bord";
+    // Vérifier les sous-pages en premier (plus spécifiques)
+    if (pathname.includes("/demandes-adhesion")) return "Demandes d'Adhésion";
+    if (pathname.includes("/demandes")) return "Gestion des avances";
+    if (pathname.includes("/paiements")) return "Paiement de salaire";
+    if (pathname.includes("/remboursements")) return "Gestion des remboursements";
     if (pathname.includes("/employes")) return "Gestion des Employés";
     if (pathname.includes("/finances")) return "Finances";
     if (pathname.includes("/statistiques")) return "Statistiques";
-    if (pathname.includes("/demandes")) return "Demandes";
     if (pathname.includes("/alertes")) return "Alertes";
     if (pathname.includes("/parametres")) return "Paramètres";
+    
+    // Page principale du dashboard en dernier
+    if (pathname === "/dashboard") return "Tableau de Bord";
 
     return "Tableau de Bord";
   };
@@ -140,23 +162,25 @@ export default function EntrepriseHeader() {
 
   return (
     <>
-      <header className="w-full h-20 flex items-center justify-between px-4 md:px-8 bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] shadow-sm sticky top-0 z-20">
+      <header 
+        className="w-full h-20 flex items-center justify-between px-4 md:px-8 border-b shadow-lg sticky top-0 z-20 transition-all duration-300"
+        style={{
+          background: isScrolled ? 'rgba(12, 26, 46, 0.8)' : 'var(--zalama-bg-darker)',
+          borderColor: 'var(--zalama-border)',
+          backdropFilter: isScrolled ? 'blur(20px)' : 'none'
+        }}
+      >
         {/* Titre de la page */}
         <div className="flex items-center">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-xl font-bold" style={{ color: 'var(--zalama-text)' }}>
             {getPageTitle()}
           </h1>
-          <div className="hidden md:flex items-center ml-6 text-gray-600 dark:text-gray-300 text-sm">
-            <span className="bg-blue-100 text-xl dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-6">
-              {session?.partner?.company_name || "Dashboard"}
-            </span>
-          </div>
         </div>
 
         {/* Bloc actions */}
         <div className="flex items-center gap-4 md:gap-6">
           {/* Indicateur de statut du refresh automatique */}
-          <div className="flex items-center gap-2">
+          {/* <div className="flex items-center gap-2">
             <div
               className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                 autoRefreshStatus === "active"
@@ -182,73 +206,54 @@ export default function EntrepriseHeader() {
                 {autoRefreshStatus === "active" ? "Auto" : "Manuel"}
               </span>
             </div>
-          </div>
+          </div> */}
 
           {/* Bouton de refresh manuel */}
           <button
             onClick={handleRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-full backdrop-blur-sm hover:scale-110 hover:shadow-md border transition-all duration-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             title="Actualiser les données manuellement"
+            style={{
+              background: 'var(--zalama-bg-light)',
+              borderColor: 'var(--zalama-border)',
+              color: 'var(--zalama-text-secondary)'
+            }}
+            onMouseEnter={(e) => {
+              if (!isRefreshing) {
+                e.currentTarget.style.background = 'var(--zalama-bg-lighter)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'var(--zalama-bg-light)';
+            }}
           >
             <RefreshCw
-              className={`w-5 h-5 text-gray-600 dark:text-gray-300 ${
-                isRefreshing ? "animate-spin" : ""
-              }`}
+              className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
             />
           </button>
 
           <button
-            className="relative focus:outline-none"
+            className="relative p-2 rounded-full backdrop-blur-sm transition-all duration-200 focus:outline-none"
             aria-label="Voir les notifications"
             onClick={toggleNotifications}
+            style={{ color: 'var(--zalama-text-secondary)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.color = 'var(--zalama-text)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.color = 'var(--zalama-text-secondary)';
+            }}
           >
-            <Bell className="w-6 h-6 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors" />
-            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full bg-red-500/70 opacity-75"></span>
-            <span className="absolute -top-1 -right-1 bg-red-500 text-[10px] text-white rounded-full px-1">
+            <Bell className="w-6 h-6 transition-colors" />
+            <span className="animate-ping absolute -top-1 -right-1 inline-flex h-3 w-3 rounded-full opacity-75" style={{ background: 'var(--zalama-danger)' }}></span>
+            <span className="absolute -top-1 -right-1 text-[10px] text-white rounded-full px-1" style={{ background: 'var(--zalama-danger)' }}>
               {unreadCount}
             </span>
           </button>
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none"
-            aria-label={
-              theme === "dark"
-                ? "Passer en mode clair"
-                : "Passer en mode sombre"
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="w-5 h-5 text-yellow-400" />
-            ) : (
-              <Moon className="w-5 h-5 text-gray-500 dark:text-gray-300" />
-            )}
-          </button>
 
-          {/* Menu de profil avec bouton de déconnexion */}
-          <div className="relative">
-            <button
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors focus:outline-none"
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-            >
-              <User className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-200 hidden sm:inline">
-                {session?.admin?.display_name || "Admin"}
-              </span>
-            </button>
-
-            {profileMenuOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50 border border-gray-200 dark:border-gray-700">
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Se déconnecter
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </header>
 

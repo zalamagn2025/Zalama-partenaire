@@ -543,8 +543,8 @@ function PaymentResultContent() {
                     <Badge
                       variant={
                         paymentResult.status === "success"
-                          ? "default"
-                          : "destructive"
+                          ? "success"
+                          : "error"
                       }
                       className={`px-6 py-2 text-lg font-semibold ${
                         paymentResult.status === "success"

@@ -32,6 +32,9 @@ import {
   X,
   AlertTriangle,
   User,
+  Phone,
+  MapPin,
+  Hash,
 } from "lucide-react";
 
 interface EmployeeWithoutAccount {
@@ -39,6 +42,10 @@ interface EmployeeWithoutAccount {
   nom: string;
   prenom: string;
   email: string | null;
+  telephone: string | null;
+  adresse: string | null;
+  matricule: string | null;
+  genre: string | null;
   poste: string;
   type_contrat: string;
   salaire_net: number | null;
@@ -309,21 +316,25 @@ export default function DemandesAdhesionPage() {
             Gérez les employés sans compte ZaLaMa
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Users className="h-8 w-8 text-blue-600" />
-          <div className="text-right">
-            <div className="text-2xl font-bold text-gray-900 dark:text-white">
-              {filteredEmployees.length}
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm p-6 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
+              <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              employés sans compte
+            <div>
+              <div className="text-3xl font-bold text-gray-900 dark:text-white">
+                {filteredEmployees.length}
+              </div>
+              <div className="text-sm font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                Employés sans compte
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Filtres et recherche */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow-sm p-4">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow-sm p-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
           {/* Recherche */}
           <div className="relative flex-1 max-w-md">
@@ -358,7 +369,7 @@ export default function DemandesAdhesionPage() {
       </div>
 
       {/* Tableau des employés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         {filteredEmployees.length === 0 ? (
           <div className="p-12 text-center">
             <UserPlus className="h-12 w-12 text-gray-400 mx-auto mb-4" />
@@ -394,7 +405,7 @@ export default function DemandesAdhesionPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-[var(--zalama-border)]">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentEmployees.map((employee) => (
                 <tr
                   key={employee.id}
@@ -414,7 +425,7 @@ export default function DemandesAdhesionPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            variant={employee.actif ? "default" : "secondary"}
+                            variant={employee.actif ? "success" : "error"}
                             className="text-xs"
                           >
                             {employee.actif ? "Actif" : "Inactif"}
@@ -436,7 +447,7 @@ export default function DemandesAdhesionPage() {
                     </div>
                   </td>
                   <td className="px-3 py-4">
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="info" className="text-xs">
                       {employee.type_contrat}
                     </Badge>
                   </td>
@@ -446,39 +457,60 @@ export default function DemandesAdhesionPage() {
                     </div>
                   </td>
                   <td className="px-3 py-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                    <div className="flex items-center gap-1">
+                      {/* Bouton Détails */}
+                      {/* <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleViewDetails(employee);
                         }}
-                        className="flex items-center gap-1"
+                        disabled={false}
+                        className="group relative p-2 rounded-full bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 w-8 h-8 flex items-center justify-center"
+                        title="Voir les détails"
                       >
                         <Eye className="h-3 w-3" />
-                        Détails
-                      </Button>
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Voir
+                        </div>
+                      </button> */}
 
-                      <Button
-                        variant="outline"
-                        size="sm"
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleViewDetails(employee);
+                         }}
+                         disabled={false}
+                         className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                         title="Voir les détails"
+                       >
+                         <Eye className="h-4 w-4" />
+                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                           Voir
+                         </div>
+                       </button>
+
+                      {/* Bouton Rejeter */}
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleRejectEmployee(employee);
                         }}
                         disabled={rejectingEmployee === employee.id}
-                        className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 hover:border-red-300"
+                        className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        title="Rejeter l'inscription"
                       >
-                        <LoadingButton
-                          loading={rejectingEmployee === employee.id}
-                        >
-                          <X className="h-3 w-3" />
-                        </LoadingButton>
-                        Rejeter
-                      </Button>
+                        {rejectingEmployee === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Rejeter
+                        </div>
+                      </button>
 
-                      <Button
+                      {/* Bouton Créer */}
+                      <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleCreateAccount(employee.id);
@@ -486,24 +518,26 @@ export default function DemandesAdhesionPage() {
                         disabled={
                           creatingAccount === employee.id || !employee.email
                         }
-                        className={`${
+                        className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
                           !employee.email
-                            ? "bg-gray-400 cursor-not-allowed"
-                            : "bg-green-600 hover:bg-green-700"
-                        } flex items-center gap-1`}
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                            : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                        }`}
                         title={
                           !employee.email
                             ? "Email requis pour créer un compte"
-                            : ""
+                            : "Créer le compte"
                         }
                       >
-                        <LoadingButton
-                          loading={creatingAccount === employee.id}
-                        >
-                          <UserPlus className="h-3 w-3" />
-                        </LoadingButton>
-                        Créer
-                      </Button>
+                        {creatingAccount === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                        ) : (
+                          <UserPlus className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          {!employee.email ? "Email requis" : "Créer"}
+                        </div>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -528,21 +562,25 @@ export default function DemandesAdhesionPage() {
       {/* Modal des détails */}
       {isModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-gray-50 to-orange-50/30 dark:from-gray-800 dark:to-orange-900/10">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <User className="w-6 h-6 text-blue-600" />
-                  Détails de l'employé
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Informations complètes de l'employé sans compte
-                </p>
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Détails de l'employé
+                  </h2>
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    Informations complètes de l'employé sans compte
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -551,77 +589,155 @@ export default function DemandesAdhesionPage() {
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
-              <div className="flex items-center gap-4 pb-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                  <span className="text-blue-600 dark:text-blue-400 font-semibold text-xl">
-                    {selectedEmployee.prenom.charAt(0)}
-                    {selectedEmployee.nom.charAt(0)}
-                  </span>
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                    {selectedEmployee.prenom} {selectedEmployee.nom}
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400 mt-1">
-                    {selectedEmployee.poste}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant={selectedEmployee.actif ? "default" : "secondary"}>
-                      {selectedEmployee.actif ? "Actif" : "Inactif"}
-                    </Badge>
-                    <Badge variant="outline">
-                      {selectedEmployee.type_contrat}
-                    </Badge>
+              <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      {selectedEmployee.prenom.charAt(0)}
+                      {selectedEmployee.nom.charAt(0)}
+                    </span>
                   </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">
+                      {selectedEmployee.prenom} {selectedEmployee.nom}
+                    </h3>
+                    <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                      {selectedEmployee.poste}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant={selectedEmployee.actif ? "success" : "error"}>
+                    {selectedEmployee.actif ? "Actif" : "Inactif"}
+                  </Badge>
                 </div>
               </div>
 
               {/* Informations en grille */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Email</p>
+              <div className="space-y-4">
+                {/* Email - prend toute la largeur */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedEmployee.email || "Non renseigné"}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Type de contrat</p>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedEmployee.type_contrat}
-                  </p>
-                </div>
+                {/* Autres informations en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.telephone || "Non renseigné"}
+                    </p>
+                  </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'embauche</p>
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                        <MapPin className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Adresse</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.adresse || "Non renseignée"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                        <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Type de contrat</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.type_contrat}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-cyan-100 dark:bg-cyan-900/20 rounded-lg">
+                        <Hash className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Matricule</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.matricule || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-pink-100 dark:bg-pink-900/20 rounded-lg">
+                        <User className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Genre</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployee.genre || "Non renseigné"}
+                    </p>
+                  </div>
+
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                      <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
+                  </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(selectedEmployee.date_embauche)}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Salaire net</p>
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                      <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
+                  </div>
                   <p className="font-medium text-green-600 dark:text-green-400">
                     {formatSalary(selectedEmployee.salaire_net)}
                   </p>
                 </div>
 
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Date d'ajout</p>
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'ajout</span>
+                  </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {formatDate(selectedEmployee.created_at)}
                   </p>
                 </div>
+                </div>
               </div>
 
               {selectedEmployee.date_expiration && (
-                <div className="flex items-center gap-3 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/30 rounded-xl backdrop-blur-sm">
+                  <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-orange-400" />
+                  </div>
                   <div>
-                    <div className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                    <div className="text-sm font-semibold text-orange-300">
                       Contrat à durée déterminée
                     </div>
-                    <div className="text-sm text-orange-600 dark:text-orange-400">
+                    <div className="text-sm text-orange-400">
                       Expire le {formatDate(selectedEmployee.date_expiration)}
                     </div>
                   </div>
@@ -630,30 +746,26 @@ export default function DemandesAdhesionPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={() => {
-                  handleRejectEmployee(selectedEmployee);
-                  setIsModalOpen(false);
-                }}
-                disabled={rejectingEmployee === selectedEmployee.id}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {rejectingEmployee === selectedEmployee.id ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-                Rejeter l'inscription
-              </button>
-
-              <div className="flex gap-3">
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
                 <button
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
+                  onClick={() => {
+                    handleRejectEmployee(selectedEmployee);
+                    setIsModalOpen(false);
+                  }}
+                  disabled={rejectingEmployee === selectedEmployee.id}
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-red-400 bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30 rounded-lg hover:from-red-500/20 hover:to-red-600/20 hover:text-red-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  Fermer
+                  {rejectingEmployee === selectedEmployee.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent" />
+                  ) : (
+                    <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  )}
+                  <span className="group-hover:scale-105 transition-all duration-300">
+                    {rejectingEmployee === selectedEmployee.id ? "Rejet en cours..." : "Rejeter l'inscription"}
+                  </span>
                 </button>
+                
                 <button
                   onClick={() => {
                     handleCreateAccount(selectedEmployee.id);
@@ -663,10 +775,10 @@ export default function DemandesAdhesionPage() {
                     creatingAccount === selectedEmployee.id ||
                     !selectedEmployee.email
                   }
-                  className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
+                  className={`flex items-center gap-3 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-300 group ${
                     !selectedEmployee.email
-                      ? "bg-gray-400 cursor-not-allowed text-white"
-                      : "bg-green-600 hover:bg-green-700 text-white"
+                      ? "bg-gray-500/20 text-gray-400 cursor-not-allowed border border-gray-500/30"
+                      : "bg-gradient-to-r from-[var(--zalama-blue)]/20 to-[var(--zalama-blue-accent)]/20 text-[var(--zalama-blue)] border border-[var(--zalama-blue)]/30 hover:from-[var(--zalama-blue)]/30 hover:to-[var(--zalama-blue-accent)]/30 hover:text-white hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm"
                   }`}
                   title={
                     !selectedEmployee.email
@@ -675,11 +787,13 @@ export default function DemandesAdhesionPage() {
                   }
                 >
                   {creatingAccount === selectedEmployee.id ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-[var(--zalama-blue)] border-t-transparent" />
                   ) : (
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
                   )}
-                  Créer le compte
+                  <span className="group-hover:scale-105 transition-all duration-300">
+                    {creatingAccount === selectedEmployee.id ? "Création en cours..." : "Créer le compte"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -690,17 +804,21 @@ export default function DemandesAdhesionPage() {
       {/* Modal de confirmation de rejet */}
       {isRejectModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-lg w-full overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0 bg-gradient-to-r from-red-50 to-orange-50/30 dark:from-red-900/20 dark:to-orange-900/10">
-              <div>
-                <h2 className="text-xl font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
-                  <AlertTriangle className="w-6 h-6" />
-                  Rejeter l'inscription
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Cette action enverra une notification à l'employé
-                </p>
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Rejeter l'inscription
+                  </h2>
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    Cette action enverra une notification à l'employé
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => {
@@ -708,7 +826,7 @@ export default function DemandesAdhesionPage() {
                   setRejectReason("");
                   setSelectedEmployee(null);
                 }}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -716,66 +834,71 @@ export default function DemandesAdhesionPage() {
 
             {/* Content */}
             <div className="p-6 space-y-6">
-              <div className="p-6 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-                    <span className="text-red-600 dark:text-red-400 font-semibold text-xl">
-                      {selectedEmployee.prenom.charAt(0)}
-                      {selectedEmployee.nom.charAt(0)}
-                    </span>
-                  </div>
-                  <div>
-                    <div className="font-semibold text-lg text-red-900 dark:text-red-100">
-                      {selectedEmployee.prenom} {selectedEmployee.nom}
-                    </div>
-                    <div className="text-sm text-red-700 dark:text-red-300">
-                      {selectedEmployee.poste}
-                    </div>
-                  </div>
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30 rounded-xl backdrop-blur-sm">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-blue-600 dark:text-blue-400 font-bold text-xl">
+                    {selectedEmployee.prenom.charAt(0)}
+                    {selectedEmployee.nom.charAt(0)}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    {selectedEmployee.prenom} {selectedEmployee.nom}
+                  </h3>
+                  <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                    {selectedEmployee.poste}
+                  </p>
                 </div>
               </div>
 
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <label className="text-sm font-medium text-[var(--zalama-text-secondary)]">
                   Motif du rejet (optionnel)
                 </label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
                   placeholder="Expliquez pourquoi cette inscription est rejetée..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:bg-gray-800 dark:text-white resize-none"
+                  className="w-full px-4 py-3 border border-[var(--zalama-border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 bg-transparent text-white resize-none backdrop-blur-sm"
                   rows={4}
                 />
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-[var(--zalama-text-secondary)]">
                   Ce motif sera envoyé à l'employé par email et SMS.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button
-                onClick={() => {
-                  setIsRejectModalOpen(false);
-                  setRejectReason("");
-                  setSelectedEmployee(null);
-                }}
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={confirmRejectEmployee}
-                disabled={rejectingEmployee === selectedEmployee.id}
-                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {rejectingEmployee === selectedEmployee.id ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                ) : (
-                  <X className="h-4 w-4" />
-                )}
-                Confirmer le rejet
-              </button>
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => {
+                    setIsRejectModalOpen(false);
+                    setRejectReason("");
+                    setSelectedEmployee(null);
+                  }}
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-[var(--zalama-text-secondary)] bg-transparent border border-[var(--zalama-border)]/50 rounded-lg hover:bg-white/10 hover:text-white hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
+                >
+                  <span className="group-hover:scale-105 transition-all duration-300">
+                    Annuler
+                  </span>
+                </button>
+                
+                <button
+                  onClick={confirmRejectEmployee}
+                  disabled={rejectingEmployee === selectedEmployee.id}
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-red-400 bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30 rounded-lg hover:from-red-500/20 hover:to-red-600/20 hover:text-red-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                >
+                  {rejectingEmployee === selectedEmployee.id ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-400 border-t-transparent" />
+                  ) : (
+                    <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  )}
+                  <span className="group-hover:scale-105 transition-all duration-300">
+                    {rejectingEmployee === selectedEmployee.id ? "Rejet en cours..." : "Confirmer le rejet"}
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

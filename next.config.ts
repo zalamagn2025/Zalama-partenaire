@@ -80,7 +80,22 @@ const nextConfig: NextConfig = {
   // Support des navigateurs plus anciens
   transpilePackages: ["@radix-ui/react-icons"],
   // Configuration webpack pour la compatibilité
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    // Supprimer console.log en production
+    if (!dev && !isServer) {
+      config.optimization.minimizer.forEach((minimizer: any) => {
+        if (minimizer.constructor.name === 'TerserPlugin') {
+          minimizer.options.terserOptions = {
+            ...minimizer.options.terserOptions,
+            compress: {
+              ...minimizer.options.terserOptions?.compress,
+              drop_console: ['log'],
+            },
+          };
+        }
+      });
+    }
+
     // Support des formats vidéo avec fallbacks
     config.module.rules.push({
       test: /\.(mp4|webm|ogg)$/,
