@@ -603,21 +603,30 @@ export default function DemandesPage() {
     currentMonthData?.statistics?.by_status?.rejected ||
     allDemandes.filter((d) => d.statut === "Rejeté").length;
 
-  // ✅ Statistiques des remboursements
-  const remboursementsPaye = allDemandes.filter((d) => {
+  // ✅ Statistiques des remboursements (montants)
+  const remboursementsPaye = allDemandes.reduce((total, d) => {
     const remb = (d as any).remboursement || (d as any).remboursements;
-    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "PAYE";
-  }).length;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "PAYE") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
 
-  const remboursementsEnAttente = allDemandes.filter((d) => {
+  const remboursementsEnAttente = allDemandes.reduce((total, d) => {
     const remb = (d as any).remboursement || (d as any).remboursements;
-    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_ATTENTE";
-  }).length;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_ATTENTE") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
 
-  const remboursementsEnRetard = allDemandes.filter((d) => {
+  const remboursementsEnRetard = allDemandes.reduce((total, d) => {
     const remb = (d as any).remboursement || (d as any).remboursements;
-    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_RETARD";
-  }).length;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_RETARD") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
 
   const stats = [
     {
@@ -1114,7 +1123,7 @@ export default function DemandesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
-              {remboursementsPaye}
+              {remboursementsPaye.toLocaleString()} GNF
             </p>
             <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
               Remboursements payés
@@ -1132,7 +1141,7 @@ export default function DemandesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
-              {remboursementsEnAttente}
+              {remboursementsEnAttente.toLocaleString()} GNF
             </p>
             <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
               Remboursements en attente
@@ -1150,7 +1159,7 @@ export default function DemandesPage() {
           </div>
           <div>
             <p className="text-2xl font-bold text-rose-900 dark:text-rose-100">
-              {remboursementsEnRetard}
+              {remboursementsEnRetard.toLocaleString()} GNF
             </p>
             <p className="text-sm text-rose-600 dark:text-rose-400 mt-1">
               Remboursements en retard
