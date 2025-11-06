@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
+import PaymentListTable from "@/components/PaymentListTable";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
@@ -1460,8 +1461,18 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
+      ) : dataType === 'paiements' ? (
+        /* Composant dédié pour les paiements de salaire */
+        <PaymentListTable
+          payments={paginatedEmployees}
+          onViewDetails={(payment) => {
+            setSelectedRemboursement(payment as any);
+            setShowDetailModal(true);
+          }}
+          gnfFormatter={gnfFormatter}
+        />
       ) : (
-        /* Liste des remboursements regroupés par employé (pour onglets avances et paiements) */
+        /* Liste des remboursements regroupés par employé (pour onglet avances uniquement) */
         <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1473,40 +1484,8 @@ export default function RemboursementsPage() {
           </div>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed dark:divide-gray-700">
-            {/* ✅ En-tête adapté selon le type sélectionné */}
-            {dataType === 'paiements' ? (
-              // En-tête pour paiements de salaire (style page /dashboard/paiements)
-              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
-                <tr>
-                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Employé
-                  </th>
-                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Période
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Salaire Net
-                  </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Avances déduites
-                  </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Salaire reçu
-                  </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Montant à rembourser
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-            ) : (
-              // En-tête pour avances sur salaire (original)
-              <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
+            {/* En-tête pour avances sur salaire */}
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
                 <tr>
                   <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Employé
@@ -1534,7 +1513,6 @@ export default function RemboursementsPage() {
                   </th>
                 </tr>
               </thead>
-            )}
             <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentMonthData?.data?.length === 0 && (
                 <tr>
@@ -1582,32 +1560,7 @@ export default function RemboursementsPage() {
                       </div>
                     </div>
                   </td>
-                  {/* ✅ Cellules adaptées selon le type */}
-                  {dataType === 'paiements' ? (
-                    // Cellules pour paiements de salaire : Période | Salaire Net | Avances déduites | Salaire reçu | Montant à rembourser | Statut
-                    <>
-                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                        {employeeData.periode?.periode_complete || 'N/A'}
-                      </td>
-                      <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                        {gnfFormatter(employeeData.salaire_net)}
-                      </td>
-                      <td className="px-3 py-4 text-center text-sm text-gray-500">
-                        {gnfFormatter(employeeData.paiement_details?.avances_deduites || 0)}
-                      </td>
-                      <td className="px-3 py-4 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                        {gnfFormatter(employeeData.salaire_restant)}
-                      </td>
-                      <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
-                        {gnfFormatter(employeeData.montant_total_remboursement)}
-                      </td>
-                      <td className="px-3 py-4 text-center">
-                        {getStatusBadge(employeeData.statut_global)}
-                      </td>
-                    </>
-                  ) : (
-                    // Cellules pour avances sur salaire (original)
-                    <>
+                  {/* Cellules pour avances sur salaire */}
                       <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
                         {gnfFormatter(employeeData.montant_total_remboursement)}
                       </td>
@@ -1628,8 +1581,6 @@ export default function RemboursementsPage() {
                       <td className="px-3 py-4">
                         {getStatusBadge(employeeData.statut_global)}
                       </td>
-                    </>
-                  )}
                   <td className="px-3 py-4 text-center">
                     <button
                       onClick={() => handleShowEmployeeDetails(employeeData)}
