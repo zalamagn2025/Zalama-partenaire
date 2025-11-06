@@ -925,7 +925,7 @@ export default function RemboursementsPage() {
                 }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
-                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>📊 Tous ({(currentMonthData?.data?.length || 0) + (paymentHistory.length || 0)})</span>
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Tous ({(currentMonthData?.data?.length || 0) + (paymentHistory.length || 0)})</span>
               </button>
               <button
                 onClick={() => setDataType('avances')}
@@ -936,7 +936,7 @@ export default function RemboursementsPage() {
                 }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
-                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>💰 Avances ({currentMonthData?.data?.length || 0})</span>
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Avances sur salaire ({currentMonthData?.data?.length || 0})</span>
               </button>
               <button
                 onClick={() => setDataType('paiements')}
@@ -947,7 +947,7 @@ export default function RemboursementsPage() {
                 }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
-                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>💵 Paiements ({paymentHistory.length || 0})</span>
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Paiements de salaire ({paymentHistory.length || 0})</span>
               </button>
             </div>
           </div>
