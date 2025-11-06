@@ -269,7 +269,8 @@ class EdgeFunctionService {
     };
 
     // ✅ Ajouter le token d'authentification si disponible et non déjà présent
-    if (this.accessToken && !options.headers?.['Authorization']) {
+    const optionsHeaders = options.headers as Record<string, string> | undefined;
+    if (this.accessToken && !optionsHeaders?.['Authorization']) {
       defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
