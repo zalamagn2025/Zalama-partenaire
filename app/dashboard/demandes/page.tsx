@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   FileText,
   CheckCircle,
@@ -18,10 +19,13 @@ import {
   Check,
   X,
   RefreshCw,
+  Phone,
+  Calendar,
+  Hash,
   Eye,
+  Receipt,
 } from "lucide-react";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 import { PartnerDataService } from "@/lib/services";
@@ -30,6 +34,7 @@ import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Pagination from "@/components/ui/Pagination";
 
 // Type étendu pour inclure les données des employés
 interface SalaryAdvanceRequestWithEmployee extends SalaryAdvanceRequest {
@@ -102,6 +107,7 @@ export default function DemandesPage() {
   // États pour les données de filtres
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
   const [loadingFilters, setLoadingFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   // État pour stocker les informations des employés
   const [employeesData, setEmployeesData] = useState<Map<string, any>>(
@@ -301,6 +307,12 @@ export default function DemandesPage() {
           employeesMap.size,
           "employés"
         );
+        // Debug: vérifier si les photos sont présentes
+        const employeesWithPhotos = Array.from(employeesMap.values()).filter(emp => emp.photo_url);
+        console.log("📸 Employés avec photos:", employeesWithPhotos.length, "sur", employeesMap.size);
+        if (employeesWithPhotos.length > 0) {
+          console.log("📸 Exemple de photo:", employeesWithPhotos[0].photo_url);
+        }
       }
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
@@ -521,6 +533,7 @@ export default function DemandesPage() {
         d.statut ||
         "Non défini",
       type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
+      employe: employe, // ✅ Ajouter les données de l'employé pour accéder au salaire_net
     };
   });
 
@@ -740,47 +753,34 @@ export default function DemandesPage() {
   if (loading && demandesAvance.length === 0) {
     return (
       <div className="p-6 space-y-6 animate-pulse">
-        {/* Skeleton pour l'en-tête */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="space-y-3">
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-96"></div>
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-80"></div>
-          </div>
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-40"></div>
-        </div>
+        {/* Skeleton pour les filtres avancés */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
 
         {/* Skeleton pour les statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[...Array(4)].map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
           ))}
         </div>
 
-        {/* Skeleton pour les filtres */}
-        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-24"></div>
+        {/* Skeleton pour la barre de recherche */}
+        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-16"></div>
 
-        {/* Skeleton pour la liste des demandes */}
+        {/* Skeleton pour le tableau des demandes */}
         <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
-          <div className="space-y-4">
+          <div className="space-y-3">
+            {/* En-tête du tableau */}
+            <div className="grid grid-cols-6 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
             {[...Array(6)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between p-4 bg-gray-300 dark:bg-gray-700 rounded-lg"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="bg-gray-400 dark:bg-gray-600 rounded-full h-12 w-12"></div>
-                  <div className="space-y-2 flex-1">
-                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-6 w-64"></div>
-                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-4 w-48"></div>
+                <div key={i} className="bg-gray-300 dark:bg-gray-700 rounded h-5"></div>
+              ))}
                   </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="space-y-2">
-                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-5 w-32"></div>
-                    <div className="bg-gray-400 dark:bg-gray-600 rounded h-4 w-24"></div>
-                  </div>
-                  <div className="bg-gray-400 dark:bg-gray-600 rounded h-9 w-24"></div>
-                </div>
+            {/* Lignes du tableau */}
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="grid grid-cols-6 gap-4 py-3">
+                {[...Array(6)].map((_, j) => (
+                  <div key={j} className="bg-gray-300 dark:bg-gray-700 rounded h-6"></div>
+                ))}
               </div>
             ))}
           </div>
@@ -794,222 +794,21 @@ export default function DemandesPage() {
 
   return (
     <div className="p-6">
-      {/* En-tête */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
-        <div className="flex items-center gap-3">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-[var(--zalama-text)]">
-                Demandes de Services
-              </h1>
-              {currentMonthData && (
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                  Données du mois en cours
-                </span>
-              )}
+     {/* Filtres avancés - Style identique à la page dashboard */}
+     <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
               <button
-                onClick={loadCurrentMonthData}
-                disabled={edgeFunctionLoading}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-                title="Actualiser les données du mois en cours"
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
-                <RefreshCw
-                  className={`h-4 w-4 text-gray-500 ${
-                    edgeFunctionLoading ? "animate-spin" : ""
-                  }`}
-                />
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
               </button>
-            </div>
-            <p className="text-[var(--zalama-text)]/60 mt-1">
-              Gérez les demandes d'avance sur salaire et de prêts P2P de vos
-              employés
-            </p>
-          </div>
-          {/* Indicateur de rafraîchissement */}
-          {tableLoading && (
-            <LoadingButton
-              loading={true}
-              className="text-sm text-blue-600 dark:text-blue-400"
-            >
-              <span>Mise à jour...</span>
-            </LoadingButton>
-          )}
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              // TODO: Implémenter l'export CSV
-              toast.info("Export CSV à implémenter");
-            }}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </button>
-        </div>
-      </div>
-
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-        {stats.map((stat, index) => (
-          <StatCard
-            key={index}
-            title={stat.title}
-            value={stat.value}
-            icon={stat.icon}
-            color={stat.color}
-          />
-        ))}
-      </div>
-
-      {/* Répartition par motifs de demande */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Répartition par motifs de demande
-          </h3>
-          {(() => {
-            // Calculer la répartition par motifs à partir des vraies données
-            const motifCounts = allDemandes.reduce((acc, demande) => {
-              const motif = demande.type_motif || "Non spécifié";
-              acc[motif] = (acc[motif] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>);
-
-            const repartitionMotifsData = Object.entries(motifCounts).map(
-              ([motif, count], index) => {
-                const colors = [
-                  "#8884d8",
-                  "#82ca9d",
-                  "#ffc658",
-                  "#ff7300",
-                  "#00C49F",
-                  "#FF8042",
-                ];
-                return {
-                  motif,
-                  valeur: count,
-                  color: colors[index % colors.length],
-                };
-              }
-            );
-
-            const hasMotifsData = repartitionMotifsData.length > 0;
-
-            return hasMotifsData ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={repartitionMotifsData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ motif, percent }) =>
-                      `${motif} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="valeur"
-                  >
-                    {repartitionMotifsData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
-                <div className="text-center">
-                  <PieChartIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucune donnée disponible</p>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-
-        {/* Répartition par statut */}
-        <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Répartition par statut
-          </h3>
-          {(() => {
-            const statutCounts = allDemandes.reduce((acc, demande) => {
-              const statut = demande.statut || "Non défini";
-              acc[statut] = (acc[statut] || 0) + 1;
-              return acc;
-            }, {} as Record<string, number>);
-
-            const repartitionStatutData = Object.entries(statutCounts).map(
-              ([statut, count], index) => {
-                const colors = ["#10B981", "#F59E0B", "#EF4444", "#6366F1"];
-                return {
-                  statut,
-                  valeur: count,
-                  color: colors[index % colors.length],
-                };
-              }
-            );
-
-            const hasStatutData = repartitionStatutData.length > 0;
-
-            return hasStatutData ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={repartitionStatutData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ statut, percent }) =>
-                      `${statut} ${(percent * 100).toFixed(0)}%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="valeur"
-                  >
-                    {repartitionStatutData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[300px] text-gray-500 dark:text-gray-400">
-                <div className="text-center">
-                  <PieChartIcon className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Aucune donnée disponible</p>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      </div>
-
-      {/* Barre de recherche simple */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-4 mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Rechercher par nom d'employé, motif, ou montant..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
-          />
-        </div>
-      </div>
-
-      {/* Filtres avancés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-6 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filtres avancés
-          </h3>
-          <div className="flex gap-2">
             <button
               onClick={resetFilters}
               className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -1021,14 +820,17 @@ export default function DemandesPage() {
               disabled={edgeFunctionLoading}
               className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
             >
-              <LoadingButton loading={edgeFunctionLoading}>
+                {edgeFunctionLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
                 Actualiser
-              </LoadingButton>
             </button>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
           {/* Filtre par mois */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1042,7 +844,7 @@ export default function DemandesPage() {
                   e.target.value ? parseInt(e.target.value) : null
                 )
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Tous les mois</option>
               {activityPeriods?.mois?.map((mois: number) => (
@@ -1068,7 +870,7 @@ export default function DemandesPage() {
                   e.target.value ? parseInt(e.target.value) : null
                 )
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Toutes les années</option>
               {activityPeriods?.annees?.map((annee: number) => (
@@ -1087,7 +889,7 @@ export default function DemandesPage() {
             <select
               value={filters.status || ""}
               onChange={(e) => applyFilter("status", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Tous les statuts</option>
               <option value="En attente RH/Responsable">
@@ -1106,7 +908,7 @@ export default function DemandesPage() {
             <select
               value={filters.categorie || ""}
               onChange={(e) => applyFilter("categorie", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Toutes les catégories</option>
               <option value="mono-mois">Mono-mois</option>
@@ -1124,7 +926,7 @@ export default function DemandesPage() {
               onChange={(e) =>
                 applyFilter("type_motif", e.target.value || null)
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Tous les motifs</option>
               <option value="sante">Santé</option>
@@ -1146,7 +948,7 @@ export default function DemandesPage() {
               onChange={(e) =>
                 applyFilter("statut_remboursement", e.target.value || null)
               }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
             >
               <option value="">Tous les statuts</option>
               <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
@@ -1156,10 +958,118 @@ export default function DemandesPage() {
               <option value="ANNULE">Annulé</option>
             </select>
           </div>
+          </div>
+        )}
         </div>
 
-        {/* Indicateur de filtres actifs */}
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+        {/* Total demandes */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Total</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {totalDemandes}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Total demandes
+            </p>
+          </div>
+        </div>
+
+        {/* Validées */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Validées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {approvedDemandes}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Validées
+            </p>
+          </div>
+        </div>
+
+        {/* En attente */}
+        <div className="bg-yellow-50 dark:bg-yellow-900/10 rounded-lg p-5 border border-yellow-200 dark:border-yellow-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">
+              {pendingDemandes}
+            </p>
+            <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+              En attente
+            </p>
+          </div>
+        </div>
+
+        {/* En attente RH/Responsable */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">RH</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {pendingRHResponsable}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              En attente RH
+            </p>
+          </div>
+        </div>
+
+        {/* Rejetées */}
+        <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-5 border border-red-200 dark:border-red-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
+            <Badge variant="error" className="text-xs">Rejetées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-red-900 dark:text-red-100">
+              {rejectedDemandes}
+            </p>
+            <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+              Rejetées
+            </p>
+          </div>
+        </div>
       </div>
+
+      {/* Barre de recherche simple */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-4 mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Rechercher par nom d'employé, motif, ou montant..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white"
+          />
+        </div>
+      </div>
+
+      
 
       {/* Liste des demandes */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm relative">
@@ -1185,104 +1095,143 @@ export default function DemandesPage() {
             </p>
           </div>
         ) : (
-          <div className="w-full">
-            <table className="w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+          <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full table-fixed dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-[var(--zalama-card)]">
                 <tr>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Nom de l'employé
                   </th>
-                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Catégorie
                   </th>
-                  <th className="px-2 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Montant
                   </th>
-                  <th className="px-2 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Motif
                   </th>
-                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Statut
                   </th>
-                  <th className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
                 {currentItems.map((demande) => (
                   <tr
                     key={demande.id}
                     className="hover:bg-gray-50 dark:hover:bg-gray-800"
                   >
-                    <td className="px-3 py-3">
-                      <div className="flex items-center min-w-0">
-                        <div className="flex-shrink-0 h-6 w-6">
-                          <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
-                            <User className="h-3 w-3 text-blue-600 dark:text-blue-400" />
+                    <td className="px-3 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {(() => {
+                            const employeeData = employeesData.get(demande.employe_id);
+                            const photoUrl = employeeData?.photo_url || (demande.employees as any)?.photo_url;
+                            console.log(`🔍 Demande ${demande.id}:`, {
+                              employe_id: demande.employe_id,
+                              hasEmployeeData: !!employeeData,
+                              photoUrl: photoUrl,
+                              employeesPhotoUrl: (demande.employees as any)?.photo_url
+                            });
+                            return photoUrl ? (
+                              <Image
+                                src={photoUrl}
+                                alt={demande.demandeur}
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover rounded-full"
+                              />
+                            ) : (
+                              <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                                {demande.demandeur.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
+                              </span>
+                            );
+                          })()}
                           </div>
-                        </div>
-                        <div className="ml-2 min-w-0 flex-1">
-                          <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        <div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">
                             {demande.demandeur}
                           </div>
                           {demande.poste &&
                             demande.poste !== "Non spécifié" && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 {demande.poste}
                               </div>
                             )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-center">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
-                          demande.categorie === "mono-mois"
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                            : demande.categorie === "multi-mois"
-                            ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300"
-                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
-                        }`}
-                      >
-                        {demande.categorie || "N/A"}
-                      </span>
+                    <td className="px-3 py-4 text-center">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                        {(() => {
+                          const employeeData = employeesData.get(demande.employe_id);
+                          const salaireNet = employeeData?.salaire_net || (demande as any).employe?.salaire_net || 0;
+                          return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
+                        })()}
+                      </div>
                     </td>
-                    <td className="px-2 py-3 text-right">
+                    <td className="px-3 py-4 text-center">
+                      <Badge
+                        variant={
+                          demande.categorie === "mono-mois"
+                            ? "info"
+                            : demande.categorie === "multi-mois"
+                            ? "purple"
+                            : "default"
+                        }
+                        className="text-xs"
+                      >
+                        {demande.categorie === "mono-mois"
+                          ? "Mono-mois"
+                          : demande.categorie === "multi-mois"
+                          ? "Multi-mois"
+                          : demande.categorie || "N/A"}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-4 text-right">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {(demande.montant || 0).toLocaleString()} GNF
                       </div>
                     </td>
-                    <td className="px-2 py-3">
+                    <td className="px-3 py-4">
                       <div className="text-sm text-gray-900 dark:text-white truncate max-w-20">
                         {demande.type_motif || "Autre"}
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-center">
+                    <td className="px-3 py-4 text-center">
                       <div className="text-sm text-gray-900 dark:text-white">
                         {demande.date}
                       </div>
                     </td>
-                    <td className="px-2 py-3 text-center">
-                      <span
-                        className={`px-2 py-1 inline-flex text-xs leading-4 font-semibold rounded-full ${
+                    <td className="px-3 py-4 text-center">
+                      <Badge
+                        variant={
                           demande.statut === "En attente" ||
                           demande.statut === "En attente RH/Responsable"
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                            ? "warning"
                             : demande.statut === "Validé"
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                            ? "success"
                             : demande.statut === "Rejeté"
-                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300"
-                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
-                        }`}
+                            ? "error"
+                            : "default"
+                        }
+                        className="text-xs"
                       >
                         {demande.statut}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-2 py-3 text-center">
+                    <td className="px-3 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
                         {/* Actions pour les demandes en attente RH/Responsable */}
                         {demande.statut === "En attente RH/Responsable" ? (
@@ -1297,16 +1246,17 @@ export default function DemandesPage() {
                                 rejectingRequest === demande.id ||
                                 tableLoading
                               }
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-green-600 hover:bg-green-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                              title="Approuver la demande"
                             >
-                              <LoadingButton
-                                loading={approvingRequest === demande.id}
-                              >
-                                <Check className="h-3 w-3" />
-                              </LoadingButton>
-                              {approvingRequest === demande.id
-                                ? "Traitement..."
-                                : "Approuver"}
+                              {approvingRequest === demande.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                              ) : (
+                                <Check className="h-4 w-4" />
+                              )}
+                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                {approvingRequest === demande.id ? "Traitement..." : "Approuver"}
+                              </div>
                             </button>
                             <button
                               onClick={(e) => {
@@ -1318,34 +1268,32 @@ export default function DemandesPage() {
                                 approvingRequest === demande.id ||
                                 tableLoading
                               }
-                              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                              title="Rejeter la demande"
                             >
-                              <LoadingButton
-                                loading={rejectingRequest === demande.id}
-                              >
-                                <X className="h-3 w-3" />
-                              </LoadingButton>
-                              {rejectingRequest === demande.id
-                                ? "Traitement..."
-                                : "Rejeter"}
+                              {rejectingRequest === demande.id ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                              ) : (
+                                <X className="h-4 w-4" />
+                              )}
+                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                {rejectingRequest === demande.id ? "Traitement..." : "Rejeter"}
+                              </div>
                             </button>
                           </div>
-                        ) : (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {demande.statut === "Validé" && "✅"}
-                            {demande.statut === "Rejeté" && "❌"}
-                            {demande.statut === "En attente" && "⏳"}
-                          </span>
-                        )}
+                        ) : null}
                         <button
                           onClick={() => {
                             setSelectedDemande(demande);
                             setShowDetailsModal(true);
                           }}
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-orange-600 hover:text-orange-800 dark:text-orange-400 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md transition-colors"
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Voir les détails"
                         >
-                          <Eye className="h-3 w-3" />
-                          Détails
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Voir
+                          </div>
                         </button>
                       </div>
                     </td>
@@ -1354,65 +1302,43 @@ export default function DemandesPage() {
               </tbody>
             </table>
           </div>
-        )}
       </div>
+        )}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="mt-6 flex justify-center">
-          <nav className="flex items-center gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-              disabled={currentPage === 1}
-              className="px-3 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Précédent
-            </button>
-
-            {[...Array(totalPages)].map((_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => setCurrentPage(index + 1)}
-                className={`px-3 py-2 text-sm font-medium rounded-lg ${
-                  currentPage === index + 1
-                    ? "bg-[var(--zalama-primary)] text-white"
-                    : "text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-
-            <button
-              onClick={() =>
-                setCurrentPage(Math.min(totalPages, currentPage + 1))
-              }
-              disabled={currentPage === totalPages}
-              className="px-3 py-2 text-sm font-medium text-[var(--zalama-text)] bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Suivant
-            </button>
-          </nav>
-        </div>
-      )}
+        {filteredDemandes.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredDemandes.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
+      </div>
 
       {/* Modal de détails de la demande */}
       {showDetailsModal && selectedDemande && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Détails de la demande
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Référence: {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
                 </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowDetailsModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1420,120 +1346,294 @@ export default function DemandesPage() {
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Informations de l'employé */}
+              {/* En-tête avec photo et nom */}
+              <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    {(() => {
+                      const employeeData = employeesData.get(selectedDemande.employe_id);
+                      const photoUrl = employeeData?.photo_url || (selectedDemande.employees as any)?.photo_url;
+                      return photoUrl ? (
+                        <Image
+                          src={photoUrl}
+                          alt={selectedDemande.demandeur || "Employé"}
+                          width={80}
+                          height={80}
+                          className="w-full h-full object-cover rounded-full"
+                        />
+                      ) : (
+                        <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                          {selectedDemande.employees
+                            ? `${selectedDemande.employees.prenom.charAt(0)}${selectedDemande.employees.nom.charAt(0)}`
+                            : selectedDemande.demandeur
+                            ? selectedDemande.demandeur.split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2)
+                            : "??"}
+                        </span>
+                      );
+                    })()}
+                  </div>
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Informations Employé
-                </h3>
-                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div>
-                    <p className="text-xs text-gray-500">Nom complet</p>
-                    <p className="font-medium">
-                      {selectedDemande.employe
-                        ? `${selectedDemande.employe.prenom} ${selectedDemande.employe.nom}`
+                    <h3 className="text-2xl font-bold text-white">
+                      {selectedDemande.employees
+                        ? `${selectedDemande.employees.prenom} ${selectedDemande.employees.nom}`
                         : selectedDemande.demandeur || "N/A"}
+                    </h3>
+                    <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                      {selectedDemande.employees?.poste || selectedDemande.poste || "N/A"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Poste</p>
-                    <p className="font-medium">{selectedDemande.employe?.poste || selectedDemande.poste || "N/A"}</p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-sm">{selectedDemande.employe?.email || "N/A"}</p>
+                <div className="flex items-center gap-3">
+                  <Badge
+                    variant={
+                      selectedDemande.statut_global === "Validé" || selectedDemande.statut === "Validé"
+                        ? "success"
+                        : selectedDemande.statut_global === "Rejeté" || selectedDemande.statut === "Rejeté"
+                        ? "error"
+                        : "warning"
+                    }
+                    className="text-xs"
+                  >
+                    {selectedDemande.statut_global || selectedDemande.statut || "N/A"}
+                  </Badge>
+                  <Badge
+                    variant={
+                      selectedDemande.categorie === "mono-mois"
+                        ? "info"
+                        : selectedDemande.categorie === "multi-mois"
+                        ? "purple"
+                        : "default"
+                    }
+                    className="text-xs"
+                  >
+                    {selectedDemande.categorie === "mono-mois"
+                      ? "Mono-mois"
+                      : selectedDemande.categorie === "multi-mois"
+                      ? "Multi-mois"
+                      : selectedDemande.categorie || "N/A"}
+                  </Badge>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Téléphone</p>
-                    <p className="font-medium">{selectedDemande.employe?.telephone || "N/A"}</p>
                   </div>
+
+              {/* Informations en grille */}
+              <div className="space-y-4">
+                {/* Email - prend toute la largeur */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <MailWarning className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedDemande.employe?.email || "Non renseigné"}
+                  </p>
               </div>
 
-              {/* Informations de la demande */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Détails de la Demande
-                </h3>
-                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Référence</span>
-                    <span className="font-mono font-medium">{selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}</span>
+                {/* Autres informations en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date de création</span>
-                    <span className="font-medium">
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                  </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedDemande.employe?.telephone || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                  </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Montant demandé</span>
+                  </div>
+                    <p className="font-medium text-green-600 dark:text-green-400">
+                      {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                        <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Type de motif</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}
+                    </p>
+              </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Date de création</span>
+                  </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.date_creation_premiere
                         ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR")
-                        : selectedDemande.date || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date de validation</span>
-                    <span className="font-medium">
-                      {selectedDemande.demandes_detailes?.[0]?.date_validation
-                        ? new Date(selectedDemande.demandes_detailes[0].date_validation).toLocaleDateString("fr-FR")
-                        : selectedDemande.updated_at
-                        ? new Date(selectedDemande.updated_at).toLocaleDateString("fr-FR")
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Type de demande</span>
-                    <span className="font-medium">{selectedDemande.type_demande || "N/A"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Statut</span>
-                    <span>{getStatusBadge(selectedDemande.statut_global || selectedDemande.statut)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Catégorie</span>
-                    <span className="font-medium">{selectedDemande.categorie || "N/A"}</span>
+                        : selectedDemande.date
+                        ? new Date(selectedDemande.date).toLocaleDateString("fr-FR")
+                        : "Non définie"}
+                    </p>
+                </div>
+
+                  {selectedDemande.demandes_detailes?.[0]?.date_validation && (
+                    <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
+                          <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              </div>
+                        <span className="text-gray-600 dark:text-gray-400 text-xs">Date de validation</span>
+                      </div>
+                      <p className="font-medium text-teal-600 dark:text-teal-400">
+                        {new Date(selectedDemande.demandes_detailes[0].date_validation).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                        <Hash className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Référence</span>
+                    </div>
+                    <p className="font-mono text-xs text-gray-600 dark:text-gray-400 break-all">
+                      {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
+                    </p>
                   </div>
                 </div>
               </div>
 
-              {/* Montants */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Détails Financiers
-                </h3>
-                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Montant demandé</span>
-                    <span className="font-medium text-green-600">
-                      {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Type de motif</span>
-                    <span className="font-medium">{selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Motif */}
-              {selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif ? (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Motif
-                  </h3>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                {/* Motif - prend toute la largeur */}
+                {(selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif) && (
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                        <MessageSquare className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Motif</span>
+                    </div>
                     <p className="text-sm text-gray-700 dark:text-gray-300">
                       {selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif}
                     </p>
                   </div>
+                )}
+
+                {/* Plan de remboursement pour multi-mois */}
+                {(() => {
+                  const numInstallments = selectedDemande.demandes_detailes?.[0]?.num_installments || selectedDemande.num_installments;
+                  return selectedDemande.categorie === "multi-mois" && numInstallments && numInstallments > 1 && (
+                  <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                          Plan de remboursement Multi-mois
+                        </h4>
+                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                          {numInstallments} mensualités
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {(() => {
+                        const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
+                        const nbMois = numInstallments || 1;
+                        const montantParMois = Math.floor(montantTotal / nbMois);
+                        const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
+                        
+                        return Array.from({ length: nbMois }, (_, i) => {
+                          const moisIndex = i + 1;
+                          const montant = moisIndex === nbMois ? dernierMontant : montantParMois;
+                          const dateEcheance = new Date();
+                          dateEcheance.setMonth(dateEcheance.getMonth() + moisIndex);
+                          
+                          return (
+                            <div key={moisIndex} className="flex items-center justify-between p-3 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-purple-200 dark:border-purple-800/20">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                    {moisIndex}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                    Échéance {moisIndex}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {dateEcheance.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
+                                  {montant.toLocaleString()} GNF
+                                </p>
+                                <p className="text-xs text-purple-600 dark:text-purple-400">
+                                  {Math.round((montant / montantTotal) * 100)}% du total
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                    
+                    <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
+                        <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                          {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  );
+                })()}
+
+                {/* Bouton télécharger le reçu */}
+                {(selectedDemande.demandes_detailes?.[0]?.receipt_url || selectedDemande.receipt_url) && (
+                  <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-lg p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                          <Receipt className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-green-900 dark:text-green-100">
+                            Reçu disponible
+                          </h4>
+                          <p className="text-xs text-green-600 dark:text-green-400">
+                            Généré le {selectedDemande.demandes_detailes?.[0]?.receipt_generated_at 
+                              ? new Date(selectedDemande.demandes_detailes[0].receipt_generated_at).toLocaleDateString('fr-FR')
+                              : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                      <a
+                        href={selectedDemande.demandes_detailes?.[0]?.receipt_url || selectedDemande.receipt_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md hover:shadow-lg"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span className="text-sm font-medium">Télécharger</span>
+                      </a>
+                    </div>
+                  </div>
+                )}
                 </div>
-              ) : null}
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
-                onClick={() => setShowDetailsModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                Fermer
-              </Button>
             </div>
           </div>
         </div>

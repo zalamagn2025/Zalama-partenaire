@@ -125,8 +125,8 @@ export function PinInput({
             "relative w-12 h-12 rounded-lg border-2 transition-all duration-200",
             "flex items-center justify-center",
             "bg-white dark:bg-gray-800",
-            "hover:border-blue-300 dark:hover:border-blue-600",
-            focusedIndex === index && "border-blue-500 dark:border-blue-400 ring-2 ring-blue-200 dark:ring-blue-800",
+            "hover:border-orange-300 dark:hover:border-orange-600",
+            focusedIndex === index && "border-[var(--zalama-orange)] ring-2 ring-orange-200 dark:ring-orange-800",
             error && "border-red-500 dark:border-red-400",
             !error && !focusedIndex && value[index] && "border-green-500 dark:border-green-400",
             disabled && "opacity-50 cursor-not-allowed"

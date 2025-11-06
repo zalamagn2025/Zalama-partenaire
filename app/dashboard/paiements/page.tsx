@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { 
   Banknote, 
   TrendingUp, 
@@ -10,294 +11,379 @@ import {
   Filter, 
   RefreshCw, 
   Loader2,
-  ChevronLeft,
-  ChevronRight,
   Eye,
-  Download
+  Download,
+  User,
+  Mail,
+  Phone,
+  DollarSign,
+  CreditCard,
+  FileText,
+  Clock,
+  CheckCircle,
+  Hash,
+  MapPin,
+  Search,
+  Plus,
+  ChevronDown,
+  X,
+  ArrowRight,
+  Calendar as CalendarIcon,
+  UserCheck,
+  Building,
+  AlertCircle,
+  Zap,
+  ArrowLeft,
+  CheckCircle2,
+  Save
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import StatCard from "@/components/dashboard/StatCard";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
-import { toast } from "sonner";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
+import { toast } from "sonner";
 
-// Fonction pour formatter les montants en GNF
-const gnfFormatter = (value: number | null | undefined) => {
-  if (value === null || value === undefined || isNaN(value)) {
-    return "0 GNF";
-  }
-  return `${value.toLocaleString()} GNF`;
-};
-
-// Fonction pour formatter les dates
-const formatDate = (dateString: string) => {
-  if (!dateString) return "N/A";
-  return new Date(dateString).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-};
-
-// Interface pour les statistiques
-interface PaymentStatistics {
-  total_paiements: number;
-  paiements_effectues: number;
-  paiements_en_attente: number;
-  montant_total_salaires: number;
-  montant_total_avances_deduites: number;
-  montant_total_frais: number;
-  montant_total_remboursements: number;
-  employes_payes_distincts: number;
-  dernier_paiement: string | null;
-  paiements_par_mois: Record<string, any>;
-}
-
-// Interface pour un paiement
-interface Payment {
+// Types pour les données
+type Payment = {
   id: string;
   employe_id: string;
-  periode_debut: string;
-  periode_fin: string;
   salaire_net: number;
-  avances_deduites: number;
   salaire_disponible: number;
-  methode_paiement: string;
-  intervention_zalama: boolean;
-  frais_intervention: number;
+  avances_deduites: number;
   montant_total_remboursement: number;
+  frais_intervention?: number;
+  montant?: number; // Alias pour compatibilité
   statut: string;
   date_paiement: string;
-  date_limite: string;
+  periode_debut: string;
+  periode_fin: string;
+  mois_paye?: string; // Calculé à partir de periode_debut
   reference_paiement: string;
-  commentaire: string | null;
+  methode_paiement?: string;
+  intervention_zalama?: boolean;
   created_at: string;
   employe?: {
     id: string;
     nom: string;
     prenom: string;
+    poste: string;
     email: string;
     telephone: string;
-    poste: string;
-  } | null;
-}
-
-// Interface pour la réponse paginée
-interface PaginatedResponse {
-  success: boolean;
-  data: Payment[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrevious: boolean;
+    photo_url?: string;
+    salaire_net?: number;
   };
-}
+};
 
-export default function PaiementsPage() {
+type Employee = {
+  id: string;
+  nom: string;
+  prenom: string;
+  poste: string;
+  email: string;
+  telephone: string;
+  photo_url?: string;
+  salaire_net?: number;
+  salaire_mensuel?: number; // Alias pour compatibilité
+};
+
+export default function PaymentSalaryPage() {
+  const { session } = useEdgeAuthContext();
   const router = useRouter();
-  const { session, loading: authLoading } = useEdgeAuthContext();
-
-  // États
-  const [loading, setLoading] = useState(true);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [statistics, setStatistics] = useState<PaymentStatistics | null>(null);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 10,
-    total: 0,
-    totalPages: 0,
-    hasNext: false,
-    hasPrevious: false,
-  });
-
-  // Filtres
-  const [filters, setFilters] = useState({
-    statut: "all",
-    mois: new Date().getMonth() + 1,
-    annee: new Date().getFullYear(),
-  });
-
-  // Modal
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [statistics, setStatistics] = useState<any>(null); // ✅ Nouvelles stats depuis l'API
+  const [loadingData, setLoadingData] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedMonth, setSelectedMonth] = useState<string>("all");
+  const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPaymentPage, setShowPaymentPage] = useState(false);
 
-  // Ouvrir le modal
-  const handleViewDetails = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setIsModalOpen(true);
-  };
+  // États pour la page de paiement
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const [paymentMonth, setPaymentMonth] = useState<string>("");
+  const [paymentDate, setPaymentDate] = useState<string>("");
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [currentStep, setCurrentStep] = useState(1);
 
-  // Fermer le modal
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedPayment(null);
-  };
+  // Charger les données
+  useEffect(() => {
+    if (session?.access_token) {
+      loadAllData();
+    }
+  }, [session?.access_token]);
 
-  // Fonction pour récupérer les statistiques
-  const fetchStatistics = async () => {
-    if (!session?.access_token) return;
-
+  const loadAllData = async () => {
+    setLoadingData(true);
     try {
-      setLoadingStats(true);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/partner-payment-history?action=statistics`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des statistiques");
-      }
-
-      const result = await response.json();
-      if (result.success) {
-        setStatistics(result.data);
-      }
+      await Promise.all([loadPayments(), loadEmployees(), loadStatistics()]);
     } catch (error) {
-      console.error("Erreur:", error);
-      toast.error("Impossible de charger les statistiques");
+      console.error("Erreur lors du chargement des données:", error);
     } finally {
-      setLoadingStats(false);
+      setLoadingData(false);
     }
   };
 
-  // Fonction pour récupérer les paiements
-  const fetchPayments = async (page = 1) => {
-    if (!session?.access_token) return;
-
+  const loadPayments = async () => {
     try {
-      setLoading(true);
-      
-      // Construire l'URL avec les filtres
-      const params = new URLSearchParams({
-        action: "list",
-        page: page.toString(),
-        limit: pagination.limit.toString(),
+      const response = await fetch("/api/proxy/payments?action=list&page=1&limit=100", {
+          headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
       });
 
-      if (filters.statut !== "all") {
-        params.append("statut", filters.statut);
-      }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/partner-payment-history?${params}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
       if (!response.ok) {
-        throw new Error("Erreur lors de la récupération des paiements");
+        throw new Error("Erreur lors du chargement des paiements");
       }
 
-      const result: PaginatedResponse = await response.json();
-      if (result.success) {
-        setPayments(result.data);
-        setPagination(result.pagination);
+      const data = await response.json();
+      
+      if (data.success) {
+        // Mapper les données pour ajouter mois_paye et montant
+        // ✅ Utiliser salaire_disponible_total (inclut les ajustements)
+        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
+          ...payment,
+          mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
+          montant: payment.salaire_disponible_total || payment.salaire_disponible || 0
+        }));
+        
+        setPayments(mappedPayments);
+      } else {
+        throw new Error(data.message || "Erreur lors du chargement des paiements");
       }
     } catch (error) {
-      console.error("Erreur:", error);
-      toast.error("Impossible de charger les paiements");
-    } finally {
-      setLoading(false);
+      console.error("Erreur lors du chargement des paiements:", error);
+      toast.error("Erreur lors du chargement des paiements");
+      setPayments([]);
     }
   };
 
-  // Fonction pour rafraîchir les données
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await Promise.all([fetchStatistics(), fetchPayments(pagination.page)]);
-    setRefreshing(false);
-    toast.success("Données actualisées");
+  const loadStatistics = async () => {
+    try {
+      const response = await fetch("/api/proxy/payments?action=statistics", {
+        headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des statistiques");
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setStatistics(data.data);
+      } else {
+        throw new Error(data.message || "Erreur lors du chargement des statistiques");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des statistiques:", error);
+      toast.error("Erreur lors du chargement des statistiques");
+      setStatistics(null);
+    }
   };
 
-  // Chargement initial
-  useEffect(() => {
-    if (!authLoading && session?.access_token) {
-      fetchStatistics();
-      fetchPayments(1);
-    }
-  }, [authLoading, session?.access_token]);
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch("/api/proxy/employees", {
+          headers: {
+          Authorization: `Bearer ${session?.access_token}`,
+            "Content-Type": "application/json",
+          },
+      });
 
-  // Appliquer les filtres
-  useEffect(() => {
-    if (session?.access_token && !loading) {
-      fetchPayments(1);
-    }
-  }, [filters.statut]);
+      if (!response.ok) {
+        throw new Error("Erreur lors du chargement des employés");
+      }
 
-  // Fonction pour obtenir le badge de statut
-  const getStatusBadge = (statut: string) => {
-    switch (statut) {
+      const data = await response.json();
+      if (data.success) {
+        // Mapper les données pour ajouter salaire_mensuel à partir de salaire_net
+        const employeesData = data.data?.employees || data.data || [];
+        const mappedEmployees = (Array.isArray(employeesData) ? employeesData : []).map((emp: any) => ({
+          ...emp,
+          salaire_mensuel: emp.salaire_net || 0
+        }));
+        
+        setEmployees(mappedEmployees);
+        console.log('✅ Employés chargés:', mappedEmployees.length, 'employés');
+      } else {
+        throw new Error(data.message || "Erreur lors du chargement des employés");
+      }
+    } catch (error) {
+      console.error("Erreur lors du chargement des employés:", error);
+      toast.error("Erreur lors du chargement des employés");
+      setEmployees([]);
+    }
+  };
+
+  // Filtrage des paiements
+  const filteredPayments = payments.filter((payment) => {
+    const matchesSearch = 
+      payment.employe?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.employe?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.employe?.poste?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      payment.mois_paye?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = selectedStatus === "all" || payment.statut === selectedStatus;
+    const matchesMonth = selectedMonth === "all" || payment.mois_paye === selectedMonth;
+    const matchesEmployee = selectedEmployee === "all" || payment.employe_id === selectedEmployee;
+
+    return matchesSearch && matchesStatus && matchesMonth && matchesEmployee;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const currentPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
+
+  // ✅ NOUVELLES STATISTIQUES depuis l'API (pas de calculs locaux)
+  const totalPayments = statistics?.total_paiements || 0;
+  const totalSalaires = statistics?.montant_total_salaires || 0;
+  const totalAvancesDeduites = statistics?.montant_total_avances_deduites || 0;
+  const totalRemboursements = statistics?.montant_total_remboursements || 0;
+  const completedPayments = statistics?.paiements_effectues || 0;
+  const pendingPayments = statistics?.paiements_en_attente || 0;
+  
+  // ✅ PÉNALITÉS DE RETARD
+  const semainesRetard = statistics?.semaines_retard || 0;
+  const penaliteRetardPourcentage = statistics?.penalite_retard_pourcentage || 0;
+  const montantPenaliteRetard = statistics?.montant_penalite_retard || 0;
+  const montantTotalAvecPenalite = statistics?.montant_total_avec_penalite || totalRemboursements;
+  const joursRestants = statistics?.jours_restants_remboursement || 0;
+  const enRetard = joursRestants < 0;
+
+  // Fonction pour obtenir la couleur du badge selon le statut
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
       case "PAYE":
-        return <Badge className="bg-green-500">Payé</Badge>;
+      case "completed":
+        return "success";
       case "EN_ATTENTE":
-        return <Badge className="bg-yellow-500">En attente</Badge>;
+      case "pending":
+        return "warning";
+      case "EN_RETARD":
+        return "error";
       case "ANNULE":
-        return <Badge className="bg-red-500">Annulé</Badge>;
+        return "error";
+      case "REMBOURSE":
+        return "info";
       case "ECHOUE":
-        return <Badge className="bg-red-600">Échoué</Badge>;
+      case "failed":
+        return "error";
       default:
-        return <Badge className="bg-gray-500">{statut}</Badge>;
+        return "info";
     }
   };
 
-  if (authLoading || loading) {
+  // Fonction pour obtenir le label du statut
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case "PAYE":
+        return "Payé";
+      case "EN_ATTENTE":
+        return "En attente";
+      case "EN_RETARD":
+        return "En retard";
+      case "ANNULE":
+        return "Annulé";
+      case "REMBOURSE":
+        return "Remboursé";
+      case "ECHOUE":
+        return "Échoué";
+      case "completed":
+        return "Effectué";
+      case "pending":
+        return "En attente";
+      case "failed":
+        return "Échoué";
+      default:
+        return status;
+    }
+  };
+
+  // Fonction pour formater le montant
+  const formatAmount = (amount: number | undefined | null) => {
+    if (!amount || isNaN(amount)) return '0';
+    return new Intl.NumberFormat('fr-FR').format(amount);
+  };
+
+  // Fonction pour formater le numéro de téléphone
+  const formatPhoneNumber = (phone: string | undefined) => {
+    if (!phone) return "Non renseigné";
+    // Supprimer tous les espaces et le préfixe +224 s'il existe déjà
+    const cleanPhone = phone.replace(/\s/g, '').replace(/^\+?224/, '');
+    return `+224 ${cleanPhone}`;
+  };
+
+  // Fonction pour formater la date
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  // Fonction pour obtenir le nom du mois
+  const getMonthName = (monthString: string) => {
+    if (!monthString) return "N/A";
+    const [year, month] = monthString.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long" });
+  };
+
+  // Mois disponibles pour le filtre
+  const availableMonths = Array.from(new Set(payments.map(p => p.mois_paye).filter((m): m is string => Boolean(m)))).sort();
+
+  // Fonctions pour la gestion des employés sélectionnés
+  const toggleEmployeeSelection = (employeeId: string) => {
+    setSelectedEmployees(prev => 
+      prev.includes(employeeId) 
+        ? prev.filter(id => id !== employeeId)
+        : [...prev, employeeId]
+    );
+  };
+
+  const selectAllEmployees = () => {
+    setSelectedEmployees(employees.map(emp => emp.id));
+  };
+
+  const clearSelection = () => {
+    setSelectedEmployees([]);
+  };
+
+  // Calcul du montant total
+  const selectedEmployeesData = employees.filter(emp => selectedEmployees.includes(emp.id));
+  const totalAmountSelected = selectedEmployeesData.reduce((sum, emp) => sum + (emp.salaire_mensuel || 0), 0);
+
+  // Navigation entre étapes
+  const nextStep = () => {
+    if (currentStep < 3) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  if (loadingData) {
     return (
       <div className="p-6 space-y-6 animate-pulse">
-        {/* Skeleton pour l'en-tête */}
-        <div className="flex justify-between items-center">
-          <div className="space-y-2">
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-96"></div>
-            <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-5 w-80"></div>
-          </div>
-          <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-10 w-32"></div>
-        </div>
-
         {/* Skeleton pour les statistiques */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="bg-gray-200 dark:bg-gray-800 rounded-lg h-32"></div>
           ))}
@@ -308,420 +394,1002 @@ export default function PaiementsPage() {
 
         {/* Skeleton pour le tableau des paiements */}
         <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-6">
-          <div className="space-y-3">
-            {/* En-tête du tableau */}
-            <div className="grid grid-cols-9 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
-              {[...Array(9)].map((_, i) => (
-                <div
-                  key={i}
-                  className="bg-gray-300 dark:bg-gray-700 rounded h-5"
-                ></div>
-              ))}
-            </div>
-            {/* Lignes du tableau */}
+          <div className="space-y-4">
             {[...Array(5)].map((_, i) => (
-              <div key={i} className="grid grid-cols-9 gap-4 py-3">
-                {[...Array(9)].map((_, j) => (
-                  <div
-                    key={j}
-                    className="bg-gray-300 dark:bg-gray-700 rounded h-6"
-                  ></div>
-                ))}
+              <div key={i} className="flex items-center space-x-4">
+                <div className="w-10 h-10 bg-gray-300 dark:bg-gray-700 rounded-full"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/4"></div>
+                  <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
+                </div>
+                <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-16"></div>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Skeleton pour la pagination */}
-        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-12"></div>
       </div>
     );
   }
 
+  // Page d'effectuation de paiement
+  if (showPaymentPage) {
   return (
-    <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* En-tête */}
-      <div className="flex justify-between items-center">
+      <div className="p-6 space-y-6">
+        {/* Header avec navigation */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowPaymentPage(false)}
+              className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Retour
+            </button>
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Historique des Paiements
+                Effectuer un paiement de salaire
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Consultez l'historique et les statistiques de vos paiements salariés
+                Sélectionnez les employés et configurez le paiement mensuel
           </p>
         </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-          className="border-orange-300 dark:border-orange-600 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-800 dark:hover:text-orange-300"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-          Actualiser
-        </Button>
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge variant="info" className="text-sm">
+              Étape {currentStep} sur 3
+            </Badge>
+          </div>
       </div>
 
-      {/* Statistiques */}
-      {loadingStats ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="p-6 animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-            </Card>
-          ))}
+        {/* Étapes de progression */}
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+          <div className="flex items-center justify-center space-x-8">
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep >= 1 ? 'bg-orange-600 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+              }`}>
+                1
         </div>
-      ) : statistics ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard
-            title="Total Paiements"
-            value={statistics.total_paiements.toString()}
-            icon={Banknote}
-            color="blue"
-          />
-          <StatCard
-            title="Montant Total Salaires"
-            value={gnfFormatter(statistics.montant_total_salaires)}
-            icon={TrendingUp}
-            color="green"
-          />
-          <StatCard
-            title="Avances Déduites"
-            value={gnfFormatter(statistics.montant_total_avances_deduites)}
-            icon={Calendar}
-            color="yellow"
-          />
-          <StatCard
-            title="Montant Remboursements"
-            value={gnfFormatter(statistics.montant_total_remboursements)}
-            icon={Banknote}
-            color="purple"
-          />
+              <span className={`text-sm font-medium ${
+                currentStep >= 1 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                Sélectionner
+              </span>
+            </div>
+            <div className={`w-16 h-0.5 ${
+              currentStep >= 2 ? 'bg-orange-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}></div>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep >= 2 ? 'bg-orange-600 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+              }`}>
+                2
+              </div>
+              <span className={`text-sm font-medium ${
+                currentStep >= 2 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                Configurer
+              </span>
+            </div>
+            <div className={`w-16 h-0.5 ${
+              currentStep >= 3 ? 'bg-orange-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}></div>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep >= 3 ? 'bg-orange-600 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+              }`}>
+                3
+              </div>
+              <span className={`text-sm font-medium ${
+                currentStep >= 3 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+              }`}>
+                Confirmer
+              </span>
+            </div>
+          </div>
         </div>
-      ) : null}
 
-      {/* Filtres */}
-      <Card className="p-4 bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="flex items-center gap-2">
-            <Filter className="w-5 h-5 text-gray-500" />
-            <span className="text-sm font-medium text-[var(--zalama-text)]">
-              Filtres:
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Section principale */}
+          <div className="xl:col-span-2 space-y-6">
+            {/* Étape 1: Sélection des employés */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                {/* Recherche et filtres */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                      <input
+                        type="text"
+                        placeholder="Rechercher un employé..."
+                        className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+                    <button 
+                      onClick={selectAllEmployees}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={clearSelection}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <span>Sélectionnés:</span>
+                    <Badge variant="info" className="text-xs">{selectedEmployees.length} employé(s)</Badge>
+                  </div>
+                </div>
+
+                {/* Liste des employés */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm backdrop-blur-sm">
+                  <div className="p-4 border-b border-[var(--zalama-border)]/30">
+                    <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      Employés disponibles ({employees.length})
+                    </h4>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {employees.map((employee) => (
+                      <div 
+                        key={employee.id} 
+                        className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
+                          selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+                        }`}
+                        onClick={() => toggleEmployeeSelection(employee.id)}
+                      >
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {employee.photo_url ? (
+                            <Image
+                              src={employee.photo_url}
+                              alt={`${employee.prenom} ${employee.nom}`}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                              {employee.prenom?.charAt(0)}
+                              {employee.nom?.charAt(0)}
             </span>
+                          )}
           </div>
-          
-          <Select
-            value={filters.statut}
-            onValueChange={(value) =>
-              setFilters((prev) => ({ ...prev, statut: value }))
-            }
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Statut" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tous les statuts</SelectItem>
-              <SelectItem value="PAYE">Payé</SelectItem>
-              <SelectItem value="EN_ATTENTE">En attente</SelectItem>
-              <SelectItem value="ANNULE">Annulé</SelectItem>
-              <SelectItem value="ECHOUE">Échoué</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </Card>
-
-      {/* Tableau des paiements */}
-      <Card className="bg-[var(--zalama-card)] border-[var(--zalama-border)]">
-        <div className="p-4 border-b border-[var(--zalama-border)]">
-          <h2 className="text-lg font-semibold text-[var(--zalama-text)]">Liste des Paiements</h2>
-        </div>
-        
-        {loading ? (
-          <div className="p-8 flex justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          </div>
-        ) : payments.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            Aucun paiement trouvé
-          </div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Référence</TableHead>
-                    <TableHead>Employé</TableHead>
-                    <TableHead>Période</TableHead>
-                    <TableHead>Salaire Net</TableHead>
-                    <TableHead>Avances</TableHead>
-                    <TableHead>Montant Payé</TableHead>
-                    <TableHead>Statut</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-mono text-xs">
-                        {payment.reference_paiement}
-                      </TableCell>
-                      <TableCell>
-                        {payment.employe ? (
-                          <div>
-                            <p className="font-medium">
-                              {payment.employe.nom} {payment.employe.prenom}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
+                            {employee.prenom} {employee.nom}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                            {employee.poste}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                            {employee.email}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
+                              {formatAmount(employee.salaire_mensuel || 0)} GNF
                             </p>
-                            <p className="text-xs text-gray-500">
-                              {payment.employe.poste}
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              Salaire mensuel
                             </p>
                           </div>
-                        ) : (
-                          <span className="text-gray-400">N/A</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(payment.periode_debut)} <br />
-                        <span className="text-gray-500">→ {formatDate(payment.periode_fin)}</span>
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {gnfFormatter(payment.salaire_net)}
-                      </TableCell>
-                      <TableCell className="text-orange-600">
-                        {gnfFormatter(payment.avances_deduites)}
-                      </TableCell>
-                      <TableCell className="font-bold text-green-600">
-                        {gnfFormatter(payment.salaire_disponible)}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(payment.statut)}</TableCell>
-                      <TableCell className="text-sm">
-                        {formatDate(payment.date_paiement)}
-                      </TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewDetails(payment)}
-                          className="text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          Détails
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                          <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
+                            selectedEmployees.includes(employee.id) 
+                              ? 'border-orange-500 bg-orange-500' 
+                              : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
+                          }`}>
+                            {selectedEmployees.includes(employee.id) && (
+                              <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
+                            )}
+                          </div>
+                        </div>
+              </div>
+            ))}
+          </div>
+        </div>
+              </div>
+            )}
+
+            {/* Étape 2: Configuration */}
+            {currentStep === 2 && (
+              <div className="space-y-6">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Configuration du paiement
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Mois de paiement
+                      </label>
+                      <select 
+                        value={paymentMonth}
+                        onChange={(e) => setPaymentMonth(e.target.value)}
+                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <option value="">Sélectionner le mois</option>
+                        <option value="2024-01">Janvier 2024</option>
+                        <option value="2024-02">Février 2024</option>
+                        <option value="2024-03">Mars 2024</option>
+                        <option value="2024-04">Avril 2024</option>
+                        <option value="2024-05">Mai 2024</option>
+                        <option value="2024-06">Juin 2024</option>
+                        <option value="2024-07">Juillet 2024</option>
+                        <option value="2024-08">Août 2024</option>
+                        <option value="2024-09">Septembre 2024</option>
+                        <option value="2024-10">Octobre 2024</option>
+                        <option value="2024-11">Novembre 2024</option>
+                        <option value="2024-12">Décembre 2024</option>
+                      </select>
+        </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Date de paiement
+                      </label>
+                      <input
+                        type="date"
+                        value={paymentDate}
+                        onChange={(e) => setPaymentDate(e.target.value)}
+                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Méthode de paiement
+                      </label>
+                      <select 
+                        value={paymentMethod}
+                        onChange={(e) => setPaymentMethod(e.target.value)}
+                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <option value="">Sélectionner la méthode</option>
+                        <option value="mobile_money">Mobile Money</option>
+                        <option value="bank_transfer">Virement bancaire</option>
+                        <option value="cash">Espèces</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Étape 3: Confirmation */}
+            {currentStep === 3 && (
+              <div className="space-y-6">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Confirmation du paiement
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                        <div>
+                          <h4 className="text-sm font-medium text-green-800 dark:text-green-200">
+                            Paiement prêt à être effectué
+                          </h4>
+                          <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                            Vérifiez les informations ci-dessous avant de confirmer le paiement.
+                          </p>
+                        </div>
+                      </div>
+        </div>
+        
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Mois de paiement</label>
+                        <p className="text-gray-900 dark:text-white">{getMonthName(paymentMonth)}</p>
+          </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date de paiement</label>
+                        <p className="text-gray-900 dark:text-white">{formatDate(paymentDate)}</p>
+          </div>
+                          <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Méthode</label>
+                        <p className="text-gray-900 dark:text-white">
+                          {paymentMethod === "mobile_money" ? "Mobile Money" :
+                           paymentMethod === "bank_transfer" ? "Virement bancaire" :
+                           paymentMethod === "cash" ? "Espèces" : "Non sélectionnée"}
+                            </p>
+                          </div>
+                      <div>
+                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Employés sélectionnés</label>
+                        <p className="text-gray-900 dark:text-white">{selectedEmployees.length} employé(s)</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             </div>
 
-            {/* Pagination */}
-            <div className="p-4 border-t flex items-center justify-between">
-              <div className="text-sm text-gray-600">
-                Page {pagination.page} sur {pagination.totalPages} ({pagination.total} paiements)
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Résumé du paiement */}
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                Résumé du paiement
+              </h4>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Employés sélectionnés</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedEmployees.length}</span>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPayments(pagination.page - 1)}
-                  disabled={!pagination.hasPrevious || loading}
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Précédent
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => fetchPayments(pagination.page + 1)}
-                  disabled={!pagination.hasNext || loading}
-                >
-                  Suivant
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </Button>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Montant total</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">{formatAmount(totalAmountSelected)} GNF</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Frais de transaction</span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">0 GNF</span>
+                </div>
+                <div className="border-t border-[var(--zalama-border)]/30 pt-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium text-gray-900 dark:text-white">Total à payer</span>
+                    <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatAmount(totalAmountSelected)} GNF</span>
+                  </div>
+                </div>
               </div>
             </div>
-          </>
-        )}
-      </Card>
 
-      {/* Graphique de l'évolution mensuelle */}
-      {statistics && Object.keys(statistics.paiements_par_mois).length > 0 && (
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Évolution Mensuelle</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={Object.entries(statistics.paiements_par_mois).map(
-                ([mois, data]) => ({
-                  mois: new Date(mois + "-01").toLocaleDateString("fr-FR", {
-                    month: "short",
-                    year: "numeric",
-                  }),
-                  salaires: data.montant_salaires,
-                  avances: data.montant_avances,
-                  frais: data.montant_frais,
-                })
-              )}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="mois" />
-              <YAxis />
-              <Tooltip formatter={(value: number) => gnfFormatter(value)} />
-              <Legend />
-              <Bar dataKey="salaires" fill="#10b981" name="Salaires" />
-              <Bar dataKey="avances" fill="#f59e0b" name="Avances déduites" />
-              <Bar dataKey="frais" fill="#6366f1" name="Frais" />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      )}
+            {/* Actions rapides */}
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Zap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                Actions rapides
+              </h4>
+              <div className="space-y-2">
+                <button 
+                  onClick={selectAllEmployees}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <UserCheck className="w-4 h-4" />
+                  Sélectionner tous les employés
+                </button>
+                <button 
+                  onClick={clearSelection}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Désélectionner tout
+                </button>
+                <button className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors">
+                  <FileText className="w-4 h-4" />
+                  Exporter la liste
+                </button>
+              </div>
+            </div>
 
-      {/* Modal de détails du paiement */}
-      {isModalOpen && selectedPayment && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            {/* Navigation */}
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+              <div className="space-y-3">
+                {currentStep > 1 && (
+                  <button 
+                    onClick={prevStep}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    Étape précédente
+                  </button>
+                )}
+                
+                {currentStep < 3 && (
+                  <button 
+                    onClick={nextStep}
+                    disabled={currentStep === 1 && selectedEmployees.length === 0}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    Étape suivante
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+
+                {currentStep === 3 && (
+                  <button 
+                    disabled={!paymentMonth || !paymentDate || !paymentMethod}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Effectuer le paiement
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Page principale des paiements
+  return (
+    <div className="p-6">
+      {/* En-tête avec titre et bouton d'action */}
+      <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Détails du Paiement
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Référence: {selectedPayment.reference_paiement}
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Paiement de salaire
+          </h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
+            Gérez les paiements de salaire de vos employés
                 </p>
               </div>
               <button
-                onClick={handleCloseModal}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5" />
+          onClick={() => setShowPaymentPage(true)}
+          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+          style={{ background: 'var(--zalama-orange)' }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
+        >
+          <Plus className="w-5 h-5" />
+          <span className="font-medium">Effectuer un paiement</span>
               </button>
             </div>
+
+      {/* ⚠️ Alerte de retard */}
+      {enRetard && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                ⚠️ Retard de remboursement détecté
+              </h4>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                Vous avez <strong>{Math.abs(joursRestants)} jours de retard</strong> ({semainesRetard} semaine{semainesRetard > 1 ? 's' : ''}).
+                Une pénalité de <strong>{penaliteRetardPourcentage}%</strong> s'applique, soit <strong>{formatAmount(montantPenaliteRetard)} GNF</strong>.
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                💰 <strong>Total à rembourser avec pénalité : {formatAmount(montantTotalAvecPenalite)} GNF</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+            
+      {/* Statistiques détaillées */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+        {/* Total Paiements */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Total</Badge>
+          </div>
+              <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {totalPayments}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Total Paiements
+                    </p>
+                  </div>
+        </div>
+
+        {/* Montant Total Salaires */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Salaires</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {formatAmount(totalSalaires)} GNF
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Montant Total Salaires
+            </p>
+          </div>
+        </div>
+
+        {/* Avances Déduites */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <TrendingUp className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">Avances</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {formatAmount(totalAvancesDeduites)} GNF
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Avances Déduites
+            </p>
+          </div>
+        </div>
+
+        {/* Montant Remboursements */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Banknote className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Rembours.</Badge>
+                  </div>
+                  <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {formatAmount(totalRemboursements)} GNF
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Montant Remboursements
+            </p>
+                  </div>
+                </div>
+
+        {/* Pénalités de retard */}
+        <div className={`rounded-lg p-5 border shadow-sm hover:shadow-md transition-shadow ${
+          enRetard 
+            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30' 
+            : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className={`p-2 rounded-lg ${
+              enRetard 
+                ? 'bg-red-100 dark:bg-red-900/30' 
+                : 'bg-green-100 dark:bg-green-900/30'
+            }`}>
+              <Clock className={`w-6 h-6 ${
+                enRetard 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : 'text-green-600 dark:text-green-400'
+              }`} />
+            </div>
+            <Badge className={`text-xs ${
+              enRetard 
+                ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' 
+                : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+            }`}>
+              {enRetard ? `+${penaliteRetardPourcentage}%` : 'À jour'}
+            </Badge>
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${
+              enRetard 
+                ? 'text-red-900 dark:text-red-100' 
+                : 'text-green-900 dark:text-green-100'
+            }`}>
+              {enRetard ? `${formatAmount(montantPenaliteRetard)} GNF` : '0 GNF'}
+            </p>
+            <p className={`text-sm mt-1 ${
+              enRetard 
+                ? 'text-red-600 dark:text-red-400' 
+                : 'text-green-600 dark:text-green-400'
+            }`}>
+              {enRetard ? `Pénalité (${semainesRetard} sem.)` : 'Pas de retard'}
+            </p>
+          </div>
+        </div>
+              </div>
+
+      {/* Filtres avancés */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedStatus("all");
+                  setSelectedMonth("all");
+                  setSelectedEmployee("all");
+                  setSearchTerm("");
+                }}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={loadAllData}
+                disabled={loadingData}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {loadingData ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+          {/* Barre de recherche */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Recherche
+            </label>
+            <div>
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Tous les statuts</option>
+              <option value="EN_ATTENTE">EN_ATTENTE</option>
+              <option value="PAYE">PAYE</option>
+              <option value="EN_RETARD">EN_RETARD</option>
+              <option value="ANNULE">ANNULE</option>
+              <option value="REMBOURSE">REMBOURSE</option>
+            </select>
+          </div>
+
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Tous les mois</option>
+              {availableMonths.map((month) => (
+                <option key={month} value={month}>
+                  {getMonthName(month)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par employé */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Employé
+            </label>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Tous les employés</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.prenom} {employee.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {loadingData && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
+      </div>
+
+      {/* Tableau des paiements */}
+      {loadingData ? (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner />
+          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+            Chargement des paiements...
+          </span>
+        </div>
+      ) : currentPayments.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Aucun paiement trouvé
+                </h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            Aucun paiement ne correspond aux critères de recherche.
+                            </p>
+                  </div>
+                        ) : (
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed dark:divide-gray-700">
+              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+                <tr>
+                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Mois payé
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Avances déduites
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire reçu
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Date de paiement
+                  </th>
+                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {currentPayments.map((payment) => (
+                  <tr
+                    key={payment.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {payment.employe?.photo_url ? (
+                            <Image
+                              src={payment.employe.photo_url}
+                              alt={`${payment.employe.prenom} ${payment.employe.nom}`}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                              {payment.employe?.prenom?.charAt(0)}
+                              {payment.employe?.nom?.charAt(0)}
+                    </span>
+                          )}
+                  </div>
+                        <div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">
+                            {payment.employe?.prenom} {payment.employe?.nom}
+                  </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {payment.employe?.poste || "N/A"}
+                  </div>
+                  </div>
+                  </div>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {getMonthName(payment.mois_paye || '')}
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(payment.employe?.salaire_net || payment.salaire_net || 0)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
+                      {formatAmount(payment.avances_deduites || 0)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(payment.montant)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
+                        {getStatusLabel(payment.statut)}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                        {formatDate(payment.date_paiement)}
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <button
+                        onClick={() => {
+                          setSelectedPayment(payment);
+                          setShowDetailModal(true);
+                        }}
+                        className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        title="Voir les détails"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Voir
+                </div>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+              </div>
+
+            {/* Pagination */}
+          {filteredPayments.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredPayments.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
+              </div>
+      )}
+
+      {/* Modal de détails du paiement */}
+      {showDetailModal && selectedPayment && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
+                  <Eye className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+              <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Détails du paiement
+                </h3>
+                  <p className="text-[var(--zalama-text-secondary)] text-sm mt-0.5">
+                    Informations complètes du paiement
+                  </p>
+                  </div>
+                  </div>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="p-1.5 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
+              >
+                <X className="h-4 w-4" />
+              </button>
+                  </div>
             
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
-              {/* Informations de l'employé */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Informations Employé
-                </h3>
-                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div>
-                    <p className="text-xs text-gray-500">Nom complet</p>
-                    <p className="font-medium">
-                      {selectedPayment.employe?.nom} {selectedPayment.employe?.prenom}
+              {/* Informations employé - prend toute la largeur */}
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                    <User className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                  <span className="text-gray-600 dark:text-gray-400 text-xs">Employé</span>
+                      </div>
+                <div className="space-y-2">
+                  <p className="font-bold text-lg text-gray-900 dark:text-white">
+                    {selectedPayment.employe?.prenom} {selectedPayment.employe?.nom}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-medium">Email:</span> {selectedPayment.employe?.email || "Non renseigné"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Autres informations en grille */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Salaire Net */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire Net</span>
+                  </div>
+                  <p className="font-medium text-orange-600 dark:text-orange-400">
+                    {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
                     </p>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Poste</p>
-                    <p className="font-medium">{selectedPayment.employe?.poste || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-sm">{selectedPayment.employe?.email || "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Téléphone</p>
-                    <p className="font-medium">{selectedPayment.employe?.telephone || "N/A"}</p>
-                  </div>
+                {/* Mois payé */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                      <CalendarIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Mois payé</span>
+                </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : "N/A"}
+                  </p>
               </div>
 
-              {/* Informations du paiement */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Détails du Paiement
-                </h3>
-                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Référence</span>
-                    <span className="font-mono font-medium">{selectedPayment.reference_paiement}</span>
+                {/* Phone Card */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                      <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Période</span>
-                    <span className="font-medium">
-                      {formatDate(selectedPayment.periode_debut)} → {formatDate(selectedPayment.periode_fin)}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
-                    <span className="font-medium">{formatDate(selectedPayment.date_paiement)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date limite</span>
-                    <span className="font-medium">{formatDate(selectedPayment.date_limite)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Statut</span>
-                    <span>{getStatusBadge(selectedPayment.statut)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Méthode</span>
-                    <span className="font-medium">
-                      {selectedPayment.intervention_zalama ? "Intervention ZaLaMa" : selectedPayment.methode_paiement}
-                    </span>
-                  </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                 </div>
-              </div>
-
-              {/* Montants */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                  Détails Financiers
-                </h3>
-                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Salaire net</span>
-                    <span className="font-medium">{gnfFormatter(selectedPayment.salaire_net)}</span>
-                  </div>
-                  <div className="flex justify-between text-orange-600">
-                    <span>Avances déduites</span>
-                    <span className="font-medium">- {gnfFormatter(selectedPayment.avances_deduites)}</span>
-                  </div>
-                  <div className="border-t pt-3 flex justify-between text-green-600">
-                    <span className="font-semibold">Salaire disponible</span>
-                    <span className="font-bold text-lg">{gnfFormatter(selectedPayment.salaire_disponible)}</span>
-                  </div>
-                  {selectedPayment.intervention_zalama && (
-                    <>
-                      <div className="flex justify-between text-blue-600">
-                        <span>Frais d'intervention (6%)</span>
-                        <span className="font-medium">+ {gnfFormatter(selectedPayment.frais_intervention)}</span>
-                      </div>
-                      <div className="border-t pt-3 flex justify-between text-purple-600">
-                        <span className="font-semibold">Montant total remboursement</span>
-                        <span className="font-bold text-lg">{gnfFormatter(selectedPayment.montant_total_remboursement)}</span>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Commentaire */}
-              {selectedPayment.commentaire && (
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
-                    Commentaire
-                  </h3>
-                  <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                      {selectedPayment.commentaire}
-                    </p>
-                  </div>
-                </div>
-              )}
-
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatPhoneNumber(selectedPayment.employe?.telephone)}
+                  </p>
             </div>
             
-            {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
-                onClick={handleCloseModal} 
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                Fermer
-              </Button>
+                {/* Salaire reçu */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                      <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
+            </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire reçu</span>
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatAmount(selectedPayment.montant || selectedPayment.salaire_disponible)} GNF
+                    </p>
+                  </div>
+
+                {/* Avances déduites */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <TrendingUp className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Avances déduites</span>
+                  </div>
+                  <p className="font-medium text-orange-600 dark:text-orange-400">
+                    {formatAmount(selectedPayment.avances_deduites || 0)} GNF
+                    </p>
+                  </div>
+
+                {/* Statut */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <CheckCircle className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+            </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Statut</span>
+                  </div>
+                  <Badge variant={getStatusBadgeVariant(selectedPayment.statut)} className="text-xs">
+                    {getStatusLabel(selectedPayment.statut)}
+                  </Badge>
+            </div>
+            
+                {/* Date de paiement */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                      <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Date de paiement</span>
+                      </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {formatDate(selectedPayment.date_paiement)}
+                  </p>
+              </div>
+
+                {/* ID du paiement */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-cyan-100 dark:bg-cyan-900/20 rounded-lg">
+                      <Hash className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                  </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">ID Paiement</span>
+                </div>
+                  <p className="font-medium text-gray-900 dark:text-white font-mono text-sm">
+                    {selectedPayment.id}
+                  </p>
+            </div>
+              </div>
             </div>
           </div>
         </div>
@@ -729,4 +1397,3 @@ export default function PaiementsPage() {
     </div>
   );
 }
-

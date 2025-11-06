@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Pagination from "@/components/ui/Pagination";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -19,6 +20,9 @@ import {
   Tooltip,
 } from "chart.js";
 import {
+  RefreshCw,
+  Mail,
+  Phone,
   DollarSign,
   BarChart3,
   Clock,
@@ -63,6 +67,9 @@ type Remboursement = {
     nom: string;
     prenom: string;
     salaire_net: number;
+    email?: string;
+    telephone?: string;
+    poste?: string;
   };
   demande_avance?: {
     montant_demande: number;
@@ -82,15 +89,23 @@ type Remboursement = {
 
 // Fonction pour obtenir le badge de statut
 const getStatusBadge = (statut: string) => {
-  switch (statut) {
+  // Normaliser le statut
+  const statutUpper = statut?.toUpperCase() || '';
+  
+  switch (statutUpper) {
     case "PAYE":
-      return <Badge className="bg-green-500">Payé</Badge>;
+    case "PAYÉ":
+      return <Badge variant="success" className="bg-green-500 text-white border-0">Payé</Badge>;
     case "EN_ATTENTE":
-      return <Badge className="bg-yellow-500">En attente</Badge>;
+    case "EN ATTENTE":
+    case "ATTENTE":
+      return <Badge variant="warning" className="bg-yellow-500 text-white border-0">En attente</Badge>;
     case "EN_RETARD":
-      return <Badge className="bg-red-500">En retard</Badge>;
+    case "EN RETARD":
+    case "RETARD":
+      return <Badge variant="error" className="bg-red-500 text-white border-0">En retard</Badge>;
     default:
-      return <Badge className="bg-gray-500">{statut}</Badge>;
+      return <Badge variant="default" className="bg-gray-500 text-white border-0">{statut}</Badge>;
   }
 };
 
@@ -785,9 +800,9 @@ export default function RemboursementsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50 dark:bg-gray-900 min-h-screen">
+    <div className="p-6 space-y-6 max-w-full overflow-hidden">
       {/* En-tête professionnel */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] rounded-lg shadow-sm border border-gray-200 dark:border-[var(--zalama-border)] p-6">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow-sm p-6 backdrop-blur-sm">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
@@ -803,11 +818,6 @@ export default function RemboursementsPage() {
               {currentMonthData && (
                 <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
                   Données du mois en cours
-                </span>
-              )}
-              {statistics && (
-                <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-green-900 dark:text-green-300">
-                  Statistiques Edge Function
                 </span>
               )}
               <button
@@ -884,7 +894,7 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Filtres avancés */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -1001,8 +1011,8 @@ export default function RemboursementsPage() {
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les employés</option>
-              {activeEmployees.map((employee) => (
-                <option key={employee.id} value={employee.id}>
+              {activeEmployees.map((employee, index) => (
+                <option key={`${employee.id}-${index}`} value={employee.id}>
                   {employee.nom_complet || `${employee.prenom} ${employee.nom}`}
                 </option>
               ))}
@@ -1064,32 +1074,32 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Statistiques détaillées */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
               <DollarSign className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">
                 Total en attente
               </div>
-              <div className="text-lg font-bold text-orange-600 dark:text-orange-400">
+              <div className="text-lg font-bold text-orange-900 dark:text-orange-100">
                 {gnfFormatter(totalRemboursements)}
               </div>
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
               <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
                 Total remboursements
               </div>
-              <div className="text-lg font-bold text-gray-900 dark:text-white">
+              <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
                 {statistics?.total_remboursements ||
                   (currentMonthData?.data
                     ? currentMonthData.data.length
@@ -1098,16 +1108,16 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+            <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
               <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-yellow-600 dark:text-yellow-400 uppercase tracking-wide">
                 En attente
               </div>
-              <div className="text-lg font-bold text-yellow-600 dark:text-yellow-400">
+              <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
                 {statistics?.remboursements_en_attente ||
                   (currentMonthData?.data
                     ? currentMonthData.data.filter(
@@ -1119,16 +1129,16 @@ export default function RemboursementsPage() {
             </div>
           </div>
         </div>
-        <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg p-4 shadow-sm">
+        <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
               <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wide">
                 Payés
               </div>
-              <div className="text-lg font-bold text-green-600 dark:text-green-400">
+              <div className="text-lg font-bold text-green-900 dark:text-green-100">
                 {statistics?.remboursements_payes ||
                   (currentMonthData?.data
                     ? currentMonthData.data.filter(
@@ -1142,7 +1152,7 @@ export default function RemboursementsPage() {
       </div>
 
       {/* Liste des remboursements regroupés par employé */}
-      <div className="bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)] rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
             Remboursements par employé
@@ -1152,36 +1162,36 @@ export default function RemboursementsPage() {
           </p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border border-gray-200 dark:border-[var(--zalama-border)]">
+          <table className="w-full table-fixed dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
               <tr>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Employé
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Total remboursement
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Frais service total
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Nombre de remboursements
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Salaire restant
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Période
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Statut global
                 </th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-[var(--zalama-card)] divide-y divide-gray-200 dark:divide-[var(--zalama-border)]">
+            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentMonthData?.data?.length === 0 && (
                 <tr>
                   <td
@@ -1194,213 +1204,112 @@ export default function RemboursementsPage() {
               )}
               {paginatedEmployees.map((employeeData: any, idx: number) => (
                 <tr
-                  key={employeeData.employe_id}
-                  className="dark:bg-[var(--zalama-card)] transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                  key={`${employeeData.employe_id}-${idx}`}
+                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {employeeData.employe?.prenom} {employeeData.employe?.nom}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      {employeeData.employe?.email}
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      Salaire: {gnfFormatter(employeeData.employe?.salaire_net)}
+                  <td className="px-3 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {(employeeData.employe as any)?.photo_url ? (
+                          <Image
+                            src={(employeeData.employe as any).photo_url}
+                            alt={`${employeeData.employe?.prenom} ${employeeData.employe?.nom}`}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            {employeeData.employe?.prenom?.charAt(0)}
+                            {employeeData.employe?.nom?.charAt(0)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {employeeData.employe?.prenom} {employeeData.employe?.nom}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {employeeData.employe?.email}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          Salaire: {gnfFormatter(employeeData.employe?.salaire_net)}
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400">
+                  <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
                     {gnfFormatter(employeeData.montant_total_remboursement)}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-500">
+                  <td className="px-3 py-4 text-sm text-gray-500">
                     {gnfFormatter(employeeData.frais_service_total)}
                   </td>
-                  <td className="px-3 py-2 text-sm text-gray-900 dark:text-white">
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
                       {employeeData.nombre_remboursements}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                  <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                     {gnfFormatter(employeeData.salaire_restant)}
                   </td>
-                  <td className="px-3 py-2 text-xs text-gray-500">
-                    <div>{employeeData.periode?.description}</div>
-                    <div className="text-xs text-gray-400">
-                      {employeeData.periode?.periode_complete}
-                    </div>
+                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                    {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
                   </td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        employeeData.statut_global === "EN_ATTENTE"
-                          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                          : employeeData.statut_global === "PAYE"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                          : employeeData.statut_global === "EN_RETARD"
-                          ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                          : "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300"
-                      }`}
-                    >
-                      {employeeData.statut_global}
-                    </span>
+                  <td className="px-3 py-4">
+                    {getStatusBadge(employeeData.statut_global)}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-4 text-center">
                     <button
                       onClick={() => handleShowEmployeeDetails(employeeData)}
-                      className="inline-flex items-center px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-md transition-colors"
+                      className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                       title="Voir les détails des remboursements"
                     >
-                      <Eye className="w-4 h-4 mr-1" />
+                      <Eye className="h-4 w-4" />
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                       Détails
+                      </div>
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg px-4 py-3">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
-              {(currentPage - 1) * itemsPerPage + 1}-
-              {Math.min(currentPage * itemsPerPage, dataForPagination.length)}{" "}
-              sur {dataForPagination.length} employé(s)
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="h-8 w-8 p-0 border-[var(--zalama-border)] hover:bg-[var(--zalama-blue)]/10"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-              {currentPage} / {totalPages}
-            </span>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="h-8 w-8 p-0 border-[var(--zalama-border)] hover:bg-[var(--zalama-blue)]/10"
-            >
-              <ArrowRight className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Graphiques compacts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Répartition par statut
-          </h3>
-          <div className="h-48">
-            <Pie
-              data={{
-                labels: Object.keys(stats),
-                datasets: [
-                  {
-                    data: Object.values(stats),
-                    backgroundColor: [
-                      "#f59e0b",
-                      "#10b981",
-                      "#6b7280",
-                      "#ef4444",
-                    ],
-                    borderWidth: 0,
-                  },
-                ],
-              }}
-              options={{
-                plugins: {
-                  legend: {
-                    position: "bottom",
-                    labels: {
-                      padding: 15,
-                      usePointStyle: true,
-                      font: { size: 11 },
-                    },
-                  },
-                },
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] rounded-lg p-4">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-            Par employé
-          </h3>
-          <div className="h-48">
-            <Bar
-              data={{
-                labels: Object.keys(employeStats).map(
-                  (name) => name.split(" ")[0]
-                ), // Prenom uniquement
-                datasets: [
-                  {
-                    data: Object.values(employeStats),
-                    backgroundColor: "#6366f1",
-                    borderRadius: 4,
-                    barThickness: 20,
-                  },
-                ],
-              }}
-              options={{
-                indexAxis: "y" as const,
-                plugins: {
-                  legend: { display: false },
-                  tooltip: {
-                    callbacks: {
-                      title: (context) =>
-                        Object.keys(employeStats)[context[0].dataIndex],
-                      label: (context) =>
-                        `${context.parsed.x} remboursement(s)`,
-                    },
-                  },
-                },
-                scales: {
-                  x: {
-                    display: false,
-                    grid: { display: false },
-                  },
-                  y: {
-                    grid: { display: false },
-                    ticks: { font: { size: 10 } },
-                  },
-                },
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
+        {dataForPagination.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={dataForPagination.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
 
       {/* Modal de détail professionnelle */}
       {showDetailModal && selectedRemboursement && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <Receipt className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Détail du remboursement
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Référence: {selectedRemboursement.id || "N/A"}
                 </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowDetailModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -1498,20 +1407,25 @@ export default function RemboursementsPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600 dark:text-gray-400">Statut</span>
-                    <span>{getStatusBadge(selectedRemboursement.statut_remboursement)}</span>
+                    <span>{getStatusBadge(selectedRemboursement.statut)}</span>
                   </div>
                 </div>
               </div>
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
                 onClick={() => setShowDetailModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
               >
+                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  <span className="group-hover:scale-105 transition-all duration-300">
                 Fermer
-              </Button>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1519,21 +1433,26 @@ export default function RemboursementsPage() {
 
       {/* Modal des informations financières de ZaLaMa */}
       {showFinancialInfoModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <Building className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                   Informations Financières - ZaLaMa SARL
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                   Relevé d'identité bancaire et coordonnées de l'entreprise
                 </p>
               </div>
-              <Button
+              </div>
+              <button
                 onClick={() => setShowFinancialInfoModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -1727,13 +1646,18 @@ export default function RemboursementsPage() {
             </div>
             
             {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
+            <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
+              <div className="flex items-center gap-4">
+                <button
                 onClick={() => setShowFinancialInfoModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
+                  className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
               >
+                  <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
+                  <span className="group-hover:scale-105 transition-all duration-300">
                 Fermer
-              </Button>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -1741,121 +1665,177 @@ export default function RemboursementsPage() {
 
       {/* Modal des détails d'un employé */}
       {showEmployeeDetailsModal && selectedEmployeeDetails && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
+                  <User className="w-6 h-6 text-white" />
+                </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Détails des remboursements - {selectedEmployeeDetails?.employe?.prenom} {selectedEmployeeDetails?.employe?.nom}
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Détails de l'employé
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Liste complète des remboursements individuels pour cet employé
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    Informations complètes de l'employé
                 </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowEmployeeDetailsModal(false)}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
             
             {/* Content - Scrollable */}
-            <div className="p-6 space-y-10 overflow-y-auto flex-1">
-              {/* Informations de l'employé */}
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-8">
-                <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                  Informations de l'employé
-                </h4>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Nom complet:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.prenom}{" "}
-                      {selectedEmployeeDetails.employe?.nom}
-                    </p>
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* En-tête avec photo et nom */}
+              <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
+                <div className="flex items-center gap-6">
+                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    {(selectedEmployeeDetails.employe as any)?.photo_url ? (
+                      <Image
+                        src={(selectedEmployeeDetails.employe as any).photo_url}
+                        alt={`${selectedEmployeeDetails.employe?.prenom} ${selectedEmployeeDetails.employe?.nom}`}
+                        width={80}
+                        height={80}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                        {selectedEmployeeDetails.employe?.prenom?.charAt(0)}
+                        {selectedEmployeeDetails.employe?.nom?.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Email:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.email}
+                    <h3 className="text-2xl font-bold text-white">
+                      {selectedEmployeeDetails.employe?.prenom} {selectedEmployeeDetails.employe?.nom}
+                    </h3>
+                    <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
+                      {selectedEmployeeDetails.employe?.poste || "N/A"}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Téléphone:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {selectedEmployeeDetails.employe?.telephone}
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant="info" className="text-xs">
+                    {selectedEmployeeDetails.nombre_remboursements} remboursement(s)
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Informations en grille */}
+              <div className="space-y-4">
+                {/* Email - prend toute la largeur */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
+                  </div>
+                  <p className="font-medium text-gray-900 dark:text-white">
+                    {selectedEmployeeDetails.employe?.email || "Non renseigné"}
                     </p>
                   </div>
-                  <div>
-                    <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                      Salaire net:
-                    </span>
-                    <p className="text-sm text-gray-900 dark:text-white">
-                      {gnfFormatter(
-                        selectedEmployeeDetails.employe?.salaire_net
-                      )}
+
+                {/* Autres informations en grille */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                    </div>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {selectedEmployeeDetails.employe?.telephone || "Non renseigné"}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
+                    </div>
+                    <p className="font-medium text-green-600 dark:text-green-400">
+                      {gnfFormatter(selectedEmployeeDetails.employe?.salaire_net)}
+                    </p>
+                  </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
+                        <Receipt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Total remboursement</span>
+                    </div>
+                    <p className="font-medium text-red-600 dark:text-red-400">
+                      {gnfFormatter(selectedEmployeeDetails.montant_total_remboursement)}
                     </p>
                   </div>
                 </div>
               </div>
 
               {/* Résumé des remboursements */}
-              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-8">
-                <h4 className="text-xl font-semibold text-blue-900 dark:text-blue-300 mb-8">
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 shadow-sm backdrop-blur-sm">
+                <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5 text-[var(--zalama-orange)]" />
                   Résumé des remboursements
                 </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-blue-200 dark:border-blue-800">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">
-                        {selectedEmployeeDetails.nombre_remboursements}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-200 dark:border-blue-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                        <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                        Remboursements
-                      </div>
+                      <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Remboursements</p>
                     </div>
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      {selectedEmployeeDetails.nombre_remboursements}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-red-200 dark:border-red-800">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-red-600 dark:text-red-400 mb-3 break-words">
-                        {gnfFormatter(
-                          selectedEmployeeDetails.montant_total_remboursement
-                        )}
+                  <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-4 border border-orange-200 dark:border-orange-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       </div>
-                      <div className="text-sm font-medium text-red-700 dark:text-red-300">
-                        Total à rembourser
-                      </div>
+                      <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Total à rembourser</p>
                     </div>
+                    <p className="text-xl font-bold text-orange-900 dark:text-orange-100 break-words">
+                      {gnfFormatter(
+                        selectedEmployeeDetails.montant_total_remboursement
+                      )}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-gray-300 dark:border-gray-700">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-600 dark:text-gray-400 mb-3 break-words">
-                        {gnfFormatter(
-                          selectedEmployeeDetails.frais_service_total
-                        )}
+                  <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-4 border border-purple-200 dark:border-purple-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <CreditCard className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Frais service
-                      </div>
+                      <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Frais service</p>
                     </div>
+                    <p className="text-xl font-bold text-purple-900 dark:text-purple-100 break-words">
+                      {gnfFormatter(
+                        selectedEmployeeDetails.frais_service_total
+                      )}
+                    </p>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm border border-emerald-200 dark:border-emerald-800">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mb-3 break-words">
-                        {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                  <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border border-green-200 dark:border-green-800/30">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                        <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
                       </div>
-                      <div className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                        Salaire restant
-                      </div>
+                      <p className="text-xs text-green-700 dark:text-green-300 font-medium">Salaire restant</p>
                     </div>
+                    <p className="text-xl font-bold text-green-900 dark:text-green-100 break-words">
+                      {gnfFormatter(selectedEmployeeDetails.salaire_restant)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1878,68 +1858,80 @@ export default function RemboursementsPage() {
                 <h4 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
                   Remboursements individuels
                 </h4>
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {selectedEmployeeDetails.remboursements_detailes?.map(
                     (remb: any, index: number) => (
                       <div
-                        key={remb.id}
-                        className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+                        key={`${remb.id}-${index}`}
+                        className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-5 shadow-sm backdrop-blur-sm"
                       >
                         {/* En-tête du remboursement */}
-                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-[var(--zalama-border)]/30">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-700 dark:text-gray-300 font-semibold text-sm">
+                            <div className="w-10 h-10 bg-gradient-to-br from-[var(--zalama-orange)] to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-md">
                               {index + 1}
                             </div>
                             <div>
-                              <h5 className="font-semibold text-gray-900 dark:text-white">
+                              <h5 className="font-semibold text-white">
                                 Remboursement #{index + 1}
                               </h5>
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Date: {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
+                              <p className="text-xs text-[var(--zalama-text-secondary)]">
+                                {new Date(remb.date_creation).toLocaleDateString("fr-FR")}
                               </p>
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Total dû</p>
-                            <span className="font-bold text-xl text-gray-900 dark:text-white">
+                            <p className="text-xs text-[var(--zalama-text-secondary)] mb-1">Total dû</p>
+                            <span className="font-bold text-xl text-orange-500">
                               {gnfFormatter(remb.montant_total_remboursement)}
                             </span>
                           </div>
                         </div>
 
                         {/* Détails financiers en cartes */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant demandé</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                          <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Montant demandé</p>
+                            </div>
+                            <p className="text-base font-bold text-blue-900 dark:text-blue-100">
                               {gnfFormatter(remb.montant_transaction)}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Frais service (6,5%)</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-3 border border-purple-200 dark:border-purple-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CreditCard className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                              <p className="text-xs text-purple-700 dark:text-purple-300 font-medium">Frais service (6,5%)</p>
+                            </div>
+                            <p className="text-base font-bold text-purple-900 dark:text-purple-100">
                               {gnfFormatter(remb.montant_transaction * 0.065)}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Montant reçu</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-3 border border-green-200 dark:border-green-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CheckCircle className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
+                              <p className="text-xs text-green-700 dark:text-green-300 font-medium">Montant reçu</p>
+                            </div>
+                            <p className="text-base font-bold text-green-900 dark:text-green-100">
                               {gnfFormatter(
                                 remb.montant_transaction - remb.montant_transaction * 0.065
                               )}
                             </p>
                           </div>
-                          <div className="bg-white dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                            <p className="text-xs text-gray-600 dark:text-gray-400 mb-1">Remboursement dû</p>
-                            <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                          <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-3 border border-orange-200 dark:border-orange-800/30">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Receipt className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+                              <p className="text-xs text-orange-700 dark:text-orange-300 font-medium">Remboursement dû</p>
+                            </div>
+                            <p className="text-base font-bold text-orange-900 dark:text-orange-100">
                               {gnfFormatter(remb.montant_total_remboursement)}
                             </p>
                           </div>
                         </div>
 
                         {/* Statut */}
-                        <div className="flex items-center justify-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-center pt-4 border-t border-[var(--zalama-border)]/30">
                           {getStatusBadge(remb.statut)}
                         </div>
                       </div>
@@ -1947,16 +1939,6 @@ export default function RemboursementsPage() {
                   )}
                 </div>
               </div>
-            </div>
-            
-            {/* Footer */}
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <Button 
-                onClick={() => setShowEmployeeDetailsModal(false)} 
-                className="bg-red-500 hover:bg-red-600 text-white"
-              >
-                Fermer
-              </Button>
             </div>
           </div>
         </div>

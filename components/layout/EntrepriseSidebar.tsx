@@ -12,6 +12,8 @@ import {
   Star,
   UserCheck,
   Banknote,
+  DollarSign,
+  UserPlus,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -25,15 +27,14 @@ const getNavItems = () => [
   { label: "Tableau de bord", icon: Home, href: `/dashboard` },
   {
     label: "Demandes d'Adhésion",
-    icon: Users,
+    icon: UserPlus,
     href: `/dashboard/demandes-adhesion`,
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
-  { label: "Demandes", icon: FileText, href: `/dashboard/demandes` },
-  { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
-  // Ajout du lien Paiements
+  { label: "Demande d'avance", icon: FileText, href: `/dashboard/demandes` },
+  // Ajout du lien Paiement de salaire
   {
-    label: "Paiements",
+    label: "Paiement de salaire",
     icon: Banknote,
     href: `/dashboard/paiements`,
   },
@@ -43,6 +44,8 @@ const getNavItems = () => [
     icon: BarChart2,
     href: `/dashboard/remboursements`,
   },
+  { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
+  { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Test Djomy
   /* {
     label: "Test Djomy",
@@ -50,7 +53,6 @@ const getNavItems = () => [
     href: `/dashboard/remboursements-test`,
   }, */
   /* { label: "Documents", icon: FolderOpen, href: `/dashboard/documents` }, */
-  { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
   { label: "Paramètres", icon: Settings, href: `/dashboard/parametres` },
 ];
 
@@ -104,22 +106,24 @@ export default function EntrepriseSidebar() {
 
   return (
     <aside
-      className={`sidebar fixed top-0 left-0 h-full bg-gray-700 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 z-30 ${
+      className={`sidebar fixed top-0 left-0 h-full border-r transition-all duration-300 z-30 ${
         collapsed ? "w-16" : "w-64"
       }`}
       style={{
         width: collapsed
           ? "var(--sidebar-collapsed-width)"
           : "var(--sidebar-width)",
+        background: 'var(--zalama-bg-darker)',
+        borderColor: 'var(--zalama-border)'
       }}
     >
       {/* Logo et titre */}
-      <div className="flex items-center justify-between h-18 px-4 border-b border-[var(--zalama-border)]">
+      <div className="flex items-center justify-between h-18 px-4 border-b" style={{ borderColor: 'var(--zalama-border)' }}>
         {!collapsed && (
           <Link href="/dashboard" className="flex items-center">
             <div className="relative w-32 h-20 mr-3">
               <Image
-                src="/images/Logo_vertical.svg"
+                src="/images/Logo.svg"
                 alt="ZaLaMa Logo"
                 fill
                 className="object-contain"
@@ -134,7 +138,16 @@ export default function EntrepriseSidebar() {
         )}
         <button
           onClick={toggleSidebar}
-          className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          className="p-2 rounded-full bg-transparent hover:scale-110 hover:shadow-lg border border-transparent transition-all duration-300 backdrop-blur-sm"
+          style={{ color: 'var(--zalama-text-secondary)' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.currentTarget.style.borderColor = 'var(--zalama-border)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.borderColor = 'transparent';
+          }}
         >
           {collapsed ? (
             <ChevronRight className="w-5 h-5" />
@@ -164,14 +177,39 @@ export default function EntrepriseSidebar() {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${
+                  className={`flex items-center px-3 py-2.5 transition-all duration-300 group relative overflow-hidden ${
                     isActive
-                      ? "bg-[var(--zalama-bg-lighter)] text-[var(--zalama-blue)] border-l-4 border-[var(--zalama-blue)] shadow-sm"
-                      : "text-[var(--zalama-text)] hover:bg-[var(--zalama-bg-light)] hover:text-[var(--zalama-blue)]"
+                      ? "border-l-4 shadow-lg backdrop-blur-sm"
+                      : "hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm hover:border-l-2"
                   }`}
+                  style={
+                    isActive
+                      ? {
+                          background: 'rgba(255, 103, 31, 0.2)',
+                          color: 'var(--zalama-orange)',
+                          borderLeftColor: 'var(--zalama-orange)'
+                        }
+                      : {
+                          color: 'var(--zalama-text)'
+                        }
+                  }
+                  onMouseEnter={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.color = 'var(--zalama-orange)';
+                      e.currentTarget.style.borderLeftColor = 'rgba(255, 103, 31, 0.5)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = 'var(--zalama-text)';
+                      e.currentTarget.style.borderLeftColor = 'transparent';
+                    }
+                  }}
                 >
                   <item.icon
-                    className={`w-5 h-5 ${collapsed ? "mx-auto" : "mr-3"}`}
+                    className={`w-5 h-5 transition-all duration-300 group-hover:scale-110 ${collapsed ? "mx-auto" : "mr-3"}`}
                   />
                   <span
                     className={`${collapsed ? "hidden" : "block"} sidebar-text`}
@@ -186,48 +224,64 @@ export default function EntrepriseSidebar() {
       </nav>
 
       {/* Profil utilisateur */}
-      <div className="absolute bottom-0 left-0 right-0 border-t border-gray-200 dark:border-gray-700 p-4">
+      <div className="absolute bottom-0 left-0 right-0 border-t p-4" style={{ borderColor: 'var(--zalama-border)' }}>
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`flex items-center w-full rounded-lg p-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors ${
+            className={`flex items-center w-full rounded-lg p-2 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm border border-transparent transition-all duration-300 group ${
               collapsed ? "justify-center" : "justify-between"
             }`}
+            style={{ color: 'var(--zalama-text)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'var(--zalama-border)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
+            }}
           >
             <div
               className={`flex items-center ${
                 collapsed ? "justify-center" : ""
               }`}
             >
-              <div className="w-8 h-8 rounded-full bg-[var(--zalama-blue)] flex items-center justify-center text-white font-semibold flex-shrink-0">
-                {session?.admin?.display_name?.charAt(0) || "A"}
+              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 group-hover:scale-110 transition-all duration-300 shadow-lg" style={{ background: 'var(--zalama-orange)' }}>
+                {session?.admin?.display_name?.charAt(0) || "P"}
               </div>
               {!collapsed && (
-                <div className="ml-3 sidebar-text">
-                  <p className="text-sm font-medium">
-                    {session?.partner?.company_name || "Entreprise"}
+                <div className="ml-3 sidebar-text min-w-0 flex-1 text-left">
+                  <p className="text-sm font-medium truncate text-left" style={{ color: 'var(--zalama-text)' }} title={session?.admin?.display_name || "Partenaire"}>
+                    {session?.admin?.display_name || "Partenaire"}
                   </p>
-                  <p className="text-xs text-[var(--zalama-gray)]/60">
+                  <p className="text-xs truncate text-left" style={{ color: 'var(--zalama-text-secondary)' }} title={session?.admin?.role || "Entreprise"}>
                     {session?.admin?.role
                       ? session.admin.role.charAt(0).toUpperCase() +
                         session.admin.role.slice(1)
-                      : "Administrateur"}
+                      : "Entreprise"}
                   </p>
                 </div>
               )}
             </div>
-            {!collapsed && <ChevronRight className="w-4 h-4 sidebar-text" />}
+            {/* {!collapsed && <ChevronRight className="w-4 h-4 sidebar-text group-hover:scale-110 transition-all duration-300" />} */}
           </button>
 
           {menuOpen && !collapsed && (
-            <div className="absolute bottom-full left-0 w-full mb-2 bg-[var(--zalama-card)] dark:text-gray-300 rounded-lg border border-[var(--zalama-border)] shadow-lg overflow-hidden">
+            <div className="absolute bottom-full left-0 w-full mb-2 backdrop-blur-xl rounded-lg border shadow-xl overflow-hidden" style={{ background: 'var(--zalama-bg-light)', borderColor: 'var(--zalama-border)' }}>
               <ul>
                 <li>
                   <button
-                    className="flex w-full items-center px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+                    className="flex w-full items-center px-4 py-2 text-sm hover:scale-105 hover:shadow-lg transition-all duration-300 rounded-md group"
+                    style={{ color: 'var(--zalama-danger)' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                     onClick={handleLogout}
                   >
-                    <LogOut className="w-4 h-4 mr-2" />
+                    <LogOut className="w-4 h-4 mr-2 group-hover:scale-110 transition-all duration-300" />
                     Déconnexion
                   </button>
                 </li>

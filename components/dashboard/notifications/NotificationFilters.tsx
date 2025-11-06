@@ -26,14 +26,15 @@ export default function NotificationFilters({ currentFilter, onFilterChange }: N
             <button
               key={filter.id}
               onClick={() => onFilterChange(filter.id)}
-              className={`flex items-center px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
+              className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
                 isActive 
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' 
-                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white'
+                  ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
               }`}
+              style={{ height: '2rem', lineHeight: '1' }}
             >
-              <Icon className={`w-4 h-4 mr-1.5 ${filter.color || ''}`} />
-              {filter.label}
+              <Icon className={`w-4 h-4 mr-1.5 flex-shrink-0 ${filter.color || ''}`} style={{ lineHeight: '1' }} />
+              <span className="flex-shrink-0" style={{ lineHeight: '1' }}>{filter.label}</span>
             </button>
           );
         })}

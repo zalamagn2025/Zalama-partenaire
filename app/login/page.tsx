@@ -209,6 +209,18 @@ export default function LoginPage() {
         {!showForgotPin ? (
           <Card>
             <CardHeader>
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="/images/Logo.svg" 
+                  alt="ZaLaMa Logo" 
+                  className="h-16 w-auto"
+                  onError={(e) => {
+                    // Fallback si le logo SVG n'existe pas
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/images/logo-fav.png";
+                  }}
+                />
+              </div>
               <CardTitle className="text-center text-2xl font-bold">
                 Connexion
               </CardTitle>
@@ -233,7 +245,7 @@ export default function LoginPage() {
                     }}
                     required
                     disabled={isLoading}
-                    className={emailError ? "border-red-500" : ""}
+                    className={emailError ? "border-red-500" : "focus-visible:border-[var(--zalama-orange)] focus-visible:ring-orange-500/50"}
                   />
                   {emailError && (
                     <p className="text-sm text-red-500 mt-1">{emailError}</p>
@@ -301,7 +313,11 @@ export default function LoginPage() {
               </CardContent>
 
               <CardFooter className="flex flex-col space-y-4 mt-4">
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[var(--zalama-orange)] hover:bg-orange-600 text-white" 
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -320,6 +336,18 @@ export default function LoginPage() {
         ) : (
           <Card>
             <CardHeader>
+              <div className="flex justify-center mb-6">
+                <img 
+                  src="/images/Logo.svg" 
+                  alt="ZaLaMa Logo" 
+                  className="h-16 w-auto"
+                  onError={(e) => {
+                    // Fallback si le logo SVG n'existe pas
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/images/logo-fav.png";
+                  }}
+                />
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -355,6 +383,7 @@ export default function LoginPage() {
                       onChange={(e) => setResetEmail(e.target.value)}
                       required
                       disabled={isResettingPin}
+                      className="focus-visible:border-[var(--zalama-orange)] focus-visible:ring-orange-500/50"
                     />
                     <Mail className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                   </div>
@@ -378,7 +407,7 @@ export default function LoginPage() {
               <CardFooter className="flex flex-col space-y-4 mt-4">
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-[var(--zalama-orange)] hover:bg-orange-600 text-white"
                   disabled={isResettingPin}
                 >
                   {isResettingPin ? (

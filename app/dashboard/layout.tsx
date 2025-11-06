@@ -32,7 +32,7 @@ export default function EntrepriseLayout({
 
   return (
     <ProtectedRoute>
-      <div className="flex min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex min-h-screen bg-[var(--zalama-bg-darker)]">
         <EntrepriseSidebar />
         <div
           className="flex-1 flex flex-col transition-all duration-300"

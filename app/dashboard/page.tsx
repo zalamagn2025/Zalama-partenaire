@@ -1,6 +1,5 @@
 "use client";
 
-import StatCard from "@/components/dashboard/StatCard";
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
@@ -32,6 +31,7 @@ import {
 } from "recharts";
 import { useCustomToast } from "@/hooks/useCustomToast";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Badge } from "@/components/ui/badge";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -68,6 +68,14 @@ export default function EntrepriseDashboardPage() {
     Array<{ value: number; label: string }>
   >([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
+  
+  // État pour éviter l'affichage multiple du toast de bienvenue
+  const [welcomeToastShown, setWelcomeToastShown] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('welcome_toast_shown') === 'true';
+    }
+    return false;
+  });
 
   // Charger les données du dashboard via Edge Function
   const loadDashboardData = async (month?: number, year?: number) => {
@@ -169,34 +177,22 @@ export default function EntrepriseDashboardPage() {
 
       console.log("✅ Données dashboard chargées:", data);
 
-      if (month !== undefined || year !== undefined) {
-        toast.success(
-          `Données filtrées pour ${
-            month ? `${month}/${year}` : "la période sélectionnée"
-          }`
-        );
-      } else {
-        toast.updateSuccess("données du dashboard");
-      }
+      // Données chargées avec succès
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
       setError(errorMessage);
 
-      // Vérifier si c'est une erreur d'authentification ou de route
+      // Gestion des erreurs sans affichage de toast
       if (errorMessage.includes("401") || errorMessage.includes("403")) {
-        toast.sessionError();
         setTimeout(() => {
           router.push("/login");
         }, 2000);
       } else if (errorMessage.includes("404")) {
-        toast.error("Service temporairement indisponible. Redirection vers la connexion...");
         setTimeout(() => {
           router.push("/login");
         }, 2000);
-      } else {
-        toast.loadingError("données du dashboard");
       }
     } finally {
       setIsLoading(false);
@@ -228,6 +224,8 @@ export default function EntrepriseDashboardPage() {
   useEffect(() => {
     if (!loading && !session) {
       console.log("🔄 Pas de session, redirection vers /login");
+      // Réinitialiser le flag du toast de bienvenue lors de la déconnexion
+      localStorage.removeItem('welcome_toast_shown');
       router.push("/login");
     }
   }, [loading, session, router]);
@@ -256,14 +254,21 @@ export default function EntrepriseDashboardPage() {
   const charts = dashboardData?.charts;
   const partnerInfo = dashboardData?.partner_info;
   const filters = dashboardData?.filters;
+  const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
+  
+  // Le montant_total_remboursements est maintenant correctement calculé dans l'Edge Function
+  // Formule: Salaire Net + 6% de frais
 
-  // Afficher un message de bienvenue
+  // Afficher un message de bienvenue (une seule fois par session)
   useEffect(() => {
-    if (session?.partner && !isLoading && dashboardData) {
+    if (session?.partner && !isLoading && dashboardData && !welcomeToastShown) {
       console.log("Données du partenaire:", session.partner);
       toast.welcome(session.partner.company_name);
+      setWelcomeToastShown(true);
+      // Sauvegarder dans localStorage pour persister entre les rechargements
+      localStorage.setItem('welcome_toast_shown', 'true');
     }
-  }, [session?.partner, isLoading, dashboardData]);
+  }, [session?.partner, isLoading, dashboardData, welcomeToastShown]);
 
   // Si en cours de chargement, afficher des skeletons
   if (loading || isLoading) {
@@ -382,151 +387,26 @@ export default function EntrepriseDashboardPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* Section Filtres */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-gray-600 dark:text-white text-sm font-semibold flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filtres de période
-          </h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="px-3 py-1 text-xs bg-blue-100 hover:bg-blue-200 dark:bg-blue-900 dark:hover:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-md transition-colors flex items-center gap-1"
-            >
-              <Calendar className="h-3 w-3" />
-              {showFilters ? "Masquer" : "Filtrer"}
-            </button>
-            <button
-              onClick={() => loadDashboardData()}
-              disabled={isLoading}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              title="Actualiser les données"
-            >
-              <RefreshCw
-                className={`h-4 w-4 text-gray-500 ${
-                  isLoading ? "animate-spin" : ""
-                }`}
-              />
-            </button>
-          </div>
-        </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Mois
-              </label>
-              <select
-                value={selectedMonth || ""}
-                onChange={(e) => {
-                  const month = e.target.value
-                    ? parseInt(e.target.value)
-                    : null;
-                  setSelectedMonth(month);
-                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                  if (month && !selectedYear) {
-                    setSelectedYear(new Date().getFullYear());
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Mois en cours</option>
-                {months.map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Année
-              </label>
-              <select
-                value={selectedYear || ""}
-                onChange={(e) =>
-                  setSelectedYear(
-                    e.target.value ? parseInt(e.target.value) : null
-                  )
-                }
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-              >
-                <option value="">Année en cours</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-end gap-2">
-              <button
-                onClick={applyFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                Appliquer
-              </button>
-              <button
-                onClick={resetFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        )}
-
-        {filters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Période actuelle
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.period_description || "Mois en cours"}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Jour de paiement
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.payment_day || "Non défini"}
-              </p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                Statut
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
-                {filters.applied
-                  ? "Filtres actifs"
-                  : "Données du mois en cours"}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* En-tête du tableau de bord */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4">
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
         <div className="flex items-center gap-4">
-          <div className={`rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden ${partnerInfo?.logo_url ? 'bg-white border-2 border-gray-200' : 'bg-blue-900'}`}>
+          <div 
+            className="rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden border-2"
+            style={{
+              backgroundColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#ffffff' : 
+                              partnerInfo?.logo_url ? 'transparent' : '#1e40af',
+              borderColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#d1d5db' : 
+                          partnerInfo?.logo_url ? '#4b5563' : 'transparent'
+            }}
+          >
             {partnerInfo?.logo_url ? (
-              <>
-                <div className="absolute inset-0 bg-white rounded-lg"></div>
-                <Image
-                  src={partnerInfo.logo_url}
-                  alt={`Logo ${partnerInfo.company_name}`}
-                  fill
-                  className="object-contain relative z-10 p-1"
-                  sizes="(max-width: 768px) 64px, 64px"
-                />
-              </>
+              <Image
+                src={partnerInfo.logo_url}
+                alt={`Logo ${partnerInfo.company_name}`}
+                fill
+                className="object-contain p-2"
+                sizes="(max-width: 768px) 64px, 64px"
+              />
             ) : (
               <span className="text-white font-bold text-xl">
                 {partnerInfo?.company_name?.slice(0, 1)?.toUpperCase() || "Z"}
@@ -551,47 +431,264 @@ export default function EntrepriseDashboardPage() {
               ? new Date(partnerInfo.created_at).getFullYear()
               : new Date().getFullYear()}
           </span>
-          <span className="bg-green-900 text-green-400 text-xs px-3 py-1 rounded-full mt-1">
+          <Badge variant="success" className="mt-1">
             Compte actif
-          </span>
+          </Badge>
         </div>
+      </div>
+
+      {/* Informations de contexte - Extrait de la carte des filtres */}
+      {filters && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Période actuelle
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.period_description || "Mois en cours"}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                <RefreshCw className="w-4 h-4 text-green-600 dark:text-green-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Jour de paiement
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.payment_day || "Non défini"}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                <Filter className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                  Statut des filtres
+                </p>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {filters.applied
+                    ? "Filtres actifs"
+                    : "Données du mois en cours"}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Filtres avancés - Style identique à la page remboursements */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+          </h3>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+            </button>
+            <button
+              onClick={() => loadDashboardData()}
+              disabled={isLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+            </button>
+            </div>
+          </div>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            {/* Filtre par mois */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mois
+              </label>
+              <select
+                value={selectedMonth || ""}
+                onChange={(e) => {
+                  const month = e.target.value
+                    ? parseInt(e.target.value)
+                    : null;
+                  setSelectedMonth(month);
+                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                  if (month && !selectedYear) {
+                    setSelectedYear(new Date().getFullYear());
+                  }
+                }}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les mois</option>
+                {months.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par année */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Année
+              </label>
+              <select
+                value={selectedYear || ""}
+                onChange={(e) =>
+                  setSelectedYear(
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Toutes les années</option>
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex items-end gap-2">
+              <button
+                onClick={applyFilters}
+                disabled={isLoading}
+                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                Appliquer
+              </button>
+              <button
+                onClick={resetFilters}
+                disabled={isLoading}
+                className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {isLoading && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
       </div>
 
       {/* Cartes statistiques principales */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        <StatCard
-          title="Employés actifs/Total"
-          value={`${statistics?.active_employees || 0}/${
-            statistics?.total_employees || 0
-          }`}
-          icon={Users}
-          color="blue"
-        />
-        <StatCard
-          title="Demandes totales"
-          value={statistics?.total_demandes || 0}
-          icon={FileText}
-          color="purple"
-        />
-        <StatCard
-          title="Demandes par employé"
-          value={statistics?.demandes_per_employee || "0.0"}
-          icon={ClipboardList}
-          color="yellow"
-        />
-        <StatCard
-          title="Note moyenne"
-          value={statistics?.average_rating || "0.0"}
-          icon={Star}
-          color="green"
-        />
+        {/* Employés actifs/Total */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Employés</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {`${statistics?.active_employees || 0}/${statistics?.total_employees || 0}`}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              Employés actifs/Total
+              </p>
+            </div>
+        </div>
+
+        {/* Demandes totales */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Demandes</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {statistics?.total_demandes || 0}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Demandes totales
+              </p>
+            </div>
+        </div>
+
+        {/* Demandes par employé */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Moyenne</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {statistics?.demandes_per_employee || "0.0"}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Demandes par employé
+              </p>
+            </div>
       </div>
 
-      {/* Performance financière */}
-      <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8">
+        {/* Note moyenne */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Avis</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {statistics?.average_rating || "0.0"}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Note moyenne
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Performance financière - Avances */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8 backdrop-blur-sm">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-gray-600 dark:text-white text-lg font-semibold">
-            Performance financière
+          <h2 className="text-lg font-semibold" style={{ color: "var(--zalama-orange)" }}>
+            Performance financière - Avances sur salaire
           </h2>
           <div className="flex items-center gap-2">
             <button
@@ -609,17 +706,17 @@ export default function EntrepriseDashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Montant total débloqué
+              Montant total débloqué (Avances)
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(financialPerformance?.debloque_mois)}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              À rembourser
+              À rembourser (Avances)
             </span>
             <span className="text-2xl font-bold dark:text-white">
               {gnfFormatter(financialPerformance?.a_rembourser_mois)}
@@ -627,7 +724,7 @@ export default function EntrepriseDashboardPage() {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Date limite de remboursement
             </span>
@@ -643,23 +740,26 @@ export default function EntrepriseDashboardPage() {
                 : "Non définie"}
             </span>
           </div>
-          <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start">
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
             <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
               Jours restants avant remboursement
             </span>
             <span className="text-lg font-bold dark:text-white">
               {financialPerformance?.jours_restants || "0"} jours
             </span>
-            <div className="w-full bg-gray-700 rounded-full h-2 mt-2">
+            <div className="w-full bg-gray-700 rounded-full h-2 mt-2 overflow-hidden">
               <div
-                className="bg-yellow-400 h-2 rounded-full"
+                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
                 style={{
                   width: `${
                     financialPerformance?.debloque_mois &&
                     financialPerformance?.a_rembourser_mois
-                      ? (financialPerformance.a_rembourser_mois /
+                      ? Math.min(
+                          (financialPerformance.a_rembourser_mois /
                           financialPerformance.debloque_mois) *
+                            100,
                         100
+                        )
                       : 0
                   }%`,
                 }}
@@ -673,12 +773,106 @@ export default function EntrepriseDashboardPage() {
         </div>
       </div>
 
+      {/* Performance Paiements de Salaire */}
+      {paymentSalaryStats && (
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--zalama-orange)" }}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              Paiements de Salaires
+            </h2>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Total paiements effectués
+              </span>
+              <span className="text-2xl font-bold dark:text-white">
+                {paymentSalaryStats.paiements_effectues || 0}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                sur {paymentSalaryStats.total_paiements || 0} paiements
+              </span>
+            </div>
+            
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Montant total versé
+              </span>
+              <span className="text-xl font-bold dark:text-white">
+                {gnfFormatter(paymentSalaryStats.montant_total_salaires)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                à {paymentSalaryStats.employes_payes_distincts || 0} employés
+              </span>
+            </div>
+
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                Total à rembourser
+              </span>
+              <span className="text-xl font-bold dark:text-white">
+                {gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                Salaire Net + Frais (6%)
+              </span>
+            </div>
+            
+            {paymentSalaryStats.delai_remboursement && (
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                  Délai remboursement ZaLaMa
+                </span>
+                <span className="text-lg font-bold dark:text-white">
+                  {formatDate(paymentSalaryStats.delai_remboursement)}
+                </span>
+                {paymentSalaryStats.jours_restants_remboursement !== null && (
+                  <div className="mt-2">
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      paymentSalaryStats.jours_restants_remboursement > 7 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                        : paymentSalaryStats.jours_restants_remboursement > 0
+                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                    }`}>
+                      {paymentSalaryStats.jours_restants_remboursement > 0
+                        ? `${paymentSalaryStats.jours_restants_remboursement} jours restants`
+                        : paymentSalaryStats.jours_restants_remboursement === 0
+                        ? "Échéance aujourd'hui"
+                        : `Retard de ${Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours`
+                      }
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {paymentSalaryStats.montant_total_avances_deduites > 0 && (
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-blue-700 dark:text-blue-400">
+                  Avances déduites des salaires
+                </span>
+                <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                  {gnfFormatter(paymentSalaryStats.montant_total_avances_deduites)}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Visualisations et Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Évolution des demandes */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Évolution des demandes
             </h3>
             {filters?.applied && (
@@ -707,9 +901,9 @@ export default function EntrepriseDashboardPage() {
           </ResponsiveContainer>
         </div>
         {/* Montants débloqués */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Montants débloqués
             </h3>
             {filters?.applied && (
@@ -737,9 +931,9 @@ export default function EntrepriseDashboardPage() {
       {/* Répartition par motif + Remboursements récents */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
         {/* Répartition par motif */}
-        <div className="bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
           <div className="flex items-center justify-between mb-8">
-            <h3 className="text-gray-600 dark:text-white text-base font-semibold">
+            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
               Répartition par motif
             </h3>
             {filters?.applied && (
