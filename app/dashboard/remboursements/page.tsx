@@ -159,10 +159,61 @@ export default function RemboursementsPage() {
   const [activeEmployees, setActiveEmployees] = useState<any[]>([]);
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
 
-  // Pagination pour les données regroupées par employé
+  // ✅ Pagination pour les données regroupées par employé avec filtrage par type
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // Augmenté pour les employés
-  const dataForPagination = currentMonthData?.data || [];
+  const itemsPerPage = 10;
+  
+  // Filtrer les données selon le type sélectionné
+  const getFilteredData = () => {
+    const avances = currentMonthData?.data || [];
+    const paiements = paymentHistory || [];
+    
+    if (dataType === 'avances') {
+      return avances;
+    } else if (dataType === 'paiements') {
+      // Transformer les paiements pour avoir la même structure que les avances
+      return paiements.map((payment: any) => ({
+        employe_id: payment.employe_id,
+        employe: payment.employe,
+        type: 'paiement', // Marqueur pour identifier le type
+        montant_total_remboursement: payment.salaire_disponible,
+        frais_service_total: payment.frais_intervention || 0,
+        nombre_remboursements: 1,
+        salaire_net: payment.salaire_net,
+        statut_global: payment.statut,
+        periode: {
+          periode_complete: `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`,
+          description: `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
+        },
+        // Détails du paiement
+        paiement_details: payment
+      }));
+    } else {
+      // Tous : combiner les deux
+      const paymentsTransformed = paiements.map((payment: any) => ({
+        employe_id: payment.employe_id,
+        employe: payment.employe,
+        type: 'paiement',
+        montant_total_remboursement: payment.salaire_disponible,
+        frais_service_total: payment.frais_intervention || 0,
+        nombre_remboursements: 1,
+        salaire_net: payment.salaire_net,
+        statut_global: payment.statut,
+        periode: {
+          periode_complete: `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`,
+          description: `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
+        },
+        paiement_details: payment
+      }));
+      
+      // Ajouter un marqueur 'type' aux avances aussi
+      const avancesMarked = avances.map((a: any) => ({ ...a, type: 'avance' }));
+      
+      return [...avancesMarked, ...paymentsTransformed];
+    }
+  };
+  
+  const dataForPagination = getFilteredData();
   const totalPages = Math.ceil(dataForPagination.length / itemsPerPage);
   const paginatedEmployees = dataForPagination.slice(
     (currentPage - 1) * itemsPerPage,
