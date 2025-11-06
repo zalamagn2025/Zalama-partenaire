@@ -26,6 +26,7 @@ export async function GET(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': accessToken,
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '', // ✅ Ajout de la clé API Supabase
       },
     });
 
@@ -63,6 +64,7 @@ export async function PUT(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': accessToken || '',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '', // ✅ Ajout de la clé API Supabase
       },
       body: JSON.stringify(body),
     });

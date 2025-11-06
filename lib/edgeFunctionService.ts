@@ -268,7 +268,11 @@ class EdgeFunctionService {
       "Content-Type": "application/json",
     };
 
-    // Ne pas ajouter le token depuis this.accessToken si options.headers contient déjà Authorization
+    // ✅ Ajouter le token d'authentification si disponible et non déjà présent
+    if (this.accessToken && !options.headers?.['Authorization']) {
+      defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
     // Les headers passés en options ont la priorité
     const config: RequestInit = {
       ...options,
