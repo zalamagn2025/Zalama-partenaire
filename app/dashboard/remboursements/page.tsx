@@ -1041,15 +1041,10 @@ export default function RemboursementsPage() {
                 <Button
                   onClick={() => setShowFinancialInfoModal(true)}
                   size="sm"
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-medium shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0 relative overflow-hidden group cursor-pointer px-6 py-2"
+                  className="bg-green-600 hover:bg-green-700 text-white font-medium shadow hover:shadow-md transition-all duration-200 border-0 px-6 py-2"
                 >
-                  <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
-                  <Building className="w-4 h-4 mr-2 relative z-10" />
-                  <span className="relative z-10">
-                    Voir coordonnées bancaires de ZaLaMa
-                  </span>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-pulse"></div>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-30 group-hover:animate-shimmer"></div>
+                  <Building className="w-4 h-4 mr-2" />
+                  <span>Voir coordonnées bancaires de ZaLaMa</span>
                 </Button>
               </div>
             </div>
