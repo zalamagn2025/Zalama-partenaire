@@ -914,37 +914,40 @@ export default function RemboursementsPage() {
               Suivi et traitement des remboursements d'avances salariales
             </p>
             
-            {/* ✅ Sélecteur de type de données */}
-            <div className="flex gap-2 mt-4">
+            {/* ✅ Sélecteur de type de données - Style Notifications */}
+            <div className="flex items-center gap-1 overflow-x-auto mt-4 pb-1" style={{scrollbarWidth: 'none'}}>
               <button
                 onClick={() => setDataType('tous')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
                   dataType === 'tous'
-                    ? 'bg-[var(--zalama-orange)] text-white shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
                 }`}
+                style={{ height: '2rem', lineHeight: '1' }}
               >
-                📊 Tous ({(dataForPagination.length || 0) + (paymentHistory.length || 0)})
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>📊 Tous ({(currentMonthData?.data?.length || 0) + (paymentHistory.length || 0)})</span>
               </button>
               <button
                 onClick={() => setDataType('avances')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
                   dataType === 'avances'
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
                 }`}
+                style={{ height: '2rem', lineHeight: '1' }}
               >
-                💰 Avances sur salaire ({dataForPagination.length || 0})
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>💰 Avances ({currentMonthData?.data?.length || 0})</span>
               </button>
               <button
                 onClick={() => setDataType('paiements')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
                   dataType === 'paiements'
-                    ? 'bg-emerald-600 text-white shadow-md'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
                 }`}
+                style={{ height: '2rem', lineHeight: '1' }}
               >
-                💵 Paiements de salaire ({paymentHistory.length || 0})
+                <span className="flex-shrink-0" style={{ lineHeight: '1' }}>💵 Paiements ({paymentHistory.length || 0})</span>
               </button>
             </div>
           </div>
