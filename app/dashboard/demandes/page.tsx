@@ -138,6 +138,18 @@ export default function DemandesPage() {
       const partnerService = new PartnerDataService(session.partner.id);
       const demandes = await partnerService.getSalaryAdvanceRequests();
 
+      // ✅ Log pour vérifier si les remboursements sont bien récupérés
+      if (demandes.length > 0) {
+        console.log('📋 Exemple demande avec remboursement:', {
+          id: demandes[0].id,
+          statut: demandes[0].statut,
+          remboursement: (demandes[0] as any).remboursement,
+          hasRemboursement: !!(demandes[0] as any).remboursement,
+          isArray: Array.isArray((demandes[0] as any).remboursement),
+          length: Array.isArray((demandes[0] as any).remboursement) ? (demandes[0] as any).remboursement.length : 0
+        });
+      }
+
       setDemandesAvance(demandes);
     } catch (error: any) {
       console.error("Erreur lors du chargement des demandes:", error);
@@ -1235,24 +1247,40 @@ export default function DemandesPage() {
                       </Badge>
                     </td>
                     <td className="px-3 py-4 text-center">
-                      {(demande as any).remboursements && (demande as any).remboursements.length > 0 ? (
-                        <Badge
-                          variant={
-                            (demande as any).remboursements[0].statut === "PAYE"
-                              ? "success"
-                              : (demande as any).remboursements[0].statut === "EN_ATTENTE"
-                              ? "warning"
-                              : (demande as any).remboursements[0].statut === "EN_RETARD"
-                              ? "error"
-                              : "default"
-                          }
-                          className="text-xs"
-                        >
-                          {(demande as any).remboursements[0].statut}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
-                      )}
+                      {(() => {
+                        // ✅ Compatibilité: Edge Function = "remboursement", Supabase direct = "remboursements"
+                        const remboursement = (demande as any).remboursement || (demande as any).remboursements;
+                        
+                        // Vérifier si remboursement existe et n'est pas vide
+                        if (Array.isArray(remboursement) && remboursement.length > 0 && remboursement[0]) {
+                          const statut = remboursement[0].statut;
+                          return (
+                            <Badge
+                              variant={
+                                statut === "PAYE"
+                                  ? "success"
+                                  : statut === "EN_ATTENTE"
+                                  ? "warning"
+                                  : statut === "EN_RETARD"
+                                  ? "error"
+                                  : statut === "ANNULE"
+                                  ? "default"
+                                  : "default"
+                              }
+                              className="text-xs"
+                            >
+                              {statut}
+                            </Badge>
+                          );
+                        }
+                        
+                        // Pas de remboursement : afficher selon le statut de la demande
+                        if (demande.statut === "Validé" || demande.statut === "Approuvée") {
+                          return <span className="text-xs text-yellow-500 dark:text-yellow-400">Pas encore</span>;
+                        }
+                        
+                        return <span className="text-xs text-gray-400 dark:text-gray-500">—</span>;
+                      })()}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <div className="flex flex-col items-center gap-1">
