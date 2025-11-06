@@ -603,6 +603,22 @@ export default function DemandesPage() {
     currentMonthData?.statistics?.by_status?.rejected ||
     allDemandes.filter((d) => d.statut === "Rejeté").length;
 
+  // ✅ Statistiques des remboursements
+  const remboursementsPaye = allDemandes.filter((d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "PAYE";
+  }).length;
+
+  const remboursementsEnAttente = allDemandes.filter((d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_ATTENTE";
+  }).length;
+
+  const remboursementsEnRetard = allDemandes.filter((d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    return Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_RETARD";
+  }).length;
+
   const stats = [
     {
       title: "Total demandes",
@@ -632,6 +648,24 @@ export default function DemandesPage() {
       title: "Rejetées",
       value: rejectedDemandes,
       icon: AlertCircle,
+      color: "red" as const,
+    },
+    {
+      title: "Remboursements payés",
+      value: remboursementsPaye,
+      icon: Receipt,
+      color: "green" as const,
+    },
+    {
+      title: "Remboursements en attente",
+      value: remboursementsEnAttente,
+      icon: Receipt,
+      color: "yellow" as const,
+    },
+    {
+      title: "Remboursements en retard",
+      value: remboursementsEnRetard,
+      icon: Receipt,
       color: "red" as const,
     },
   ];
