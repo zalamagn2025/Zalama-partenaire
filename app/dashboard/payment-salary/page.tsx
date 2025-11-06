@@ -99,6 +99,9 @@ export default function PaymentSalaryPage() {
     new Set()
   );
 
+  // État pour le toggle des filtres
+  const [showFilters, setShowFilters] = useState(false);
+
   // États pour l'AlertDialog
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
@@ -506,136 +509,107 @@ export default function PaymentSalaryPage() {
         </div>
       </div>
 
-      {/* Filtres */}
-      <Card
-        style={{
-          background: "var(--zalama-card)",
-          borderColor: "var(--zalama-border)",
-        }}
-      >
-        <CardHeader>
-          <CardTitle
-            className="flex items-center gap-2"
-            style={{ color: "var(--zalama-orange)" }}
-          >
-            <Filter className="h-5 w-5" style={{ color: "var(--zalama-orange)" }} />
-            Filtres de période
-          </CardTitle>
-          <CardDescription style={{ color: "var(--zalama-text-secondary)" }}>
-            Sélectionnez la période pour laquelle vous souhaitez gérer les
-            paiements
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label
-                htmlFor="month"
-                style={{ color: "var(--zalama-text-secondary)" }}
+      {/* Filtres avancés */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
-                Mois
-              </Label>
-              <Select
-                value={selectedMonth.toString()}
-                onValueChange={(value) => setSelectedMonth(parseInt(value))}
-              >
-                <SelectTrigger
-                  style={{
-                    background: "var(--zalama-bg-light)",
-                    borderColor: "var(--zalama-border)",
-                    color: "var(--zalama-text)",
-                  }}
-                >
-                  <SelectValue placeholder="Sélectionner le mois" />
-                </SelectTrigger>
-                <SelectContent
-                  style={{
-                    background: "var(--zalama-card)",
-                    borderColor: "var(--zalama-border)",
-                  }}
-                >
-                  {Array.from({ length: currentMonth }, (_, i) => (
-                    <SelectItem
-                      key={i + 1}
-                      value={(i + 1).toString()}
-                      style={{ color: "var(--zalama-text)" }}
-                    >
-                      {new Date(2025, i).toLocaleDateString("fr-FR", {
-                        month: "long",
-                      })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label
-                htmlFor="year"
-                style={{ color: "var(--zalama-text-secondary)" }}
-              >
-                Année
-              </Label>
-              <Select
-                value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(parseInt(value))}
-              >
-                <SelectTrigger
-                  style={{
-                    background: "var(--zalama-bg-light)",
-                    borderColor: "var(--zalama-border)",
-                    color: "var(--zalama-text)",
-                  }}
-                >
-                  <SelectValue placeholder="Sélectionner l'année" />
-                </SelectTrigger>
-                <SelectContent
-                  style={{
-                    background: "var(--zalama-card)",
-                    borderColor: "var(--zalama-border)",
-                  }}
-                >
-                  {Array.from({ length: 3 }, (_, i) => {
-                    const year = 2025 - i;
-                    return (
-                      <SelectItem
-                        key={year}
-                        value={year.toString()}
-                        style={{ color: "var(--zalama-text)" }}
-                      >
-                        {year}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-end gap-2">
-              <Button
-                onClick={applyFilters}
-                disabled={isLoading}
-                style={{
-                  background: "var(--zalama-orange)",
-                  color: "white",
-                }}
-              >
-                Appliquer
-              </Button>
-              <Button
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
                 onClick={resetFilters}
-                variant="outline"
-                disabled={isLoading}
-                style={{
-                  background: "var(--zalama-bg-light)",
-                  borderColor: "var(--zalama-border)",
-                  color: "var(--zalama-text)",
-                }}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Reset
-              </Button>
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => loadPaymentData(selectedMonth, selectedYear)}
+                disabled={isLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={selectedMonth || ""}
+              onChange={(e) =>
+                setSelectedMonth(
+                  e.target.value ? parseInt(e.target.value) : currentMonth
+                )
+              }
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Tous les mois</option>
+              {Array.from({ length: currentMonth }, (_, i) => {
+                const month = i + 1;
+                return (
+                  <option key={month} value={month}>
+                    {new Date(0, month - 1).toLocaleString("fr-FR", {
+                      month: "long",
+                    })}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+
+          {/* Filtre par année */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Année
+            </label>
+            <select
+              value={selectedYear || ""}
+              onChange={(e) =>
+                setSelectedYear(
+                  e.target.value ? parseInt(e.target.value) : currentYear
+                )
+              }
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Toutes les années</option>
+              {Array.from({ length: 3 }, (_, i) => {
+                const year = 2025 - i;
+                return (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        </div>
+        )}
+
+        {/* Indicateur de filtres actifs supprimé */}
+        {isLoading && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
+      </div>
 
       {/* Informations de période */}
       <Card

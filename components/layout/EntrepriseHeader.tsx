@@ -2,8 +2,6 @@
 import {
   Bell,
   LogOut,
-  Moon,
-  Sun,
   User,
   RefreshCw,
   Wifi,
@@ -13,7 +11,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { supabase } from "@/lib/supabase";
 import NotificationDrawer from "../../components/dashboard/notifications/NotificationDrawer";
 
@@ -27,7 +24,6 @@ export default function EntrepriseHeader() {
   >("inactive");
   const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
   const { session, logout, refreshSession } = useEdgeAuthContext();
   const router = useRouter();
 
@@ -228,32 +224,6 @@ export default function EntrepriseHeader() {
             <RefreshCw
               className={`w-5 h-5 ${isRefreshing ? "animate-spin" : ""}`}
             />
-          </button>
-
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full backdrop-blur-sm hover:scale-110 hover:shadow-md border transition-all duration-200 focus:outline-none"
-            style={{
-              background: 'var(--zalama-bg-light)',
-              borderColor: 'var(--zalama-border)'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--zalama-bg-lighter)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--zalama-bg-light)';
-            }}
-            aria-label={
-              theme === "dark"
-                ? "Passer en mode clair"
-                : "Passer en mode sombre"
-            }
-          >
-            {theme === "dark" ? (
-              <Sun className="w-5 h-5 text-yellow-400" />
-            ) : (
-              <Moon className="w-5 h-5" style={{ color: 'var(--zalama-text-secondary)' }} />
-            )}
           </button>
 
           <button

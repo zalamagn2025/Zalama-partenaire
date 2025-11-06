@@ -874,138 +874,128 @@ export default function PaymentSalaryPage() {
                 </div>
               </div>
 
-      {/* Filtres et recherche */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm mb-6">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-          {/* Barre de recherche */}
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Rechercher un employé, poste ou mois..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-          
-          {/* Filtres avancés */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
+      {/* Filtres avancés */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm relative z-10"
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
-                <Filter className="w-4 h-4" />
-                Filtres
-                <ChevronDown className="w-4 h-4" />
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedStatus("all");
+                  setSelectedMonth("all");
+                  setSelectedEmployee("all");
+                  setSearchTerm("");
+                }}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={loadAllData}
+                disabled={loadingData}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {loadingData ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
               </button>
             </div>
-
-            {showFilters && (
-              <>
-                {/* Backdrop transparent pour fermer */}
-                <div 
-                  className="fixed inset-0 z-[999]" 
-                  onClick={() => setShowFilters(false)}
-                />
-                
-                {/* Modal Filtres - Positionné en fixed */}
-                <div className="fixed right-4 top-32 w-80 bg-white dark:bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-lg shadow-2xl z-[1000] p-4">
-                  <div className="space-y-4">
-                    {/* Filtre par statut */}
-              <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Statut
-                      </label>
-                      <select
-                        value={selectedStatus}
-                        onChange={(e) => setSelectedStatus(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-                      >
-                        <option value="all">Tous les statuts</option>
-                        <option value="completed">Effectué</option>
-                        <option value="pending">En attente</option>
-                        <option value="failed">Échoué</option>
-                      </select>
+          </div>
         </div>
 
-                    {/* Filtre par mois */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Mois
-                      </label>
-                      <select
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-                      >
-                        <option value="all">Tous les mois</option>
-                        {availableMonths.map((month) => (
-                          <option key={month} value={month}>
-                            {getMonthName(month)}
-                          </option>
-                        ))}
-                      </select>
-        </div>
-        
-                    {/* Filtre par employé */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Employé
-                      </label>
-                      <select
-                        value={selectedEmployee}
-                        onChange={(e) => setSelectedEmployee(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-                      >
-                        <option value="all">Tous les employés</option>
-                        {employees.map((employee) => (
-                          <option key={employee.id} value={employee.id}>
-                            {employee.prenom} {employee.nom}
-                          </option>
-                        ))}
-                      </select>
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+          {/* Barre de recherche */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Recherche
+            </label>
+            <div>
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
           </div>
 
-                    {/* Boutons d'action */}
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        onClick={() => {
-                          setSelectedStatus("all");
-                          setSelectedMonth("all");
-                          setSelectedEmployee("all");
-                        }}
-                        className="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        Réinitialiser
-                      </button>
-                      <button
-                        onClick={() => setShowFilters(false)}
-                        className="flex-1 px-3 py-2 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
-                      >
-                        Appliquer
-                      </button>
-          </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            <button
-              onClick={loadAllData}
-              disabled={loadingData}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          {/* Filtre par statut */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Statut
+            </label>
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
-              {loadingData ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              Actualiser
-            </button>
+              <option value="all">Tous les statuts</option>
+              <option value="completed">Effectué</option>
+              <option value="pending">En attente</option>
+              <option value="failed">Échoué</option>
+            </select>
+          </div>
+
+          {/* Filtre par mois */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Mois
+            </label>
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Tous les mois</option>
+              {availableMonths.map((month) => (
+                <option key={month} value={month}>
+                  {getMonthName(month)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filtre par employé */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Employé
+            </label>
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">Tous les employés</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.prenom} {employee.nom}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {loadingData && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
+          </div>
+        )}
       </div>
 
       {/* Tableau des paiements */}
