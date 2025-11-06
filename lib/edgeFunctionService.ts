@@ -268,16 +268,13 @@ class EdgeFunctionService {
       "Content-Type": "application/json",
     };
 
-    // Ajouter le token d'authentification si disponible
-    if (this.accessToken) {
-      defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
-    }
-
+    // Ne pas ajouter le token depuis this.accessToken si options.headers contient déjà Authorization
+    // Les headers passés en options ont la priorité
     const config: RequestInit = {
       ...options,
       headers: {
         ...defaultHeaders,
-        ...options.headers,
+        ...options.headers, // Les headers passés en paramètre ont la priorité
       },
     };
 
@@ -349,6 +346,24 @@ class EdgeFunctionService {
     // Utiliser les proxies locaux pour les endpoints salary-demands
     if (endpoint.startsWith("/salary-demands")) {
       const url = `/api/proxy${endpoint}`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+
+    // Utiliser les proxies locaux pour l'endpoint getme
+    if (endpoint === "/getme") {
+      const url = `/api/proxy/partner-auth/getme`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+
+    // Utiliser les proxies locaux pour l'endpoint api-key
+    if (endpoint === "/api-key") {
+      const url = `/api/proxy/partner-auth/api-key`;
+      return this.makeLocalRequest<T>(url, options);
+    }
+
+    // Utiliser les proxies locaux pour l'endpoint regenerate-api-key
+    if (endpoint === "/regenerate-api-key") {
+      const url = `/api/proxy/partner-auth/regenerate-api-key`;
       return this.makeLocalRequest<T>(url, options);
     }
 

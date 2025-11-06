@@ -247,6 +247,12 @@ export default function PaymentSalaryPage() {
       case "EN_ATTENTE":
       case "pending":
         return "warning";
+      case "EN_RETARD":
+        return "error";
+      case "ANNULE":
+        return "error";
+      case "REMBOURSE":
+        return "info";
       case "ECHOUE":
       case "failed":
         return "error";
@@ -262,6 +268,12 @@ export default function PaymentSalaryPage() {
         return "Payé";
       case "EN_ATTENTE":
         return "En attente";
+      case "EN_RETARD":
+        return "En retard";
+      case "ANNULE":
+        return "Annulé";
+      case "REMBOURSE":
+        return "Remboursé";
       case "ECHOUE":
         return "Échoué";
       case "completed":
@@ -943,9 +955,11 @@ export default function PaymentSalaryPage() {
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tous les statuts</option>
-              <option value="completed">Effectué</option>
-              <option value="pending">En attente</option>
-              <option value="failed">Échoué</option>
+              <option value="EN_ATTENTE">EN_ATTENTE</option>
+              <option value="PAYE">PAYE</option>
+              <option value="EN_RETARD">EN_RETARD</option>
+              <option value="ANNULE">ANNULE</option>
+              <option value="REMBOURSE">REMBOURSE</option>
             </select>
           </div>
 

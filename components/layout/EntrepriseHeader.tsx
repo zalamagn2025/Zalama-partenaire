@@ -42,14 +42,21 @@ export default function EntrepriseHeader() {
   const loadUnreadCount = async () => {
     if (!session?.admin?.id) return;
     try {
-      // Compter les notifications non lues pour cet admin
-      const { count, error } = await supabase
-        .from("notifications")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", session.admin.id)
-        .eq("lu", false);
-      if (!error) {
-        setUnreadCount(count || 0);
+      // Utiliser le proxy pour compter les notifications non lues
+      const response = await fetch(
+        `/api/proxy/notifications?user_id=${session.admin.id}&lu=false&count=true`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setUnreadCount(data.count || 0);
       }
     } catch (error) {
       console.error(
