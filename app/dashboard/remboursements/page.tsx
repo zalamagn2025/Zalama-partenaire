@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { usePaymentHistory } from "@/hooks/usePaymentHistory";
 import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { toast } from "sonner";
 
@@ -111,6 +112,15 @@ const getStatusBadge = (statut: string) => {
 
 export default function RemboursementsPage() {
   const { session, loading } = useEdgeAuth();
+  
+  // ✅ Utilisation du hook pour les paiements de salaire
+  const {
+    payments: paymentHistory,
+    statistics: paymentStatistics,
+    loading: paymentLoading,
+    loadPayments: loadPaymentHistoryData
+  } = usePaymentHistory(session?.access_token);
+
   const [remboursements, setRemboursements] = useState<Remboursement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalAttente, setTotalAttente] = useState(0);
@@ -132,10 +142,6 @@ export default function RemboursementsPage() {
 
   // ✅ État pour le type de données affichées
   const [dataType, setDataType] = useState<'tous' | 'avances' | 'paiements'>('tous');
-
-  // États pour les données de paiements de salaire
-  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
-  const [paymentStatistics, setPaymentStatistics] = useState<any>(null);
 
   // États pour les filtres de l'edge function partner-reimbursements
   const [filters, setFilters] = useState({
@@ -168,43 +174,78 @@ export default function RemboursementsPage() {
     const avances = currentMonthData?.data || [];
     const paiements = paymentHistory || [];
     
+    console.log('🔍 getFilteredData - dataType:', dataType);
+    console.log('🔍 getFilteredData - avances:', avances.length);
+    console.log('🔍 getFilteredData - paiements:', paiements.length);
+    
     if (dataType === 'avances') {
       return avances;
     } else if (dataType === 'paiements') {
+      console.log('🔍 Transformation des paiements...');
+      console.log('🔍 Premier paiement brut:', paiements[0]);
+      
       // Transformer les paiements pour avoir la même structure que les avances
-      return paiements.map((payment: any) => ({
-        employe_id: payment.employe_id,
-        employe: payment.employe,
-        type: 'paiement', // Marqueur pour identifier le type
-        montant_total_remboursement: payment.salaire_disponible,
-        frais_service_total: payment.frais_intervention || 0,
-        nombre_remboursements: 1,
-        salaire_net: payment.salaire_net,
-        statut_global: payment.statut,
-        periode: {
-          periode_complete: `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`,
-          description: `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
-        },
-        // Détails du paiement
-        paiement_details: payment
-      }));
+      const transformed = paiements.map((payment: any) => {
+        // ✅ Utiliser montant_total_remboursement ou calculer (salaire_net + 6%)
+        const montantRemboursement = payment.montant_total_remboursement || 
+                                      Math.round((payment.salaire_net || 0) * 1.06);
+        
+        const result = {
+          employe_id: payment.employe_id,
+          employe: payment.employe,
+          type: 'paiement', // Marqueur pour identifier le type
+          montant_total_remboursement: montantRemboursement,
+          frais_service_total: payment.frais_intervention || Math.round((payment.salaire_net || 0) * 0.06),
+          nombre_remboursements: 1,
+          salaire_net: payment.salaire_net,
+          salaire_restant: payment.salaire_disponible_total || payment.montant || payment.salaire_disponible || payment.salaire_net,
+          statut_global: payment.statut,
+          periode: {
+            periode_complete: payment.periode_debut && payment.periode_fin 
+              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}` 
+              : 'N/A',
+            description: payment.date_paiement 
+              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}` 
+              : 'N/A'
+          },
+          // Détails du paiement
+          paiement_details: payment
+        };
+        
+        return result;
+      });
+      
+      console.log('✅ Paiements transformés:', transformed.length);
+      console.log('🔍 Premier paiement transformé:', transformed[0]);
+      
+      return transformed;
     } else {
       // Tous : combiner les deux
-      const paymentsTransformed = paiements.map((payment: any) => ({
-        employe_id: payment.employe_id,
-        employe: payment.employe,
-        type: 'paiement',
-        montant_total_remboursement: payment.salaire_disponible,
-        frais_service_total: payment.frais_intervention || 0,
-        nombre_remboursements: 1,
-        salaire_net: payment.salaire_net,
-        statut_global: payment.statut,
-        periode: {
-          periode_complete: `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`,
-          description: `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
-        },
-        paiement_details: payment
-      }));
+      const paymentsTransformed = paiements.map((payment: any) => {
+        const montantRemboursement = payment.montant_total_remboursement || 
+                                      Math.round((payment.salaire_net || 0) * 1.06);
+        
+        return {
+          employe_id: payment.employe_id,
+          employe: payment.employe,
+          type: 'paiement',
+          montant_total_remboursement: montantRemboursement,
+          frais_service_total: payment.frais_intervention || Math.round((payment.salaire_net || 0) * 0.06),
+          nombre_remboursements: 1,
+          salaire_net: payment.salaire_net,
+          salaire_restant: payment.salaire_disponible_total || payment.montant || payment.salaire_disponible || payment.salaire_net,
+          statut_global: payment.statut,
+          periode: {
+            periode_complete: payment.periode_debut && payment.periode_fin 
+              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}` 
+              : 'N/A',
+            description: payment.date_paiement 
+              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}` 
+              : 'N/A'
+          },
+          paiement_details: payment
+        };
+      });
       
       // Ajouter un marqueur 'type' aux avances aussi
       const avancesMarked = avances.map((a: any) => ({ ...a, type: 'avance' }));
@@ -429,8 +470,7 @@ export default function RemboursementsPage() {
       loadRemboursementsData();
       // Charger les statistiques
       loadStatistics();
-      // ✅ Charger aussi les paiements de salaire
-      loadPaymentHistory();
+      // ✅ Les paiements de salaire sont chargés automatiquement par le hook usePaymentHistory
       // Charger les employés pour avoir les salaires
       fetchEmployees();
     }
@@ -651,46 +691,8 @@ export default function RemboursementsPage() {
   };
 
   // ✅ Fonction pour charger les paiements de salaire
-  const loadPaymentHistory = async (customFilters: any = {}) => {
-    if (!session?.access_token) return;
-
-    try {
-      edgeFunctionService.setAccessToken(session.access_token);
-
-      // Combiner les filtres
-      const activeFilters = { ...filters, ...customFilters };
-      
-      // Convertir les filtres pour partner-payment-history
-      const paymentFilters: any = {
-        page: 1,
-        limit: 100
-      };
-      if (activeFilters.mois) paymentFilters.mois = activeFilters.mois;
-      if (activeFilters.annee) paymentFilters.annee = activeFilters.annee;
-      if (activeFilters.employee_id) paymentFilters.employe_id = activeFilters.employee_id;
-      if (activeFilters.status) paymentFilters.statut = activeFilters.status;
-
-      console.log('🔄 Chargement paiements de salaire avec filtres:', paymentFilters);
-
-      // Charger les paiements de salaire
-      const paymentsData = await edgeFunctionService.getPartnerPaymentHistory(paymentFilters);
-
-      if (paymentsData.success && paymentsData.data) {
-        setPaymentHistory(paymentsData.data);
-        console.log('✅ Paiements de salaire chargés:', paymentsData.data.length);
-      }
-
-      // Charger aussi les statistiques
-      const statsData = await edgeFunctionService.getPartnerPaymentHistoryStatistics();
-      if (statsData.success && statsData.data) {
-        setPaymentStatistics(statsData.data);
-        console.log('📊 Statistiques paiements chargées:', statsData.data);
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement des paiements de salaire:', error);
-      toast.error('Erreur lors du chargement des paiements de salaire');
-    }
-  };
+  // ✅ La fonction loadPaymentHistory est maintenant gérée par le hook usePaymentHistory
+  // Le hook charge automatiquement les données au montage et expose loadPayments() pour recharger
 
   // Fonction pour obtenir le salaire net de l'employé
   const getSalaireNet = (remboursement: any) => {
@@ -816,23 +818,54 @@ export default function RemboursementsPage() {
   };
 
   // Total des remboursements en attente - utiliser les statistiques Edge Function en priorité
-  const totalRemboursements =
-    statistics?.montant_restant ||
-    (currentMonthData?.data
-      ? currentMonthData.data
+  // ✅ Calculer les statistiques selon le type sélectionné
+  const getStatsByType = () => {
+    const avances = currentMonthData?.data || [];
+    const paiements = paymentHistory || [];
+    
+    if (dataType === 'avances') {
+      // Statistiques uniquement des avances
+      return {
+        total: avances.length,
+        enAttente: avances.filter((r: any) => r.statut_global === "EN_ATTENTE").length,
+        payes: avances.filter((r: any) => r.statut_global === "PAYE").length,
+        montantEnAttente: avances
           .filter((r: any) => r.statut_global === "EN_ATTENTE")
-          .reduce(
-            (sum: number, r: any) =>
-              sum + Number(r.montant_total_remboursement),
-            0
-          )
-      : remboursements
-          .filter((r) => r.statut === "EN_ATTENTE")
-          .reduce((sum, r) => sum + Number(r.montant_total_remboursement), 0));
+          .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0)
+      };
+    } else if (dataType === 'paiements') {
+      // Statistiques uniquement des paiements
+      return {
+        total: paiements.length,
+        enAttente: paiements.filter((p: any) => p.statut === "EN_ATTENTE").length,
+        payes: paiements.filter((p: any) => p.statut === "PAYE").length,
+        montantEnAttente: paiements
+          .filter((p: any) => p.statut === "EN_ATTENTE")
+          .reduce((sum: number, p: any) => sum + Number(p.salaire_disponible || 0), 0)
+      };
+    } else {
+      // Statistiques combinées (tous)
+      const avancesEnAttente = avances.filter((r: any) => r.statut_global === "EN_ATTENTE");
+      const paiementsEnAttente = paiements.filter((p: any) => p.statut === "EN_ATTENTE");
+      
+      return {
+        total: avances.length + paiements.length,
+        enAttente: avancesEnAttente.length + paiementsEnAttente.length,
+        payes: avances.filter((r: any) => r.statut_global === "PAYE").length + 
+               paiements.filter((p: any) => p.statut === "PAYE").length,
+        montantEnAttente: 
+          avancesEnAttente.reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0) +
+          paiementsEnAttente.reduce((sum: number, p: any) => sum + Number(p.salaire_disponible || 0), 0)
+      };
+    }
+  };
+
+  const statsFiltered = getStatsByType();
+  const totalRemboursements = statsFiltered.montantEnAttente;
 
   // Debug: Log des données pour vérifier
-  console.log("🔍 Debug - currentMonthData:", currentMonthData);
-  console.log("🔍 Debug - remboursements:", remboursements);
+  console.log("🔍 Debug - dataType:", dataType);
+  console.log("🔍 Debug - statsFiltered:", statsFiltered);
   console.log("🔍 Debug - totalRemboursements:", totalRemboursements);
 
   // Loading state
@@ -1239,10 +1272,7 @@ export default function RemboursementsPage() {
                 Total remboursements
               </div>
               <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
-                {statistics?.total_remboursements ||
-                  (currentMonthData?.data
-                    ? currentMonthData.data.length
-                    : remboursements.length)}
+                {statsFiltered.total}
               </div>
             </div>
           </div>
@@ -1257,13 +1287,7 @@ export default function RemboursementsPage() {
                 En attente
               </div>
               <div className="text-lg font-bold text-yellow-900 dark:text-yellow-100">
-                {statistics?.remboursements_en_attente ||
-                  (currentMonthData?.data
-                    ? currentMonthData.data.filter(
-                        (r: any) => r.statut_global === "EN_ATTENTE"
-                      ).length
-                    : remboursements.filter((r) => r.statut === "EN_ATTENTE")
-                        .length)}
+                {statsFiltered.enAttente}
               </div>
             </div>
           </div>
@@ -1278,12 +1302,7 @@ export default function RemboursementsPage() {
                 Payés
               </div>
               <div className="text-lg font-bold text-green-900 dark:text-green-100">
-                {statistics?.remboursements_payes ||
-                  (currentMonthData?.data
-                    ? currentMonthData.data.filter(
-                        (r: any) => r.statut_global === "PAYE"
-                      ).length
-                    : remboursements.filter((r) => r.statut === "PAYE").length)}
+                {statsFiltered.payes}
               </div>
             </div>
           </div>
@@ -1302,34 +1321,68 @@ export default function RemboursementsPage() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full table-fixed dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
-              <tr>
-                <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Employé
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Total remboursement
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Frais service total
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Nombre de remboursements
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Salaire restant
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Période
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Statut global
-                </th>
-                <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
+            {/* ✅ En-tête adapté selon le type sélectionné */}
+            {dataType === 'paiements' ? (
+              // En-tête pour paiements de salaire (style page /dashboard/paiements)
+              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+                <tr>
+                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Période
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Montant à rembourser
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Frais (6%)
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire reçu
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+            ) : (
+              // En-tête pour avances sur salaire (original)
+              <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
+                <tr>
+                  <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Total remboursement
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Frais service total
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Nombre de remboursements
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire restant
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Période
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Statut global
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+            )}
             <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
               {currentMonthData?.data?.length === 0 && (
                 <tr>
@@ -1377,26 +1430,54 @@ export default function RemboursementsPage() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
-                    {gnfFormatter(employeeData.montant_total_remboursement)}
-                  </td>
-                  <td className="px-3 py-4 text-sm text-gray-500">
-                    {gnfFormatter(employeeData.frais_service_total)}
-                  </td>
-                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                      {employeeData.nombre_remboursements}
-                    </span>
-                  </td>
-                  <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                    {gnfFormatter(employeeData.salaire_restant)}
-                  </td>
-                  <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                    {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
-                  </td>
-                  <td className="px-3 py-4">
-                    {getStatusBadge(employeeData.statut_global)}
-                  </td>
+                  {/* ✅ Cellules adaptées selon le type */}
+                  {dataType === 'paiements' ? (
+                    // Cellules pour paiements de salaire
+                    <>
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                        {employeeData.periode?.periode_complete || 'N/A'}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                        {gnfFormatter(employeeData.salaire_net)}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
+                        {gnfFormatter(employeeData.montant_total_remboursement)}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm text-gray-500">
+                        {gnfFormatter(employeeData.frais_service_total)}
+                      </td>
+                      <td className="px-3 py-4 text-center text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                        {gnfFormatter(employeeData.salaire_restant)}
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        {getStatusBadge(employeeData.statut_global)}
+                      </td>
+                    </>
+                  ) : (
+                    // Cellules pour avances sur salaire (original)
+                    <>
+                      <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
+                        {gnfFormatter(employeeData.montant_total_remboursement)}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-500">
+                        {gnfFormatter(employeeData.frais_service_total)}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                          {employeeData.nombre_remboursements}
+                        </span>
+                      </td>
+                      <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                        {gnfFormatter(employeeData.salaire_restant)}
+                      </td>
+                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                        {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
+                      </td>
+                      <td className="px-3 py-4">
+                        {getStatusBadge(employeeData.statut_global)}
+                      </td>
+                    </>
+                  )}
                   <td className="px-3 py-4 text-center">
                     <button
                       onClick={() => handleShowEmployeeDetails(employeeData)}
