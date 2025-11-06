@@ -252,6 +252,14 @@ export default function PaymentSalaryPage() {
   const totalRemboursements = statistics?.montant_total_remboursements || 0;
   const completedPayments = statistics?.paiements_effectues || 0;
   const pendingPayments = statistics?.paiements_en_attente || 0;
+  
+  // ✅ PÉNALITÉS DE RETARD
+  const semainesRetard = statistics?.semaines_retard || 0;
+  const penaliteRetardPourcentage = statistics?.penalite_retard_pourcentage || 0;
+  const montantPenaliteRetard = statistics?.montant_penalite_retard || 0;
+  const montantTotalAvecPenalite = statistics?.montant_total_avec_penalite || totalRemboursements;
+  const joursRestants = statistics?.jours_restants_remboursement || 0;
+  const enRetard = joursRestants < 0;
 
   // Fonction pour obtenir la couleur du badge selon le statut
   const getStatusBadgeVariant = (status: string) => {
@@ -825,9 +833,30 @@ export default function PaymentSalaryPage() {
           <span className="font-medium">Effectuer un paiement</span>
               </button>
             </div>
+
+      {/* ⚠️ Alerte de retard */}
+      {enRetard && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                ⚠️ Retard de remboursement détecté
+              </h4>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                Vous avez <strong>{Math.abs(joursRestants)} jours de retard</strong> ({semainesRetard} semaine{semainesRetard > 1 ? 's' : ''}).
+                Une pénalité de <strong>{penaliteRetardPourcentage}%</strong> s'applique, soit <strong>{formatAmount(montantPenaliteRetard)} GNF</strong>.
+              </p>
+              <p className="text-sm text-red-700 dark:text-red-300 mt-2">
+                💰 <strong>Total à rembourser avec pénalité : {formatAmount(montantTotalAvecPenalite)} GNF</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
             
       {/* Statistiques détaillées */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
         {/* Total Paiements */}
         <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
@@ -899,6 +928,50 @@ export default function PaymentSalaryPage() {
             </p>
                   </div>
                 </div>
+
+        {/* Pénalités de retard */}
+        <div className={`rounded-lg p-5 border shadow-sm hover:shadow-md transition-shadow ${
+          enRetard 
+            ? 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800/30' 
+            : 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800/30'
+        }`}>
+          <div className="flex items-center justify-between mb-3">
+            <div className={`p-2 rounded-lg ${
+              enRetard 
+                ? 'bg-red-100 dark:bg-red-900/30' 
+                : 'bg-green-100 dark:bg-green-900/30'
+            }`}>
+              <Clock className={`w-6 h-6 ${
+                enRetard 
+                  ? 'text-red-600 dark:text-red-400' 
+                  : 'text-green-600 dark:text-green-400'
+              }`} />
+            </div>
+            <Badge className={`text-xs ${
+              enRetard 
+                ? 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300' 
+                : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+            }`}>
+              {enRetard ? `+${penaliteRetardPourcentage}%` : 'À jour'}
+            </Badge>
+          </div>
+          <div>
+            <p className={`text-2xl font-bold ${
+              enRetard 
+                ? 'text-red-900 dark:text-red-100' 
+                : 'text-green-900 dark:text-green-100'
+            }`}>
+              {enRetard ? `${formatAmount(montantPenaliteRetard)} GNF` : '0 GNF'}
+            </p>
+            <p className={`text-sm mt-1 ${
+              enRetard 
+                ? 'text-red-600 dark:text-red-400' 
+                : 'text-green-600 dark:text-green-400'
+            }`}>
+              {enRetard ? `Pénalité (${semainesRetard} sem.)` : 'Pas de retard'}
+            </p>
+          </div>
+        </div>
               </div>
 
       {/* Filtres avancés */}
