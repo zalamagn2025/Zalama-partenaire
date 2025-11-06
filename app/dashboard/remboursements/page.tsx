@@ -862,6 +862,40 @@ export default function RemboursementsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Suivi et traitement des remboursements d'avances salariales
             </p>
+            
+            {/* ✅ Sélecteur de type de données */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setDataType('tous')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  dataType === 'tous'
+                    ? 'bg-[var(--zalama-orange)] text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                📊 Tous ({(dataForPagination.length || 0) + (paymentHistory.length || 0)})
+              </button>
+              <button
+                onClick={() => setDataType('avances')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  dataType === 'avances'
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                💰 Avances sur salaire ({dataForPagination.length || 0})
+              </button>
+              <button
+                onClick={() => setDataType('paiements')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                  dataType === 'paiements'
+                    ? 'bg-emerald-600 text-white shadow-md'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                💵 Paiements de salaire ({paymentHistory.length || 0})
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
