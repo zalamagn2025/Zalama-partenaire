@@ -1102,6 +1102,63 @@ export default function DemandesPage() {
         </div>
       </div>
 
+      {/* Statistiques des remboursements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Remboursements payés */}
+        <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-5 border border-emerald-200 dark:border-emerald-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Payés</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+              {remboursementsPaye}
+            </p>
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+              Remboursements payés
+            </p>
+          </div>
+        </div>
+
+        {/* Remboursements en attente */}
+        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-5 border border-amber-200 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+              {remboursementsEnAttente}
+            </p>
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+              Remboursements en attente
+            </p>
+          </div>
+        </div>
+
+        {/* Remboursements en retard */}
+        <div className="bg-rose-50 dark:bg-rose-900/10 rounded-lg p-5 border border-rose-200 dark:border-rose-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+            </div>
+            <Badge variant="error" className="text-xs">En retard</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+              {remboursementsEnRetard}
+            </p>
+            <p className="text-sm text-rose-600 dark:text-rose-400 mt-1">
+              Remboursements en retard
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Barre de recherche simple */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-4 mb-4">
         <div className="relative">
