@@ -42,7 +42,7 @@ import {
   X,
   Filter,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { Bar, Pie } from "react-chartjs-2";
 
 Chart.register(
@@ -65,6 +65,17 @@ type Remboursement = {
   date_limite_remboursement: string;
   statut: string;
   date_remboursement_effectue: string | null;
+  type?: string;
+  statut_global?: string;
+  salaire_net?: number;
+  avances_deduites?: number;
+  salaire_restant?: number;
+  frais_service_total?: number;
+  reference_paiement?: string;
+  methode_paiement?: string;
+  date_paiement?: string;
+  date_limite?: string;
+  date_limite_remboursement_effective?: string;
   employee: {
     nom: string;
     prenom: string;
@@ -72,11 +83,20 @@ type Remboursement = {
     email?: string;
     telephone?: string;
     poste?: string;
+    matricule?: string;
   };
   demande_avance?: {
     montant_demande: number;
     date_validation: string;
   };
+  paiement_details?: Record<string, any>;
+  paiementDetails?: Record<string, any>;
+  employe?: Record<string, any>;
+  employees?: Record<string, any>[];
+  employee_data?: Record<string, any>;
+  employeeInfo?: Record<string, any>;
+  partenaire?: { company_name?: string };
+  partner?: { company_name?: string };
   tous_remboursements?: {
     id: string;
     montant_total_remboursement: number;
@@ -820,6 +840,72 @@ export default function RemboursementsPage() {
     return calculateRemboursementDu(getMontantDemande(remboursement));
   };
 
+  const isPaymentRecord = (item: any) => {
+    if (!item) return false;
+    if (item.type === "paiement") return true;
+    if (item.paiement_details || item.paiementDetails) return true;
+    if (item.statut === "PAYE" && (item.reference_paiement || item.methode_paiement)) {
+      return true;
+    }
+    return false;
+  };
+
+  const extractPaymentDetails = (item: any) => {
+    if (!item) return null;
+    return item.paiement_details || item.paiementDetails || item;
+  };
+
+  const extractEmployeeInfo = (item: any) => {
+    if (!item) return null;
+    if (item.employee) return item.employee;
+    if (item.employe) return item.employe;
+    if (Array.isArray(item.employees) && item.employees.length > 0) {
+      return item.employees[0];
+    }
+    if (item.employee_data) return item.employee_data;
+    if (item.employeeInfo) return item.employeeInfo;
+    return null;
+  };
+
+  const formatDate = (value?: string | null) => {
+    if (!value) return "N/A";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString("fr-FR");
+  };
+
+  const mapPaymentMethodLabel = (method?: string | null) => {
+    if (!method) return "N/A";
+    switch (method) {
+      case "INTERVENTION_ZALAMA":
+        return "Intervention ZaLaMa";
+      case "VIREMENT_BANCAIRE":
+        return "Virement bancaire";
+      case "ESPECES":
+        return "Espèces";
+      case "MOBILE_MONEY":
+        return "Mobile Money";
+      default:
+        return method
+          .toString()
+          .replace(/_/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+    }
+  };
+
+  const formatPeriod = (item: any) => {
+    if (!item) return "N/A";
+    if (item.periode?.periode_complete) {
+      return item.periode.periode_complete;
+    }
+    const details = extractPaymentDetails(item);
+    if (details?.periode_complete) return details.periode_complete;
+    if (details?.periode_debut && details?.periode_fin) {
+      return `${formatDate(details.periode_debut)} - ${formatDate(details.periode_fin)}`;
+    }
+    return "N/A";
+  };
+
   // Total des remboursements en attente - utiliser les statistiques Edge Function en priorité
   // ✅ Calculer les statistiques selon le type sélectionné
   const getStatsByType = () => {
@@ -952,6 +1038,90 @@ export default function RemboursementsPage() {
       </div>
     );
   }
+
+  const detailEmployee = extractEmployeeInfo(selectedRemboursement);
+  const isPaymentDetail = isPaymentRecord(selectedRemboursement);
+  const paymentDetails = isPaymentDetail ? extractPaymentDetails(selectedRemboursement) : null;
+  const paymentSummary = isPaymentDetail
+    ? {
+        salaireNet: Number(
+          paymentDetails?.salaire_net ??
+            selectedRemboursement?.salaire_net ??
+            detailEmployee?.salaire_net ??
+            0
+        ),
+        avancesDeduites: Number(
+          paymentDetails?.avances_deduites ??
+            selectedRemboursement?.avances_deduites ??
+            paymentDetails?.salaire_net_deductions ??
+            0
+        ),
+        salaireVerse: Number(
+          selectedRemboursement?.salaire_restant ??
+            paymentDetails?.salaire_disponible_total ??
+            paymentDetails?.salaire_disponible ??
+            paymentDetails?.montant ??
+            0
+        ),
+        montantRembourser: Number(
+          selectedRemboursement?.montant_total_remboursement ??
+            paymentDetails?.montant_total_remboursement ??
+            paymentDetails?.montant_a_rembourser ??
+            0
+        ),
+        fraisIntervention: Number(
+          selectedRemboursement?.frais_service_total ??
+            paymentDetails?.frais_intervention ??
+            paymentDetails?.frais_service ??
+            0
+        ),
+        penalite: Number(paymentDetails?.montant_penalite_retard ?? 0),
+      }
+    : null;
+  const paymentReference = isPaymentDetail
+    ? paymentDetails?.reference_paiement ||
+      selectedRemboursement?.reference_paiement ||
+      selectedRemboursement?.id ||
+      "N/A"
+    : selectedRemboursement?.id || "N/A";
+  const paymentStatut = isPaymentDetail
+    ? selectedRemboursement?.statut_global ||
+      paymentDetails?.statut ||
+      selectedRemboursement?.statut ||
+      "N/A"
+    : selectedRemboursement?.statut || "N/A";
+  const paymentMethod = isPaymentDetail
+    ? mapPaymentMethodLabel(
+        paymentDetails?.methode_paiement || paymentDetails?.mode_paiement
+      )
+    : undefined;
+  const paymentDatePaiement = isPaymentDetail
+    ? formatDate(
+        paymentDetails?.date_paiement || selectedRemboursement?.date_paiement
+      )
+    : null;
+  const paymentDateLimite = isPaymentDetail
+    ? formatDate(
+        paymentDetails?.date_limite ||
+          paymentDetails?.date_limite_remboursement ||
+          selectedRemboursement?.date_limite ||
+          selectedRemboursement?.date_limite_remboursement
+      )
+    : null;
+  const paymentDateRemboursement = isPaymentDetail
+    ? formatDate(
+        paymentDetails?.date_remboursement_effectue ||
+          selectedRemboursement?.date_remboursement_effectue
+      )
+    : null;
+  const paymentPeriode = isPaymentDetail ? formatPeriod(selectedRemboursement) : null;
+  const hasPaymentPenalite = Boolean(paymentSummary && paymentSummary.penalite > 0);
+  const detailModalTitle = isPaymentDetail
+    ? "Détail du paiement de salaire"
+    : "Détail du remboursement";
+  const detailReferenceLabel = isPaymentDetail
+    ? "Référence paiement"
+    : "Référence";
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
@@ -1624,10 +1794,10 @@ export default function RemboursementsPage() {
                 </div>
               <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  Détail du remboursement
+                  {detailModalTitle}
                 </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                  Référence: {selectedRemboursement.id || "N/A"}
+                  {detailReferenceLabel}: {paymentReference}
                 </p>
                 </div>
               </div>
@@ -1646,24 +1816,48 @@ export default function RemboursementsPage() {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Informations Employé
                 </h3>
-                <div className="grid grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
                   <div>
                     <p className="text-xs text-gray-500">Nom complet</p>
                     <p className="font-medium">
-                      {selectedRemboursement.employee?.prenom} {selectedRemboursement.employee?.nom}
+                      {detailEmployee
+                        ? `${detailEmployee.prenom ?? ""} ${detailEmployee.nom ?? ""}`.trim() || "N/A"
+                        : "N/A"}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Poste</p>
-                    <p className="font-medium">{selectedRemboursement.employee?.poste || "N/A"}</p>
+                    <p className="font-medium">{detailEmployee?.poste || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Email</p>
-                    <p className="font-medium text-sm">{selectedRemboursement.employee?.email || "N/A"}</p>
+                    <p className="font-medium text-sm">{detailEmployee?.email || "N/A"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-500">Téléphone</p>
-                    <p className="font-medium">{selectedRemboursement.employee?.telephone || "N/A"}</p>
+                    <p className="font-medium">{detailEmployee?.telephone || "N/A"}</p>
+                  </div>
+                  {detailEmployee?.matricule && (
+                    <div>
+                      <p className="text-xs text-gray-500">Matricule</p>
+                      <p className="font-medium">{detailEmployee.matricule}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-500">Entreprise</p>
+                    <p className="font-medium">
+                      {selectedRemboursement?.partenaire?.company_name ||
+                        selectedRemboursement?.partner?.company_name ||
+                        "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">Salaire net</p>
+                    <p className="font-medium">
+                      {gnfFormatter(
+                        detailEmployee?.salaire_net ?? paymentSummary?.salaireNet ?? 0
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1673,32 +1867,69 @@ export default function RemboursementsPage() {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Détails Financiers
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Montant demandé</p>
-                    <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-                      {gnfFormatter(getMontantDemande(selectedRemboursement))}
-                    </p>
+                {isPaymentDetail ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Salaire net</p>
+                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        {gnfFormatter(paymentSummary?.salaireNet || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">Avances déduites</p>
+                      <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                        {gnfFormatter(paymentSummary?.avancesDeduites || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                      <p className="text-xs text-green-600 dark:text-green-400 mb-2">Salaire versé</p>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        {gnfFormatter(paymentSummary?.salaireVerse || 0)}
+                      </p>
+                    </div>
+                    <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mb-2">Montant à rembourser</p>
+                      <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                        {gnfFormatter(paymentSummary?.montantRembourser || 0)}
+                      </p>
+                      <p className="text-xs text-orange-500 dark:text-orange-300 mt-2">
+                        Frais d'intervention : {gnfFormatter(paymentSummary?.fraisIntervention || 0)}
+                      </p>
+                      {hasPaymentPenalite && (
+                        <p className="text-xs text-red-500 dark:text-red-300 mt-1">
+                          Pénalité de retard : {gnfFormatter(paymentSummary?.penalite || 0)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Frais de service (6,5%)</p>
-                    <p className="text-xl font-bold text-gray-600 dark:text-gray-400">
-                      {gnfFormatter(getFraisService(selectedRemboursement))}
-                    </p>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Montant demandé</p>
+                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        {gnfFormatter(getMontantDemande(selectedRemboursement))}
+                      </p>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-300 dark:border-gray-700">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Frais de service (6,5%)</p>
+                      <p className="text-xl font-bold text-gray-600 dark:text-gray-400">
+                        {gnfFormatter(getFraisService(selectedRemboursement))}
+                      </p>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                      <p className="text-xs text-green-600 dark:text-green-400 mb-2">Montant reçu</p>
+                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                        {gnfFormatter(getMontantRecu(selectedRemboursement))}
+                      </p>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
+                      <p className="text-xs text-red-600 dark:text-red-400 mb-2">Remboursement dû</p>
+                      <p className="text-xl font-bold text-red-600 dark:text-red-400">
+                        {gnfFormatter(getRemboursementDu(selectedRemboursement))}
+                      </p>
+                    </div>
                   </div>
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-                    <p className="text-xs text-green-600 dark:text-green-400 mb-2">Montant reçu</p>
-                    <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                      {gnfFormatter(getMontantRecu(selectedRemboursement))}
-                    </p>
-                  </div>
-                  <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-                    <p className="text-xs text-red-600 dark:text-red-400 mb-2">Remboursement dû</p>
-                    <p className="text-xl font-bold text-red-600 dark:text-red-400">
-                      {gnfFormatter(getRemboursementDu(selectedRemboursement))}
-                    </p>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Dates et Statut */}
@@ -1706,34 +1937,69 @@ export default function RemboursementsPage() {
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">
                   Dates et Statut
                 </h3>
-                <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date d'avance</span>
-                    <span className="font-medium">
-                      {selectedRemboursement.demande_avance?.date_validation
-                        ? new Date(selectedRemboursement.demande_avance.date_validation).toLocaleDateString("fr-FR")
-                        : "N/A"}
-                    </span>
+                {isPaymentDetail ? (
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Période de paie</span>
+                      <span className="font-medium">{paymentPeriode || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
+                      <span className="font-medium">{paymentDatePaiement || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date limite de remboursement</span>
+                      <span className="font-medium">{paymentDateLimite || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date de remboursement</span>
+                      <span className="font-medium">{paymentDateRemboursement || "Non payé"}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400">Statut</span>
+                      <span className="flex-shrink-0">
+                        {paymentStatut && paymentStatut !== "N/A"
+                          ? getStatusBadge(paymentStatut)
+                          : <span className="font-medium">N/A</span>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Méthode de paiement</span>
+                      <span className="font-medium">{paymentMethod || "N/A"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Référence paiement</span>
+                      <span className="font-medium">{paymentReference}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date limite</span>
-                    <span className="font-medium">
-                      {new Date(selectedRemboursement.date_limite_remboursement).toLocaleDateString("fr-FR")}
-                    </span>
+                ) : (
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date d'avance</span>
+                      <span className="font-medium">
+                        {formatDate(selectedRemboursement.demande_avance?.date_validation)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date limite</span>
+                      <span className="font-medium">
+                        {formatDate(selectedRemboursement.date_limite_remboursement)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
+                      <span className="font-medium">
+                        {selectedRemboursement.date_remboursement_effectue
+                          ? formatDate(selectedRemboursement.date_remboursement_effectue)
+                          : "Non payé"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600 dark:text-gray-400">Statut</span>
+                      <span>{getStatusBadge(selectedRemboursement.statut)}</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Date de paiement</span>
-                    <span className="font-medium">
-                      {selectedRemboursement.date_remboursement_effectue
-                        ? new Date(selectedRemboursement.date_remboursement_effectue).toLocaleDateString("fr-FR")
-                        : "Non payé"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600 dark:text-gray-400">Statut</span>
-                    <span>{getStatusBadge(selectedRemboursement.statut)}</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
             
