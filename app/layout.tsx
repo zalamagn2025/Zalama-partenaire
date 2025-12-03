@@ -6,6 +6,8 @@ import { EdgeAuthProvider } from "@/contexts/EdgeAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SessionErrorHandler from "@/components/auth/SessionErrorHandler";
 import { Toaster } from "@/components/ui/custom-toaster";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
+import NetworkStatus from "@/components/pwa/NetworkStatus";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -54,7 +56,9 @@ export default function RootLayout({
         <ThemeProvider>
           <EdgeAuthProvider>
             <SessionErrorHandler>
+              <NetworkStatus />
               <Toaster />
+              <InstallPrompt />
               {children}
             </SessionErrorHandler>
           </EdgeAuthProvider>
