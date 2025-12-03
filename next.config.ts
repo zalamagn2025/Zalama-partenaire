@@ -3,13 +3,74 @@ import withPWA from "next-pwa";
 
 // Initialize next-pwa with desired options
 const withPWAConfigured = withPWA({
-  dest: "public", // generate service worker and workbox files into public/
-  disable: process.env.NODE_ENV === "development", // disable in dev to avoid caching headaches
+  dest: "public",
+  disable: process.env.NODE_ENV === "development",
   register: true,
   skipWaiting: true,
   fallbacks: {
-    // optional: you can add offline fallbacks here later
+    document: "/offline",
+    image: "/images/Logo.svg",
   },
+  runtimeCaching: [
+    {
+      urlPattern: /^https:\/\/mspmrzlqhwpdkkburjiw\.supabase\.co\/.*$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "supabase-cache",
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 24 * 60 * 60,
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      urlPattern: /^https:\/\/.*\.djomy\..*\/.*$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "djomy-api-cache",
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 60 * 60,
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+    {
+      urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|ico)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "image-cache",
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+        },
+      },
+    },
+    {
+      urlPattern: /\.(?:js|css|woff|woff2|ttf|otf)$/i,
+      handler: "StaleWhileRevalidate",
+      options: {
+        cacheName: "static-resources",
+        expiration: {
+          maxEntries: 64,
+          maxAgeSeconds: 30 * 24 * 60 * 60,
+        },
+      },
+    },
+    {
+      urlPattern: /^\/api\/.*$/i,
+      handler: "NetworkFirst",
+      options: {
+        cacheName: "api-cache",
+        expiration: {
+          maxEntries: 32,
+          maxAgeSeconds: 5 * 60,
+        },
+        networkTimeoutSeconds: 10,
+      },
+    },
+  ],
 });
 
 const nextConfig: NextConfig = {

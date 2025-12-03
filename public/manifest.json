@@ -5,11 +5,20 @@
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0d6efd",
-  "description": "Tableau de bord partenaire ZaLaMa en mode application",
+  "description": "Tableau de bord partenaire ZaLaMa - Gestion RH, avances sur salaire et paiements",
   "scope": "/",
   "lang": "fr-FR",
   "dir": "ltr",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity", "finance"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "/images/Logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/web-app-manifest-192x192.png",
       "sizes": "192x192",
@@ -21,6 +30,48 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Accéder au tableau de bord",
+      "url": "/dashboard",
+      "icons": [{
+        "src": "/web-app-manifest-192x192.png",
+        "sizes": "192x192"
+      }]
+    },
+    {
+      "name": "Employés",
+      "short_name": "Employés",
+      "description": "Gérer les employés",
+      "url": "/dashboard/employes",
+      "icons": [{
+        "src": "/web-app-manifest-192x192.png",
+        "sizes": "192x192"
+      }]
+    },
+    {
+      "name": "Finances",
+      "short_name": "Finances",
+      "description": "Voir les finances",
+      "url": "/dashboard/finances",
+      "icons": [{
+        "src": "/web-app-manifest-192x192.png",
+        "sizes": "192x192"
+      }]
+    },
+    {
+      "name": "Paiements",
+      "short_name": "Paiements",
+      "description": "Payer les salaires",
+      "url": "/dashboard/payment-salary",
+      "icons": [{
+        "src": "/web-app-manifest-192x192.png",
+        "sizes": "192x192"
+      }]
     }
   ]
 }
