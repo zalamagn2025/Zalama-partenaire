@@ -274,10 +274,18 @@ export function FirstLoginChangePasswordModal({
         }}
       >
         <DialogHeader>
-          <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-            <KeyRound className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <div className="flex justify-center mb-4">
+            <img
+              src="/images/Logo.svg"
+              alt="ZaLaMa Logo"
+              className="h-16 w-auto"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "/images/logo-fav.png";
+              }}
+            />
           </div>
-          <DialogTitle className="text-xl font-bold text-center">
+          <DialogTitle className="text-2xl font-bold text-center">
             Premier accès
           </DialogTitle>
           <DialogDescription className="text-center mt-2">
@@ -302,19 +310,22 @@ export function FirstLoginChangePasswordModal({
                     currentPin: value,
                   })
                 }
+                length={6}
                 masked={!showCurrentPin}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
                 onClick={() => setShowCurrentPin(!showCurrentPin)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               >
                 {showCurrentPin ? (
                   <EyeOff className="h-4 w-4 text-gray-500" />
                 ) : (
                   <Eye className="h-4 w-4 text-gray-500" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -333,19 +344,22 @@ export function FirstLoginChangePasswordModal({
                     newPin: value,
                   })
                 }
+                length={6}
                 masked={!showNewPin}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
                 onClick={() => setShowNewPin(!showNewPin)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               >
                 {showNewPin ? (
                   <EyeOff className="h-4 w-4 text-gray-500" />
                 ) : (
                   <Eye className="h-4 w-4 text-gray-500" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -364,19 +378,22 @@ export function FirstLoginChangePasswordModal({
                     confirmPin: value,
                   })
                 }
+                length={6}
                 masked={!showConfirmPin}
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-800"
                 onClick={() => setShowConfirmPin(!showConfirmPin)}
-                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
               >
                 {showConfirmPin ? (
                   <EyeOff className="h-4 w-4 text-gray-500" />
                 ) : (
                   <Eye className="h-4 w-4 text-gray-500" />
                 )}
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -420,7 +437,7 @@ export function FirstLoginChangePasswordModal({
               !formData.confirmPin ||
               !isPinValid
             }
-            className="w-full"
+            className="w-full bg-[var(--zalama-orange)] hover:bg-orange-600 text-white"
           >
             {isLoading ? (
               <>
