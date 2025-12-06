@@ -2040,7 +2040,7 @@ export default function RemboursementsPage() {
                 </p>
               </div>
               </div>
-              <button
+              <Button
                 onClick={() => setShowFinancialInfoModal(false)}
                 className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
