@@ -1455,7 +1455,7 @@ export default function RemboursementsPage() {
                 className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
               >
                 <X className="h-5 w-5" />
-              </Button>
+              </button>
             </div>
             
             {/* Content - Scrollable */}
