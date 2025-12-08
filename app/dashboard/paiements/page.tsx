@@ -1505,12 +1505,19 @@ function BulletinsDePaieSection({ employees, payments }: { employees: Employee[]
   const [showBulletinModal, setShowBulletinModal] = useState(false);
   const [filterMonth, setFilterMonth] = useState<string>('all');
   const [filterEmployee, setFilterEmployee] = useState<string>('all');
+  const [currentPageBulletins, setCurrentPageBulletins] = useState(1);
+  const [itemsPerPageBulletins] = useState(10);
 
   const filteredBulletins = bulletins.filter(b => {
     const matchesMonth = filterMonth === 'all' || b.mois === filterMonth;
     const matchesEmployee = filterEmployee === 'all' || b.employe.email === filterEmployee;
     return matchesMonth && matchesEmployee;
   });
+
+  // Pagination pour les bulletins
+  const totalPagesBulletins = Math.ceil(filteredBulletins.length / itemsPerPageBulletins);
+  const startIndexBulletins = (currentPageBulletins - 1) * itemsPerPageBulletins;
+  const currentBulletins = filteredBulletins.slice(startIndexBulletins, startIndexBulletins + itemsPerPageBulletins);
 
   const formatAmount = (amount: number) => {
     return new Intl.NumberFormat('fr-FR').format(amount);
@@ -1925,8 +1932,8 @@ function BulletinsDePaieSection({ employees, payments }: { employees: Employee[]
 
       {/* Tableau des bulletins */}
       {filteredBulletins.length === 0 ? (
-        <div className="text-center py-12">
-          <FileText className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Aucun bulletin trouvé
           </h3>
@@ -1935,91 +1942,143 @@ function BulletinsDePaieSection({ employees, payments }: { employees: Employee[]
           </p>
         </div>
       ) : (
-        <div className="bg-white border-2 border-gray-200 rounded-lg shadow overflow-hidden">
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
           <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-orange-500">
+            <table className="w-full table-fixed dark:divide-gray-700">
+              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-white">Employé</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-white">Poste</th>
-                  <th className="px-4 py-3 text-left text-sm font-semibold text-white">Période</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-white">Salaire Brut</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-white">Cotisations</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-white">Salaire Net</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-white">Avances</th>
-                  <th className="px-4 py-3 text-right text-sm font-semibold text-white">Net à Payer</th>
-                  <th className="px-4 py-3 text-center text-sm font-semibold text-white">Actions</th>
+                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Période
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Brut
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Cotisations
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Avances déduites
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Net à Payer
+                  </th>
+                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredBulletins.map((bulletin) => (
-                  <tr key={bulletin.id} className="transition-colors">
-                    <td className="px-4 py-3">
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {currentBulletins.map((bulletin) => (
+                  <tr
+                    key={bulletin.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        {bulletin.employe.photo_url ? (
-                          <Image
-                            src={bulletin.employe.photo_url}
-                            alt={`${bulletin.employe.prenom} ${bulletin.employe.nom}`}
-                            width={32}
-                            height={32}
-                            className="rounded-full"
-                          />
-                        ) : (
-                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                            <span className="text-orange-600 font-semibold text-xs">
-                              {bulletin.employe.prenom?.charAt(0)}{bulletin.employe.nom?.charAt(0)}
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {bulletin.employe.photo_url ? (
+                            <Image
+                              src={bulletin.employe.photo_url}
+                              alt={`${bulletin.employe.prenom} ${bulletin.employe.nom}`}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                              {bulletin.employe.prenom?.charAt(0)}
+                              {bulletin.employe.nom?.charAt(0)}
                             </span>
-                          </div>
-                        )}
+                          )}
+                        </div>
                         <div>
-                          <p className="font-semibold text-white">{bulletin.employe.prenom} {bulletin.employe.nom}</p>
-                          <p className="text-xs text-gray-500">{bulletin.employe.email}</p>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">
+                            {bulletin.employe.prenom} {bulletin.employe.nom}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {bulletin.employe.poste || "N/A"}
+                          </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{bulletin.employe.poste}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">{bulletin.periode}</td>
-                    <td className="px-4 py-3 text-sm text-right font-medium text-white">{formatAmount(bulletin.salaireBrut)} GNF</td>
-                    <td className="px-4 py-3 text-sm text-right text-gray-600">-{formatAmount(bulletin.cotisations)} GNF</td>
-                    <td className="px-4 py-3 text-sm text-right font-semibold text-white">{formatAmount(bulletin.salaireNet)} GNF</td>
-                    <td className="px-4 py-3 text-sm text-right text-orange-600">
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {bulletin.periode}
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.salaireBrut)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      -{formatAmount(bulletin.cotisations)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.salaireNet)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
                       {bulletin.avancesDeduites > 0 ? `-${formatAmount(bulletin.avancesDeduites)} GNF` : '0 GNF'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-bold text-orange-600">{formatAmount(bulletin.netAPayer)} GNF</td>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.netAPayer)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button
                           onClick={() => handleViewBulletin(bulletin)}
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
                           title="Voir les détails"
                         >
-                          <Eye className="w-4 h-4" />
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Voir
+                          </div>
                         </button>
                         <button
                           onClick={() => handleExportPDF(bulletin)}
-                          className="p-2 text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
                           title="Télécharger PDF"
                         >
-                          <Download className="w-4 h-4" />
+                          <Download className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            PDF
+                          </div>
                         </button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot className="bg-transparent border-t border-[var(--zalama-border)] border-opacity-20">
-                <tr>
-                  <td colSpan={7} className="px-4 py-3 text-right font-bold text-white">
-                    Total Net à Payer:
-                  </td>
-                  <td className="px-4 py-3 text-right font-bold text-orange-600">
-                    {formatAmount(filteredBulletins.reduce((sum, b) => sum + b.netAPayer, 0))} GNF
-                  </td>
-                  <td></td>
-                </tr>
-              </tfoot>
             </table>
           </div>
+          
+          {/* Footer avec total */}
+          {filteredBulletins.length > 0 && (
+            <div className="bg-transparent border-t border-[var(--zalama-border)] border-opacity-20 px-4 py-3">
+              <div className="flex justify-end items-center gap-4">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Total Net à Payer:
+                </span>
+                <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                  {formatAmount(filteredBulletins.reduce((sum, b) => sum + b.netAPayer, 0))} GNF
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredBulletins.length > 0 && (
+            <Pagination
+              currentPage={currentPageBulletins}
+              totalPages={totalPagesBulletins}
+              totalItems={filteredBulletins.length}
+              itemsPerPage={itemsPerPageBulletins}
+              onPageChange={setCurrentPageBulletins}
+            />
+          )}
         </div>
       )}
 
