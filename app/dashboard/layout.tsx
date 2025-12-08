@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import EntrepriseSidebar from "@/components/layout/EntrepriseSidebar";
 import EntrepriseHeader from "@/components/layout/EntrepriseHeader";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { FirstLoginChangePasswordModal } from "@/components/dashboard/FirstLoginChangePasswordModal";
 import "@/styles/zalama-theme.css";
 
 export default function EntrepriseLayout({
@@ -15,20 +16,23 @@ export default function EntrepriseLayout({
 }) {
   const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   // Vérification des conditions spéciales après chargement de la session
   useEffect(() => {
     if (!loading && session) {
-      // Redirection obligatoire si require_password_change est true
+      // Afficher la modal obligatoire si require_password_change est true
       if (session.admin.require_password_change) {
         console.log(
-          "Require password change detected, redirecting to first-login-change-password"
+          "Require password change detected, showing modal"
         );
-        router.replace("/admin/first-login-change-password");
+        setShowPasswordModal(true);
         return;
+      } else {
+        setShowPasswordModal(false);
       }
     }
-  }, [session, loading, router]);
+  }, [session, loading]);
 
   return (
     <ProtectedRoute>
@@ -49,6 +53,12 @@ export default function EntrepriseLayout({
           </main>
         </div>
       </div>
+      
+      {/* Modal de changement de code PIN à la première connexion */}
+      <FirstLoginChangePasswordModal
+        open={showPasswordModal}
+        onOpenChange={setShowPasswordModal}
+      />
     </ProtectedRoute>
   );
 }

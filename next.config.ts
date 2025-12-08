@@ -75,49 +75,49 @@ const withPWAConfigured = withPWA({
 
 const nextConfig: NextConfig = {
   async headers() {
+    const csp = [
+      "default-src 'self'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      // Scripts: allow self, inline for Next/Tailwind, and Vercel analytics
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.vercel-insights.com",
+      // Styles: allow inline for Tailwind
+      "style-src 'self' 'unsafe-inline'",
+      // Images: allow self, data/blobs and Supabase storage
+      "img-src 'self' data: blob: https://mspmrzlqhwpdkkburjiw.supabase.co",
+      // Media fonts
+      "font-src 'self' data:",
+      // XHR/websocket connections
+      "connect-src 'self' https: wss:",
+      // Workers
+      "worker-src 'self' blob:",
+      // Objects disabled
+      "object-src 'none'",
+      // Prefetches
+      "prefetch-src 'self'",
+      // Form actions restricted to self
+      "form-action 'self'",
+    ].join('; ');
+
+    const common = [
+      { key: 'X-Frame-Options', value: 'DENY' },
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
+      { key: 'Permissions-Policy', value: "camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), accelerometer=(), autoplay=(), fullscreen=(self)" },
+      { key: 'Content-Security-Policy', value: csp },
+      // Cross-Origin Isolation headers (safer defaults)
+      { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+      { key: 'Cross-Origin-Embedder-Policy', value: 'credentialless' },
+      { key: 'Cross-Origin-Resource-Policy', value: 'same-site' },
+      // Language preference
+      { key: 'Accept-Language', value: 'fr-FR,fr;q=0.9,en;q=0.8' },
+    ];
+
     return [
       {
-        source: "/(.*)",
-        headers: [
-          {
-            key: "Access-Control-Allow-Origin",
-            value: "*",
-          },
-          {
-            key: "Access-Control-Allow-Methods",
-            value: "GET, POST, PUT, DELETE, OPTIONS",
-          },
-          {
-            key: "Access-Control-Allow-Headers",
-            value: "Content-Type, Authorization, X-Requested-With",
-          },
-          {
-            key: "X-Frame-Options",
-            value: "DENY",
-          },
-          {
-            key: "X-Content-Type-Options",
-            value: "nosniff",
-          },
-          {
-            key: "Referrer-Policy",
-            value: "strict-origin-when-cross-origin",
-          },
-          // Headers pour améliorer la compatibilité
-          {
-            key: "Accept",
-            value:
-              "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-          },
-          {
-            key: "Accept-Encoding",
-            value: "gzip, deflate, br",
-          },
-          {
-            key: "Accept-Language",
-            value: "fr-FR,fr;q=0.9,en;q=0.8",
-          },
-        ],
+        source: '/(.*)',
+        headers: common,
       },
     ];
   },
@@ -140,6 +140,13 @@ const nextConfig: NextConfig = {
   },
   // Support des navigateurs plus anciens
   transpilePackages: ["@radix-ui/react-icons"],
+  // Sécurité: masquer l'en-tête X-Powered-By
+  poweredByHeader: false,
+  // Localisation par défaut en français
+  i18n: {
+    locales: ["fr"],
+    defaultLocale: "fr",
+  },
   // Configuration webpack pour la compatibilité
   webpack: (config, { isServer, dev }) => {
     // Supprimer console.log en production

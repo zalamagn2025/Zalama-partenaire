@@ -190,6 +190,23 @@ body {
   margin: 0;
 }
 
+/* Pin input focus enforcement */
+.pin-cell:focus-within {
+  border-color: var(--zalama-orange) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.4) !important;
+}
+
+[data-theme="dark"] .pin-cell:focus-within,
+:root .dark .pin-cell:focus-within {
+  border-color: var(--zalama-orange) !important;
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.4) !important;
+}
+
+.pin-cell input {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Corps de section */
 .section-body {
   padding: 1rem;
