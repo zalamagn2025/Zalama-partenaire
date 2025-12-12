@@ -10,16 +10,38 @@ export async function GET(request: Request) {
 
   const accessToken = request.headers.get('Authorization');
 
+  // ✅ Validation du token
+  if (!accessToken) {
+    console.error('❌ partner-reimbursements proxy: Pas de token Authorization');
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Token d\'authentification requis',
+      message: 'Unauthorized'
+    }, { status: 401 });
+  }
+
   try {
     const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': accessToken || '',
+        'Authorization': accessToken,
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '', // ✅ Ajout de la clé API Supabase
       },
     });
 
     const data = await response.json();
+    
+    // ✅ Log des erreurs 401 pour debug
+    if (response.status === 401) {
+      console.error('❌ partner-reimbursements Edge Function returned 401:', {
+        url,
+        hasToken: !!accessToken,
+        tokenPreview: accessToken ? accessToken.substring(0, 20) + '...' : 'none',
+        responseData: data
+      });
+    }
+    
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
     console.error('Error in partner-reimbursements proxy:', error);
@@ -42,6 +64,7 @@ export async function PUT(request: Request) {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': accessToken || '',
+        'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '', // ✅ Ajout de la clé API Supabase
       },
       body: JSON.stringify(body),
     });

@@ -122,13 +122,18 @@ export function PinInput({
         <div
           key={index}
           className={cn(
-            "relative w-12 h-12 rounded-lg border-2 transition-all duration-200",
+            "pin-cell relative w-12 h-12 rounded-lg border-2 transition-all duration-200",
             "flex items-center justify-center",
             "bg-white dark:bg-gray-800",
-            "hover:border-orange-300 dark:hover:border-orange-600",
-            focusedIndex === index && "border-[var(--zalama-orange)] ring-2 ring-orange-200 dark:ring-orange-800",
+            // Remove any default ring
+            "ring-0 ring-offset-0",
+            "hover:border-orange-500",
+            // Force orange when the inner input is focused
+            "focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-500 focus-within:ring-orange-500/40 focus-within:dark:ring-orange-400/40 focus-within:shadow-none focus-within:outline-none focus-within:[--tw-ring-color:rgb(249_115_22)]",
+            // Keep our state-based highlight too
+            focusedIndex === index && "border-orange-500 ring-2 ring-orange-500/40 dark:ring-orange-400/40",
             error && "border-red-500 dark:border-red-400",
-            !error && !focusedIndex && value[index] && "border-green-500 dark:border-green-400",
+            !error && focusedIndex !== index && value[index] && "border-green-500 dark:border-green-400",
             disabled && "opacity-50 cursor-not-allowed"
           )}
         >
@@ -149,6 +154,8 @@ export function PinInput({
             className={cn(
               "w-full h-full text-center text-xl font-bold",
               "bg-transparent border-none outline-none",
+              // Remove any default blue focus ring/shadow
+              "focus:outline-none focus:ring-0 focus:shadow-none focus-visible:outline-none focus-visible:ring-0",
               "text-gray-900 dark:text-gray-100",
               "placeholder:text-gray-400 dark:placeholder:text-gray-600",
               disabled && "cursor-not-allowed"

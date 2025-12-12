@@ -195,19 +195,20 @@ export default function RemboursementsRecents({
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
                   {remboursement.employe.photo_url ? (
-                    <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+                    <div className="h-10 w-10 rounded-full overflow-hidden bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                       <img
                         src={remboursement.employe.photo_url}
                         alt={`${remboursement.employe.prenom} ${remboursement.employe.nom}`}
                         className="h-full w-full object-cover"
                         onError={(e) => {
-                          // En cas d'erreur de chargement, afficher les initiales
+                          // En cas d'erreur de chargement, afficher les initiales avec le même design
                           const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
+                          target.style.display = "none";
                           const parent = target.parentElement;
                           if (parent) {
+                            parent.className = "h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center";
                             parent.innerHTML = `
-                              <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
+                              <span class=\"text-sm font-medium text-orange-600 dark:text-orange-400\">
                                 ${remboursement.employe.prenom.charAt(0)}${remboursement.employe.nom.charAt(0)}
                               </span>
                             `;
@@ -216,8 +217,8 @@ export default function RemboursementsRecents({
                       />
                     </div>
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                      <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
                         {remboursement.employe.prenom.charAt(0)}
                         {remboursement.employe.nom.charAt(0)}
                       </span>

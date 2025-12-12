@@ -35,13 +35,17 @@ import {
   Zap,
   ArrowLeft,
   CheckCircle2,
-  Save
+  Save,
+  Archive,
+  Printer
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 // Types pour les données
 type Payment = {
@@ -110,6 +114,9 @@ export default function PaymentSalaryPage() {
   const [paymentDate, setPaymentDate] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
+
+  // ✅ État pour le type de contenu affiché (paiement ou bulletin)
+  const [contentType, setContentType] = useState<'paiement' | 'bulletin'>('paiement');
 
   // Charger les données
   useEffect(() => {
@@ -542,7 +549,7 @@ export default function PaymentSalaryPage() {
                         }`}
                         onClick={() => toggleEmployeeSelection(employee.id)}
                       >
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {employee.photo_url ? (
                             <Image
                               src={employee.photo_url}
@@ -552,7 +559,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {employee.prenom?.charAt(0)}
                               {employee.nom?.charAt(0)}
             </span>
@@ -813,26 +820,62 @@ export default function PaymentSalaryPage() {
   return (
     <div className="p-6">
       {/* En-tête avec titre et bouton d'action */}
-      <div className="flex items-center justify-between mb-6">
-              <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Paiement de salaire
-          </h1>
-          <p className="mt-1 text-gray-600 dark:text-gray-400">
-            Gérez les paiements de salaire de vos employés
-                </p>
-              </div>
-              <button
-          onClick={() => setShowPaymentPage(true)}
-          className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
-          style={{ background: 'var(--zalama-orange)' }}
-          onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'}
-          onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
-        >
-          <Plus className="w-5 h-5" />
-          <span className="font-medium">Effectuer un paiement</span>
-              </button>
-            </div>
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Paiements
+            </h1>
+            <p className="mt-1 text-gray-600 dark:text-gray-400">
+              {contentType === 'paiement' 
+                ? 'Gérez les paiements de salaire de vos employés'
+                : 'Consultez et téléchargez les bulletins de paie'}
+            </p>
+          </div>
+          {contentType === 'paiement' && (
+            <button
+              onClick={() => setShowPaymentPage(true)}
+              className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+              style={{ background: 'var(--zalama-orange)' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
+            >
+              <Plus className="w-5 h-5" />
+              <span className="font-medium">Effectuer un paiement</span>
+            </button>
+          )}
+        </div>
+
+        {/* ✅ Sélecteur de type de contenu - Style ruban/menu */}
+        <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{scrollbarWidth: 'none'}}>
+          <button
+            onClick={() => setContentType('paiement')}
+            className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
+              contentType === 'paiement'
+                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
+            }`}
+            style={{ height: '2rem', lineHeight: '1' }}
+          >
+            <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Paiement de salaire ({payments.length})</span>
+          </button>
+          <button
+            onClick={() => setContentType('bulletin')}
+            className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
+              contentType === 'bulletin'
+                ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
+            }`}
+            style={{ height: '2rem', lineHeight: '1' }}
+          >
+            <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Bulletin de paie</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Contenu conditionnel selon le type sélectionné */}
+      {contentType === 'paiement' ? (
+        <>
 
       {/* ⚠️ Alerte de retard */}
       {enRetard && (
@@ -1158,7 +1201,7 @@ export default function PaymentSalaryPage() {
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {payment.employe?.photo_url ? (
                             <Image
                               src={payment.employe.photo_url}
@@ -1168,7 +1211,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {payment.employe?.prenom?.charAt(0)}
                               {payment.employe?.nom?.charAt(0)}
                     </span>
@@ -1394,6 +1437,763 @@ export default function PaymentSalaryPage() {
           </div>
         </div>
       )}
+        </>
+      ) : (
+        /* ✅ Section Bulletin de paie */
+        <BulletinsDePaieSection employees={employees} payments={payments} />
+      )}
+    </div>
+  );
+}
+
+// ✅ Composant pour la section Bulletins de paie
+function BulletinsDePaieSection({ employees, payments }: { employees: Employee[], payments: Payment[] }) {
+  const { session } = useEdgeAuthContext();
+  // Générer de fausses données de bulletins de paie
+  const generateFakeBulletins = () => {
+    const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const currentYear = new Date().getFullYear();
+    const bulletins: any[] = [];
+
+    employees.forEach((emp, empIndex) => {
+      // Générer 3-6 bulletins par employé pour les derniers mois
+      const numBulletins = 3 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < numBulletins; i++) {
+        const monthIndex = new Date().getMonth() - i;
+        if (monthIndex < 0) continue;
+        
+        const salaireBrut = (emp.salaire_net || 0) * 1.2; // Approximation
+        const cotisations = salaireBrut * 0.15; // 15% de cotisations
+        const salaireNet = salaireBrut - cotisations;
+        const avancesDeduites = payments
+          .filter(p => p.employe_id === emp.id && p.mois_paye?.endsWith(`-${String(monthIndex + 1).padStart(2, '0')}`))
+          .reduce((sum, p) => sum + (p.avances_deduites || 0), 0);
+        const netAPayer = salaireNet - avancesDeduites;
+
+        bulletins.push({
+          id: `bulletin-${emp.id}-${currentYear}-${monthIndex + 1}`,
+          employe: {
+            nom: emp.nom,
+            prenom: emp.prenom,
+            poste: emp.poste,
+            email: emp.email,
+            telephone: emp.telephone,
+            photo_url: emp.photo_url
+          },
+          mois: months[monthIndex],
+          annee: currentYear,
+          periode: `${months[monthIndex]} ${currentYear}`,
+          salaireBrut,
+          cotisations,
+          salaireNet,
+          avancesDeduites,
+          netAPayer,
+          dateGeneration: new Date(currentYear, monthIndex, 28).toISOString()
+        });
+      }
+    });
+
+    return bulletins.sort((a, b) => {
+      const dateA = new Date(a.dateGeneration);
+      const dateB = new Date(b.dateGeneration);
+      return dateB.getTime() - dateA.getTime();
+    });
+  };
+
+  const [bulletins] = useState(generateFakeBulletins());
+  const [selectedBulletin, setSelectedBulletin] = useState<any>(null);
+  const [showBulletinModal, setShowBulletinModal] = useState(false);
+  const [filterMonth, setFilterMonth] = useState<string>('all');
+  const [filterEmployee, setFilterEmployee] = useState<string>('all');
+  const [currentPageBulletins, setCurrentPageBulletins] = useState(1);
+  const [itemsPerPageBulletins] = useState(10);
+
+  const filteredBulletins = bulletins.filter(b => {
+    const matchesMonth = filterMonth === 'all' || b.mois === filterMonth;
+    const matchesEmployee = filterEmployee === 'all' || b.employe.email === filterEmployee;
+    return matchesMonth && matchesEmployee;
+  });
+
+  // Pagination pour les bulletins
+  const totalPagesBulletins = Math.ceil(filteredBulletins.length / itemsPerPageBulletins);
+  const startIndexBulletins = (currentPageBulletins - 1) * itemsPerPageBulletins;
+  const currentBulletins = filteredBulletins.slice(startIndexBulletins, startIndexBulletins + itemsPerPageBulletins);
+
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR').format(amount);
+  };
+
+  // Export PDF individuel
+  const handleExportPDF = async (bulletin: any) => {
+    try {
+      toast.loading('Génération du PDF en cours...', { id: 'pdf-export' });
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPos = margin;
+
+      // Couleurs
+      const orangeColor: [number, number, number] = [255, 140, 0];
+      const blackColor: [number, number, number] = [0, 0, 0];
+      const grayColor: [number, number, number] = [128, 128, 128];
+
+      // En-tête ZaLaMa
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ZaLaMa', pageWidth / 2, 20, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text('Bulletin de Paie', pageWidth / 2, 30, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+
+      yPos = 50;
+
+      // Informations employé
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Informations Employé', margin, yPos);
+      yPos += 8;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Nom complet: ${bulletin.employe.prenom} ${bulletin.employe.nom}`, margin, yPos);
+      yPos += 6;
+      pdf.text(`Poste: ${bulletin.employe.poste}`, margin, yPos);
+      yPos += 6;
+      pdf.text(`Email: ${bulletin.employe.email}`, margin, yPos);
+      yPos += 6;
+      pdf.text(`Téléphone: ${bulletin.employe.telephone || 'N/A'}`, margin, yPos);
+      yPos += 10;
+
+      // Période
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Période: ${bulletin.periode}`, margin, yPos);
+      yPos += 10;
+
+      // Détails de paie
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Détails de Paie', margin, yPos);
+      yPos += 8;
+
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Salaire Brut: ${formatAmount(bulletin.salaireBrut)} GNF`, margin, yPos);
+      yPos += 6;
+      pdf.text(`Cotisations Sociales: -${formatAmount(bulletin.cotisations)} GNF`, margin, yPos);
+      yPos += 6;
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Salaire Net: ${formatAmount(bulletin.salaireNet)} GNF`, margin, yPos);
+      yPos += 6;
+      
+      if (bulletin.avancesDeduites > 0) {
+        pdf.setFont('helvetica', 'normal');
+        pdf.setTextColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+        pdf.text(`Avances déduites: -${formatAmount(bulletin.avancesDeduites)} GNF`, margin, yPos);
+        pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+        yPos += 6;
+      }
+
+      // Net à payer
+      yPos += 5;
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(margin - 5, yPos - 5, pageWidth - 2 * margin + 10, 12, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Net à Payer: ${formatAmount(bulletin.netAPayer)} GNF`, pageWidth / 2, yPos + 3, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+      yPos += 15;
+
+      // Footer
+      const footerY = pageHeight - 20;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      pdf.text('Bulletin généré automatiquement par ZaLaMa', pageWidth / 2, footerY, { align: 'center' });
+      pdf.text(`Date de génération: ${new Date(bulletin.dateGeneration).toLocaleDateString('fr-FR')}`, pageWidth / 2, footerY + 5, { align: 'center' });
+
+      // Sauvegarder
+      const fileName = `Bulletin_${bulletin.employe.nom}_${bulletin.employe.prenom}_${bulletin.periode.replace(/\s/g, '_')}.pdf`;
+      pdf.save(fileName);
+      
+      toast.success('PDF généré avec succès!', { id: 'pdf-export' });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF:', error);
+      toast.error('Erreur lors de la génération du PDF', { id: 'pdf-export' });
+    }
+  };
+
+  // Export PDF global pour un mois
+  const handleExportGlobalPDF = async () => {
+    if (filterMonth === 'all') {
+      toast.error('Veuillez sélectionner un mois pour l\'export global');
+      return;
+    }
+
+    try {
+      toast.loading('Génération du PDF global en cours...', { id: 'pdf-global' });
+      
+      const bulletinsDuMois = filteredBulletins.filter(b => b.mois === filterMonth);
+      if (bulletinsDuMois.length === 0) {
+        toast.error('Aucun bulletin trouvé pour ce mois', { id: 'pdf-global' });
+        return;
+      }
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPos = margin;
+
+      // Couleurs
+      const orangeColor: [number, number, number] = [255, 140, 0];
+      const blackColor: [number, number, number] = [0, 0, 0];
+      const grayColor: [number, number, number] = [128, 128, 128];
+
+      // En-tête
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ZaLaMa', pageWidth / 2, 20, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Bulletins de Paie - ${filterMonth}`, pageWidth / 2, 30, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+
+      yPos = 50;
+
+      // Tableau des bulletins
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      
+      // En-tête du tableau
+      pdf.setFillColor(240, 240, 240);
+      pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 8, 'F');
+      pdf.text('Employé', margin + 2, yPos);
+      pdf.text('Poste', margin + 50, yPos);
+      pdf.text('Net à Payer', margin + 100, yPos);
+      pdf.text('Statut', margin + 150, yPos);
+      yPos += 10;
+
+      // Lignes du tableau
+      pdf.setFont('helvetica', 'normal');
+      bulletinsDuMois.forEach((bulletin, index) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+
+        const lineY = yPos;
+        pdf.text(`${bulletin.employe.prenom} ${bulletin.employe.nom}`, margin + 2, lineY);
+        pdf.text(bulletin.employe.poste || 'N/A', margin + 50, lineY);
+        pdf.text(`${formatAmount(bulletin.netAPayer)} GNF`, margin + 100, lineY);
+        pdf.text('Généré', margin + 150, lineY);
+        
+        // Ligne de séparation
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, lineY + 3, pageWidth - margin, lineY + 3);
+        
+        yPos += 8;
+      });
+
+      // Résumé
+      yPos += 5;
+      const totalNet = bulletinsDuMois.reduce((sum, b) => sum + b.netAPayer, 0);
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(margin - 5, yPos - 5, pageWidth - 2 * margin + 10, 10, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Total Net à Payer: ${formatAmount(totalNet)} GNF`, pageWidth / 2, yPos + 2, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+
+      // Footer
+      const footerY = pageHeight - 20;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      pdf.text(`Total: ${bulletinsDuMois.length} bulletin(s)`, pageWidth / 2, footerY, { align: 'center' });
+      pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, footerY + 5, { align: 'center' });
+
+      // Sauvegarder
+      const fileName = `Bulletins_${filterMonth}_${new Date().getFullYear()}.pdf`;
+      pdf.save(fileName);
+      
+      toast.success(`PDF global généré avec ${bulletinsDuMois.length} bulletin(s)!`, { id: 'pdf-global' });
+    } catch (error) {
+      console.error('Erreur lors de la génération du PDF global:', error);
+      toast.error('Erreur lors de la génération du PDF global', { id: 'pdf-global' });
+    }
+  };
+
+  const handleViewBulletin = (bulletin: any) => {
+    setSelectedBulletin(bulletin);
+    setShowBulletinModal(true);
+  };
+
+  const months = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+
+  // Export PDF des paiements du mois courant
+  const handleExportPaiementsMois = async () => {
+    try {
+      toast.loading('Génération du bulletin de paiement du mois en cours...', { id: 'pdf-paiements-mois' });
+      
+      const currentDate = new Date();
+      const currentMonth = currentDate.getMonth();
+      const currentYear = currentDate.getFullYear();
+      const monthName = months[currentMonth];
+      
+      // Filtrer les paiements du mois courant
+      const paiementsDuMois = payments.filter(p => {
+        if (!p.mois_paye) return false;
+        const [year, month] = p.mois_paye.split('-').map(Number);
+        return year === currentYear && month === currentMonth + 1;
+      });
+
+      if (paiementsDuMois.length === 0) {
+        toast.error('Aucun paiement trouvé pour le mois en cours', { id: 'pdf-paiements-mois' });
+        return;
+      }
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      let yPos = margin;
+
+      // Couleurs
+      const orangeColor: [number, number, number] = [255, 140, 0];
+      const blackColor: [number, number, number] = [0, 0, 0];
+      const grayColor: [number, number, number] = [128, 128, 128];
+
+      // En-tête ZaLaMa
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(0, 0, pageWidth, 40, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(24);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('ZaLaMa', pageWidth / 2, 20, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Bulletin de Paiement - ${monthName} ${currentYear}`, pageWidth / 2, 30, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+
+      yPos = 50;
+
+      // Informations entreprise
+      if (session?.partner) {
+        pdf.setFontSize(10);
+        pdf.setFont('helvetica', 'normal');
+        pdf.text(`Entreprise: ${session.partner.company_name || 'N/A'}`, margin, yPos);
+        yPos += 6;
+        pdf.text(`Période: ${monthName} ${currentYear}`, margin, yPos);
+        yPos += 10;
+      }
+
+      // Tableau des paiements
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      
+      // En-tête du tableau
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(margin, yPos - 5, pageWidth - 2 * margin, 8, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.text('Employé', margin + 2, yPos);
+      pdf.text('Poste', margin + 50, yPos);
+      pdf.text('Salaire Net', margin + 90, yPos);
+      pdf.text('Avances', margin + 130, yPos);
+      pdf.text('Net Payé', margin + 160, yPos);
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+      yPos += 10;
+
+      // Lignes du tableau
+      pdf.setFont('helvetica', 'normal');
+      let totalNetPaye = 0;
+      
+      paiementsDuMois.forEach((paiement) => {
+        if (yPos > pageHeight - 30) {
+          pdf.addPage();
+          yPos = margin;
+        }
+
+        const lineY = yPos;
+        const employeNom = `${paiement.employe?.prenom || ''} ${paiement.employe?.nom || 'N/A'}`;
+        const poste = paiement.employe?.poste || 'N/A';
+        const salaireNet = paiement.employe?.salaire_net || paiement.salaire_net || 0;
+        const avances = paiement.avances_deduites || 0;
+        const netPaye = paiement.montant || paiement.salaire_disponible || 0;
+        totalNetPaye += netPaye;
+
+        pdf.text(employeNom.substring(0, 20), margin + 2, lineY);
+        pdf.text(poste.substring(0, 15), margin + 50, lineY);
+        pdf.text(`${formatAmount(salaireNet)} GNF`, margin + 90, lineY, { align: 'right' });
+        pdf.text(`${formatAmount(avances)} GNF`, margin + 130, lineY, { align: 'right' });
+        pdf.text(`${formatAmount(netPaye)} GNF`, margin + 160, lineY, { align: 'right' });
+        
+        // Ligne de séparation
+        pdf.setDrawColor(200, 200, 200);
+        pdf.line(margin, lineY + 3, pageWidth - margin, lineY + 3);
+        
+        yPos += 8;
+      });
+
+      // Résumé
+      yPos += 5;
+      pdf.setFillColor(orangeColor[0], orangeColor[1], orangeColor[2]);
+      pdf.rect(margin - 5, yPos - 5, pageWidth - 2 * margin + 10, 10, 'F');
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`Total Net Payé: ${formatAmount(totalNetPaye)} GNF`, pageWidth / 2, yPos + 2, { align: 'center' });
+      pdf.setTextColor(blackColor[0], blackColor[1], blackColor[2]);
+
+      // Footer
+      const footerY = pageHeight - 20;
+      pdf.setFontSize(8);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setTextColor(grayColor[0], grayColor[1], grayColor[2]);
+      pdf.text(`Total: ${paiementsDuMois.length} paiement(s)`, pageWidth / 2, footerY, { align: 'center' });
+      pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, pageWidth / 2, footerY + 5, { align: 'center' });
+
+      // Sauvegarder
+      const fileName = `Bulletin_Paiements_${monthName}_${currentYear}.pdf`;
+      pdf.save(fileName);
+      
+      toast.success(`Bulletin généré avec ${paiementsDuMois.length} paiement(s)!`, { id: 'pdf-paiements-mois' });
+    } catch (error) {
+      console.error('Erreur lors de la génération du bulletin:', error);
+      toast.error('Erreur lors de la génération du bulletin', { id: 'pdf-paiements-mois' });
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Bouton export paiements du mois - Au-dessus des filtres */}
+      <div className="flex justify-end">
+        <button
+          onClick={handleExportPaiementsMois}
+          className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors shadow-md hover:shadow-lg"
+        >
+          <FileText className="w-5 h-5" />
+          <span className="font-medium">Export le bulletin de paiement du mois</span>
+        </button>
+      </div>
+
+      {/* Filtres et actions */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+        <div className="flex items-end justify-between gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Mois
+              </label>
+              <select
+                value={filterMonth}
+                onChange={(e) => setFilterMonth(e.target.value)}
+                className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Tous les mois</option>
+                {months.map(month => (
+                  <option key={month} value={month}>{month}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Employé
+              </label>
+              <select
+                value={filterEmployee}
+                onChange={(e) => setFilterEmployee(e.target.value)}
+                className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="all">Tous les employés</option>
+                {employees.map(emp => (
+                  <option key={emp.id} value={emp.email}>{emp.prenom} {emp.nom}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          {filterMonth !== 'all' && (
+            <button
+              onClick={handleExportGlobalPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors whitespace-nowrap"
+            >
+              <Download className="w-4 h-4" />
+              <span>Export PDF Global</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tableau des bulletins */}
+      {filteredBulletins.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Aucun bulletin trouvé
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            Aucun bulletin ne correspond aux critères de recherche.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed dark:divide-gray-700">
+              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+                <tr>
+                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Période
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Brut
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Cotisations
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire Net
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Avances déduites
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Net à Payer
+                  </th>
+                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {currentBulletins.map((bulletin) => (
+                  <tr
+                    key={bulletin.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {bulletin.employe.photo_url ? (
+                            <Image
+                              src={bulletin.employe.photo_url}
+                              alt={`${bulletin.employe.prenom} ${bulletin.employe.nom}`}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
+                              {bulletin.employe.prenom?.charAt(0)}
+                              {bulletin.employe.nom?.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">
+                            {bulletin.employe.prenom} {bulletin.employe.nom}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {bulletin.employe.poste || "N/A"}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                      {bulletin.periode}
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.salaireBrut)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      -{formatAmount(bulletin.cotisations)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.salaireNet)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
+                      {bulletin.avancesDeduites > 0 ? `-${formatAmount(bulletin.avancesDeduites)} GNF` : '0 GNF'}
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
+                      {formatAmount(bulletin.netAPayer)} GNF
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleViewBulletin(bulletin)}
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
+                          title="Voir les détails"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Voir
+                          </div>
+                        </button>
+                        <button
+                          onClick={() => handleExportPDF(bulletin)}
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md"
+                          title="Télécharger PDF"
+                        >
+                          <Download className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            PDF
+                          </div>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* Footer avec total */}
+          {filteredBulletins.length > 0 && (
+            <div className="bg-transparent border-t border-[var(--zalama-border)] border-opacity-20 px-4 py-3">
+              <div className="flex justify-end items-center gap-4">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Total Net à Payer:
+                </span>
+                <span className="text-lg font-bold text-orange-600 dark:text-orange-400">
+                  {formatAmount(filteredBulletins.reduce((sum, b) => sum + b.netAPayer, 0))} GNF
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {filteredBulletins.length > 0 && (
+            <Pagination
+              currentPage={currentPageBulletins}
+              totalPages={totalPagesBulletins}
+              totalItems={filteredBulletins.length}
+              itemsPerPage={itemsPerPageBulletins}
+              onPageChange={setCurrentPageBulletins}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Modal d'affichage du bulletin */}
+      {showBulletinModal && selectedBulletin && (
+        <BulletinModal 
+          bulletin={selectedBulletin} 
+          onClose={() => setShowBulletinModal(false)}
+          onExportPDF={() => handleExportPDF(selectedBulletin)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ✅ Composant Modal pour afficher un bulletin de paie
+function BulletinModal({ bulletin, onClose, onExportPDF }: { bulletin: any, onClose: () => void, onExportPDF: () => void }) {
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('fr-FR').format(amount);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="bg-orange-500 text-white p-4 flex items-center justify-between">
+          <div>
+            <h2 className="text-xl font-bold">Bulletin de Paie</h2>
+            <p className="text-sm text-orange-100">{bulletin.periode}</p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={onExportPDF}
+              className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-md transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span className="text-sm">Télécharger PDF</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/20 rounded-md transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-8 overflow-y-auto flex-1">
+          {/* En-tête du bulletin */}
+          <div className="mb-8 text-center border-b-2 border-orange-500 pb-6">
+            <h1 className="text-3xl font-bold text-black mb-2">ZaLaMa</h1>
+            <p className="text-gray-600">Bulletin de Paie</p>
+            <p className="text-sm text-gray-500 mt-2">{bulletin.periode}</p>
+          </div>
+
+          {/* Informations employé */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-black mb-4 border-b border-gray-300 pb-2">Informations Employé</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-600">Nom complet</p>
+                <p className="font-semibold text-black">{bulletin.employe.prenom} {bulletin.employe.nom}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Poste</p>
+                <p className="font-semibold text-black">{bulletin.employe.poste}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Email</p>
+                <p className="font-semibold text-black">{bulletin.employe.email}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Téléphone</p>
+                <p className="font-semibold text-black">{bulletin.employe.telephone || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Détails de paie */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold text-black mb-4 border-b border-gray-300 pb-2">Détails de Paie</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between py-2 border-b border-gray-200">
+                <span className="text-gray-700">Salaire Brut</span>
+                <span className="font-semibold text-black">{formatAmount(bulletin.salaireBrut)} GNF</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-gray-200">
+                <span className="text-gray-700">Cotisations Sociales</span>
+                <span className="font-semibold text-black">- {formatAmount(bulletin.cotisations)} GNF</span>
+              </div>
+              <div className="flex justify-between py-2 border-b-2 border-gray-400">
+                <span className="font-semibold text-black">Salaire Net</span>
+                <span className="font-bold text-black">{formatAmount(bulletin.salaireNet)} GNF</span>
+              </div>
+              {bulletin.avancesDeduites > 0 && (
+                <div className="flex justify-between py-2 border-b border-gray-200">
+                  <span className="text-gray-700">Avances déduites</span>
+                  <span className="font-semibold text-orange-600">- {formatAmount(bulletin.avancesDeduites)} GNF</span>
+                </div>
+              )}
+              <div className="flex justify-between py-3 bg-orange-50 border-2 border-orange-500 rounded-lg px-4 mt-4">
+                <span className="text-lg font-bold text-black">Net à Payer</span>
+                <span className="text-xl font-bold text-orange-600">{formatAmount(bulletin.netAPayer)} GNF</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-8 pt-6 border-t border-gray-300 text-center text-sm text-gray-500">
+            <p>Bulletin généré automatiquement par ZaLaMa</p>
+            <p className="mt-1">Date de génération: {new Date(bulletin.dateGeneration).toLocaleDateString('fr-FR')}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

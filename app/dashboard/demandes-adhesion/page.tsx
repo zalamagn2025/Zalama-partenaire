@@ -318,8 +318,8 @@ export default function DemandesAdhesionPage() {
         </div>
         <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm p-6 backdrop-blur-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-xl">
-              <UserPlus className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+            <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-xl">
+              <UserPlus className="h-8 w-8 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <div className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -383,83 +383,83 @@ export default function DemandesAdhesionPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full table-fixed dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
-              <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
-                <th className="w-1/4 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Employé
-                </th>
-                <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Poste
-                </th>
-                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Type de contrat
-                </th>
-                <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Salaire net
-                </th>
-                <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
-              {currentEmployees.map((employee) => (
-                <tr
-                  key={employee.id}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0">
-                        <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                          {employee.prenom.charAt(0)}
-                          {employee.nom.charAt(0)}
-                        </span>
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm text-gray-900 dark:text-white">
-                          {employee.prenom} {employee.nom}
+              <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
+                <tr className="border-b border-[var(--zalama-border)] border-opacity-20 p-4">
+                  <th className="w-1/4 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Employé
+                  </th>
+                  <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Poste
+                  </th>
+                  <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Type de contrat
+                  </th>
+                  <th className="w-1/8 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Salaire net
+                  </th>
+                  <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {currentEmployees.map((employee) => (
+                  <tr
+                    key={employee.id}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                          <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
+                            {employee.prenom.charAt(0)}
+                            {employee.nom.charAt(0)}
+                          </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Badge
-                            variant={employee.actif ? "success" : "error"}
-                            className="text-xs"
-                          >
-                            {employee.actif ? "Actif" : "Inactif"}
-                          </Badge>
+                        <div>
+                          <div className="font-medium text-sm text-gray-900 dark:text-white">
+                            {employee.prenom} {employee.nom}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge
+                              variant={employee.actif ? "success" : "error"}
+                              className="text-xs"
+                            >
+                              {employee.actif ? "Actif" : "Inactif"}
+                            </Badge>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="text-sm text-gray-900 dark:text-white truncate max-w-[200px]" title={employee.email || ""}>
-                      {employee.email || (
-                        <span className="text-red-500 text-xs">Non renseigné</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      {employee.poste}
-                    </div>
-                  </td>
-                  <td className="px-3 py-4">
-                    <Badge variant="info" className="text-xs">
-                      {employee.type_contrat}
-                    </Badge>
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                      {formatSalary(employee.salaire_net)}
-                    </div>
-                  </td>
-                  <td className="px-3 py-4">
-                    <div className="flex items-center gap-1">
-                      {/* Bouton Détails */}
-                      {/* <button
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="text-sm text-gray-900 dark:text-white truncate max-w-[200px]" title={employee.email || ""}>
+                        {employee.email || (
+                          <span className="text-red-500 text-xs">Non renseigné</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="text-sm text-gray-900 dark:text-white">
+                        {employee.poste}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <Badge variant="info" className="text-xs">
+                        {employee.type_contrat}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatSalary(employee.salaire_net)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4">
+                      <div className="flex items-center gap-1">
+                        {/* Bouton Détails */}
+                        {/* <button
                         onClick={(e) => {
                           e.stopPropagation();
                           handleViewDetails(employee);
@@ -474,77 +474,76 @@ export default function DemandesAdhesionPage() {
                         </div>
                       </button> */}
 
-                       <button
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           handleViewDetails(employee);
-                         }}
-                         disabled={false}
-                         className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                         title="Voir les détails"
-                       >
-                         <Eye className="h-4 w-4" />
-                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                           Voir
-                         </div>
-                       </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewDetails(employee);
+                          }}
+                          disabled={false}
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-blue-600 dark:text-blue-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Voir les détails"
+                        >
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Voir
+                          </div>
+                        </button>
 
-                      {/* Bouton Rejeter */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRejectEmployee(employee);
-                        }}
-                        disabled={rejectingEmployee === employee.id}
-                        className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        title="Rejeter l'inscription"
-                      >
-                        {rejectingEmployee === employee.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                          Rejeter
-                        </div>
-                      </button>
+                        {/* Bouton Rejeter */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRejectEmployee(employee);
+                          }}
+                          disabled={rejectingEmployee === employee.id}
+                          className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Rejeter l'inscription"
+                        >
+                          {rejectingEmployee === employee.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Rejeter
+                          </div>
+                        </button>
 
-                      {/* Bouton Créer */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCreateAccount(employee.id);
-                        }}
-                        disabled={
-                          creatingAccount === employee.id || !employee.email
-                        }
-                        className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                          !employee.email
+                        {/* Bouton Créer */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateAccount(employee.id);
+                          }}
+                          disabled={
+                            creatingAccount === employee.id || !employee.email
+                          }
+                          className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${!employee.email
                             ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
                             : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                        }`}
-                        title={
-                          !employee.email
-                            ? "Email requis pour créer un compte"
-                            : "Créer le compte"
-                        }
-                      >
-                        {creatingAccount === employee.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                        ) : (
-                          <UserPlus className="h-4 w-4" />
-                        )}
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                          {!employee.email ? "Email requis" : "Créer"}
-                        </div>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                            }`}
+                          title={
+                            !employee.email
+                              ? "Email requis pour créer un compte"
+                              : "Créer le compte"
+                          }
+                        >
+                          {creatingAccount === employee.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                          ) : (
+                            <UserPlus className="h-4 w-4" />
+                          )}
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            {!employee.email ? "Email requis" : "Créer"}
+                          </div>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
@@ -591,8 +590,8 @@ export default function DemandesAdhesionPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
-                    <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg">
+                    <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                       {selectedEmployee.prenom.charAt(0)}
                       {selectedEmployee.nom.charAt(0)}
                     </span>
@@ -618,8 +617,8 @@ export default function DemandesAdhesionPage() {
                 {/* Email - prend toute la largeur */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
@@ -690,41 +689,41 @@ export default function DemandesAdhesionPage() {
                     </p>
                   </div>
 
-                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                      <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                        <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {formatDate(selectedEmployee.date_embauche)}
+                    </p>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(selectedEmployee.date_embauche)}
-                  </p>
-                </div>
 
-                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
-                      <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
+                    <p className="font-medium text-green-600 dark:text-green-400">
+                      {formatSalary(selectedEmployee.salaire_net)}
+                    </p>
                   </div>
-                  <p className="font-medium text-green-600 dark:text-green-400">
-                    {formatSalary(selectedEmployee.salaire_net)}
-                  </p>
-                </div>
 
-                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                      <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                        <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'ajout</span>
                     </div>
-                    <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'ajout</span>
+                    <p className="font-medium text-gray-900 dark:text-white">
+                      {formatDate(selectedEmployee.created_at)}
+                    </p>
                   </div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(selectedEmployee.created_at)}
-                  </p>
-                </div>
                 </div>
               </div>
 
@@ -765,7 +764,7 @@ export default function DemandesAdhesionPage() {
                     {rejectingEmployee === selectedEmployee.id ? "Rejet en cours..." : "Rejeter l'inscription"}
                   </span>
                 </button>
-                
+
                 <button
                   onClick={() => {
                     handleCreateAccount(selectedEmployee.id);
@@ -775,11 +774,10 @@ export default function DemandesAdhesionPage() {
                     creatingAccount === selectedEmployee.id ||
                     !selectedEmployee.email
                   }
-                  className={`flex items-center gap-3 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-300 group ${
-                    !selectedEmployee.email
-                      ? "bg-gray-500/20 text-gray-400 cursor-not-allowed border border-gray-500/30"
-                      : "bg-gradient-to-r from-[var(--zalama-blue)]/20 to-[var(--zalama-blue-accent)]/20 text-[var(--zalama-blue)] border border-[var(--zalama-blue)]/30 hover:from-[var(--zalama-blue)]/30 hover:to-[var(--zalama-blue-accent)]/30 hover:text-white hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm"
-                  }`}
+                  className={`flex items-center gap-3 px-6 py-3 text-sm font-medium rounded-lg transition-all duration-300 group ${!selectedEmployee.email
+                    ? "bg-gray-500/20 text-gray-400 cursor-not-allowed border border-gray-500/30"
+                    : "bg-gradient-to-r from-[var(--zalama-blue)]/20 to-[var(--zalama-blue-accent)]/20 text-[var(--zalama-blue)] border border-[var(--zalama-blue)]/30 hover:from-[var(--zalama-blue)]/30 hover:to-[var(--zalama-blue-accent)]/30 hover:text-white hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm"
+                    }`}
                   title={
                     !selectedEmployee.email
                       ? "Email requis pour créer un compte"
@@ -835,8 +833,8 @@ export default function DemandesAdhesionPage() {
             {/* Content */}
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-red-500/10 to-red-600/10 border border-red-500/30 rounded-xl backdrop-blur-sm">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg">
-                  <span className="text-blue-600 dark:text-blue-400 font-bold text-xl">
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg">
+                  <span className="text-orange-600 dark:text-orange-400 font-bold text-xl">
                     {selectedEmployee.prenom.charAt(0)}
                     {selectedEmployee.nom.charAt(0)}
                   </span>
@@ -883,7 +881,7 @@ export default function DemandesAdhesionPage() {
                     Annuler
                   </span>
                 </button>
-                
+
                 <button
                   onClick={confirmRejectEmployee}
                   disabled={rejectingEmployee === selectedEmployee.id}

@@ -215,13 +215,13 @@ export default function ParametresPage() {
   };
 
   // Composant de carte de paramètre
-  const SettingCard = ({ 
-    title, 
-    description, 
-    icon: Icon, 
-    children, 
+  const SettingCard = ({
+    title,
+    description,
+    icon: Icon,
+    children,
     className = "",
-    badge = null 
+    badge = null
   }: {
     title: string;
     description: string;
@@ -233,7 +233,7 @@ export default function ParametresPage() {
     <div className={`bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 shadow-sm backdrop-blur-sm hover:shadow-md transition-all duration-200 ${className}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+          <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
             <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
@@ -252,12 +252,12 @@ export default function ParametresPage() {
   );
 
   // Composant de statistique rapide
-  const QuickStat = ({ 
-    title, 
-    value, 
-    icon: Icon, 
+  const QuickStat = ({
+    title,
+    value,
+    icon: Icon,
     color = "blue",
-    trend = null 
+    trend = null
   }: {
     title: string;
     value: string;
@@ -266,9 +266,9 @@ export default function ParametresPage() {
     trend?: string | null;
   }) => {
     const colorClasses = {
-      blue: "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+      blue: "bg-orange-100 dark:bg-orange-900/20 text-blue-600 dark:text-blue-400",
       green: "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400",
-      orange: "bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
+      orange: "bg-orange-100 dark:bg-orange-900/20 text-blue-600 dark:text-blue-400",
       purple: "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
     };
 
@@ -320,13 +320,12 @@ export default function ParametresPage() {
                 key={tab.id}
                 onClick={() => !tab.disabled && setActiveTab(tab.id)}
                 disabled={tab.disabled}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-blue-600 text-white shadow-md"
-                    : tab.disabled
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${activeTab === tab.id
+                  ? "bg-blue-600 text-white shadow-md"
+                  : tab.disabled
                     ? "text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
                     : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 <Icon className="w-4 h-4" />
                 <span className="font-medium">{tab.label}</span>
@@ -355,7 +354,7 @@ export default function ParametresPage() {
             >
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
                     <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div>
@@ -524,7 +523,7 @@ export default function ParametresPage() {
           >
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
+                <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center">
                   <User className="w-10 h-10 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
@@ -696,7 +695,7 @@ export default function ParametresPage() {
                       Attention
                     </h4>
                     <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                      La régénération de votre clé API invalidera toutes les intégrations existantes. 
+                      La régénération de votre clé API invalidera toutes les intégrations existantes.
                       Assurez-vous de tenir au courant les salariés en cas de changement.
                     </p>
                   </div>
@@ -812,14 +811,12 @@ export default function ParametresPage() {
                 </div>
                 <button
                   onClick={toggleTheme}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    theme === "dark" ? "bg-blue-600" : "bg-gray-200"
-                  }`}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${theme === "dark" ? "bg-blue-600" : "bg-gray-200"
+                    }`}
                 >
                   <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      theme === "dark" ? "translate-x-6" : "translate-x-1"
-                    }`}
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${theme === "dark" ? "translate-x-6" : "translate-x-1"
+                      }`}
                   />
                 </button>
               </div>
@@ -836,7 +833,7 @@ export default function ParametresPage() {
                     Thème {theme === "dark" ? "sombre" : "clair"}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {theme === "dark" 
+                    {theme === "dark"
                       ? "Interface optimisée pour les environnements sombres"
                       : "Interface claire et lumineuse"
                     }
@@ -859,7 +856,7 @@ export default function ParametresPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
                     <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="flex-1">

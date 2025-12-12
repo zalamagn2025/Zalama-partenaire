@@ -1,6 +1,7 @@
 "use client";
 
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
+import AlertModalWrapper from "@/components/AlertModalWrapper";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
   ClipboardList,
@@ -10,6 +11,7 @@ import {
   Users,
   Filter,
   Calendar,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -68,7 +70,7 @@ export default function EntrepriseDashboardPage() {
     Array<{ value: number; label: string }>
   >([]);
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  
+
   // État pour éviter l'affichage multiple du toast de bienvenue
   const [welcomeToastShown, setWelcomeToastShown] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -121,17 +123,16 @@ export default function EntrepriseDashboardPage() {
           window.dispatchEvent(
             new CustomEvent("session-error", {
               detail: {
-                message: `Erreur ${response.status}: ${
-                  response.status === 401
+                message: `Erreur ${response.status}: ${response.status === 401
                     ? "Non autorisé"
                     : response.status === 403
-                    ? "Accès interdit"
-                    : response.status === 404
-                    ? "Service non trouvé"
-                    : response.status === 500
-                    ? "Erreur serveur interne"
-                    : "Service indisponible"
-                }`,
+                      ? "Accès interdit"
+                      : response.status === 404
+                        ? "Service non trouvé"
+                        : response.status === 500
+                          ? "Erreur serveur interne"
+                          : "Service indisponible"
+                  }`,
                 status: response.status,
               },
             })
@@ -255,7 +256,7 @@ export default function EntrepriseDashboardPage() {
   const partnerInfo = dashboardData?.partner_info;
   const filters = dashboardData?.filters;
   const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
-  
+
   // Le montant_total_remboursements est maintenant correctement calculé dans l'Edge Function
   // Formule: Salaire Net + 6% de frais
 
@@ -354,19 +355,19 @@ export default function EntrepriseDashboardPage() {
     availableMonths.length > 0
       ? availableMonths
       : [
-          { value: 1, label: "Janvier" },
-          { value: 2, label: "Février" },
-          { value: 3, label: "Mars" },
-          { value: 4, label: "Avril" },
-          { value: 5, label: "Mai" },
-          { value: 6, label: "Juin" },
-          { value: 7, label: "Juillet" },
-          { value: 8, label: "Août" },
-          { value: 9, label: "Septembre" },
-          { value: 10, label: "Octobre" },
-          { value: 11, label: "Novembre" },
-          { value: 12, label: "Décembre" },
-        ];
+        { value: 1, label: "Janvier" },
+        { value: 2, label: "Février" },
+        { value: 3, label: "Mars" },
+        { value: 4, label: "Avril" },
+        { value: 5, label: "Mai" },
+        { value: 6, label: "Juin" },
+        { value: 7, label: "Juillet" },
+        { value: 8, label: "Août" },
+        { value: 9, label: "Septembre" },
+        { value: 10, label: "Octobre" },
+        { value: 11, label: "Novembre" },
+        { value: 12, label: "Décembre" },
+      ];
 
   const years =
     availableYears.length > 0
@@ -386,599 +387,650 @@ export default function EntrepriseDashboardPage() {
   const hasMontantsData = montantsEvolutionData.some((d: any) => d.montant > 0);
 
   return (
-    <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      {/* En-tête du tableau de bord */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
-        <div className="flex items-center gap-4">
-          <div 
-            className="rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden border-2"
-            style={{
-              backgroundColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#ffffff' : 
-                              partnerInfo?.logo_url ? 'transparent' : '#1e40af',
-              borderColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#d1d5db' : 
-                          partnerInfo?.logo_url ? '#4b5563' : 'transparent'
-            }}
-          >
-            {partnerInfo?.logo_url ? (
-              <Image
-                src={partnerInfo.logo_url}
-                alt={`Logo ${partnerInfo.company_name}`}
-                fill
-                className="object-contain p-2"
-                sizes="(max-width: 768px) 64px, 64px"
-              />
-            ) : (
-              <span className="text-white font-bold text-xl">
-                {partnerInfo?.company_name?.slice(0, 1)?.toUpperCase() || "Z"}
-              </span>
-            )}
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold dark:text-white">
-              {partnerInfo?.company_name || session?.partner?.company_name}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {partnerInfo?.activity_domain ||
-                session?.partner?.activity_domain}{" "}
-              • {statistics?.active_employees || 0} employés actifs
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-blue-400 text-sm">
-            Partenaire depuis{" "}
-            {partnerInfo?.created_at
-              ? new Date(partnerInfo.created_at).getFullYear()
-              : new Date().getFullYear()}
-          </span>
-          <Badge variant="success" className="mt-1">
-            Compte actif
-          </Badge>
-        </div>
-      </div>
-
-      {/* Informations de contexte - Extrait de la carte des filtres */}
-      {filters && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Période actuelle
-                </p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {filters.period_description || "Mois en cours"}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
-                <RefreshCw className="w-4 h-4 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Jour de paiement
-                </p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {filters.payment_day || "Non défini"}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
-                <Filter className="w-4 h-4 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                  Statut des filtres
-                </p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {filters.applied
-                    ? "Filtres actifs"
-                    : "Données du mois en cours"}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Filtres avancés - Style identique à la page remboursements */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-              Filtres avancés
-          </h3>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
-              >
-                <Filter className="h-3 w-3" />
-                {showFilters ? "Masquer" : "Afficher"}
-              </button>
-              <button
-                onClick={resetFilters}
-                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                Réinitialiser
-            </button>
-            <button
-              onClick={() => loadDashboardData()}
-              disabled={isLoading}
-                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-              >
-                {isLoading ? (
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                ) : null}
-                Actualiser
-            </button>
-            </div>
-          </div>
-        </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-            {/* Filtre par mois */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Mois
-              </label>
-              <select
-                value={selectedMonth || ""}
-                onChange={(e) => {
-                  const month = e.target.value
-                    ? parseInt(e.target.value)
-                    : null;
-                  setSelectedMonth(month);
-                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                  if (month && !selectedYear) {
-                    setSelectedYear(new Date().getFullYear());
-                  }
-                }}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Tous les mois</option>
-                {months.map((month) => (
-                  <option key={month.value} value={month.value}>
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Filtre par année */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Année
-              </label>
-              <select
-                value={selectedYear || ""}
-                onChange={(e) =>
-                  setSelectedYear(
-                    e.target.value ? parseInt(e.target.value) : null
-                  )
-                }
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-              >
-                <option value="">Toutes les années</option>
-                {years.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Boutons d'action */}
-            <div className="flex items-end gap-2">
-              <button
-                onClick={applyFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                Appliquer
-              </button>
-              <button
-                onClick={resetFilters}
-                disabled={isLoading}
-                className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
-              >
-                Reset
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Indicateur de chargement */}
-        {isLoading && (
-          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-            Mise à jour des données...
-          </div>
-        )}
-      </div>
-
-      {/* Cartes statistiques principales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-        {/* Employés actifs/Total */}
-        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Employés</Badge>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-              {`${statistics?.active_employees || 0}/${statistics?.total_employees || 0}`}
-            </p>
-            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
-              Employés actifs/Total
-              </p>
-            </div>
-        </div>
-
-        {/* Demandes totales */}
-        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-            </div>
-            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Demandes</Badge>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
-              {statistics?.total_demandes || 0}
-            </p>
-            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
-              Demandes totales
-              </p>
-            </div>
-        </div>
-
-        {/* Demandes par employé */}
-        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <Badge variant="info" className="text-xs">Moyenne</Badge>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-              {statistics?.demandes_per_employee || "0.0"}
-            </p>
-            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
-              Demandes par employé
-              </p>
-            </div>
-      </div>
-
-        {/* Note moyenne */}
-        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-              <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <Badge variant="success" className="text-xs">Avis</Badge>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-              {statistics?.average_rating || "0.0"}
-            </p>
-            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-              Note moyenne
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Performance financière - Avances */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8 backdrop-blur-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold" style={{ color: "var(--zalama-orange)" }}>
-            Performance financière - Avances sur salaire
-          </h2>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => loadDashboardData()}
-              disabled={isLoading}
-              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
-              title="Actualiser les données"
+    <AlertModalWrapper paymentStats={paymentSalaryStats}>
+      <div className="p-6 space-y-6 max-w-full overflow-hidden">
+        {/* En-tête du tableau de bord */}
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl shadow-sm flex items-center justify-between p-6 mb-4 backdrop-blur-sm">
+          <div className="flex items-center gap-4">
+            <div
+              className="rounded-lg w-16 h-16 flex items-center justify-center relative overflow-hidden border-2"
+              style={{
+                backgroundColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#ffffff' :
+                  partnerInfo?.logo_url ? 'transparent' : '#1e40af',
+                borderColor: partnerInfo?.logo_url?.toLowerCase().endsWith('.png') ? '#d1d5db' :
+                  partnerInfo?.logo_url ? '#4b5563' : 'transparent'
+              }}
             >
-              <RefreshCw
-                className={`h-4 w-4 text-gray-500 ${
-                  isLoading ? "animate-spin" : ""
-                }`}
-              />
-            </button>
+              {partnerInfo?.logo_url ? (
+                <Image
+                  src={partnerInfo.logo_url}
+                  alt={`Logo ${partnerInfo.company_name}`}
+                  fill
+                  className="object-contain p-2"
+                  sizes="(max-width: 768px) 64px, 64px"
+                />
+              ) : (
+                <span className="text-white font-bold text-xl">
+                  {partnerInfo?.company_name?.slice(0, 1)?.toUpperCase() || "Z"}
+                </span>
+              )}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold dark:text-white">
+                {partnerInfo?.company_name || session?.partner?.company_name}
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 text-lg">
+                {partnerInfo?.activity_domain ||
+                  session?.partner?.activity_domain}{" "}
+                • {statistics?.active_employees || 0} employés actifs
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <span className="text-blue-400 text-sm">
+              Partenaire depuis{" "}
+              {partnerInfo?.created_at
+                ? new Date(partnerInfo.created_at).getFullYear()
+                : new Date().getFullYear()}
+            </span>
+            <Badge variant="success" className="mt-1">
+              Compte actif
+            </Badge>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
-            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Montant total débloqué (Avances)
-            </span>
-            <span className="text-2xl font-bold dark:text-white">
-              {gnfFormatter(financialPerformance?.debloque_mois)}
-            </span>
+
+        {/* Informations de contexte - Extrait de la carte des filtres */}
+        {filters && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/30/20 rounded-lg">
+                  <Calendar className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Période actuelle
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {filters.period_description || "Mois en cours"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
+                  <RefreshCw className="w-4 h-4 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Jour de paiement
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {filters.payment_day || "Non défini"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                  <Filter className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Statut des filtres
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {filters.applied
+                      ? "Filtres actifs"
+                      : "Données du mois en cours"}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
-            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              À rembourser (Avances)
-            </span>
-            <span className="text-2xl font-bold dark:text-white">
-              {gnfFormatter(financialPerformance?.a_rembourser_mois)}
-            </span>
+        )}
+
+        {/* Filtres avancés - Style identique à la page remboursements */}
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Filtres avancés
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+                >
+                  <Filter className="h-3 w-3" />
+                  {showFilters ? "Masquer" : "Afficher"}
+                </button>
+                <button
+                  onClick={resetFilters}
+                  className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Réinitialiser
+                </button>
+                <button
+                  onClick={() => loadDashboardData()}
+                  disabled={isLoading}
+                  className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                >
+                  {isLoading ? (
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                  ) : null}
+                  Actualiser
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {showFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+              {/* Filtre par mois */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Mois
+                </label>
+                <select
+                  value={selectedMonth || ""}
+                  onChange={(e) => {
+                    const month = e.target.value
+                      ? parseInt(e.target.value)
+                      : null;
+                    setSelectedMonth(month);
+                    // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                    if (month && !selectedYear) {
+                      setSelectedYear(new Date().getFullYear());
+                    }
+                  }}
+                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                >
+                  <option value="">Tous les mois</option>
+                  {months.map((month) => (
+                    <option key={month.value} value={month.value}>
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtre par année */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Année
+                </label>
+                <select
+                  value={selectedYear || ""}
+                  onChange={(e) =>
+                    setSelectedYear(
+                      e.target.value ? parseInt(e.target.value) : null
+                    )
+                  }
+                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                >
+                  <option value="">Toutes les années</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Boutons d'action */}
+              <div className="flex items-end gap-2">
+                <button
+                  onClick={applyFilters}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  Appliquer
+                </button>
+                <button
+                  onClick={resetFilters}
+                  disabled={isLoading}
+                  className="px-4 py-2 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors disabled:opacity-50"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Indicateur de chargement */}
+          {isLoading && (
+            <div className="px-4 pb-3 flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+              Mise à jour des données...
+            </div>
+          )}
+        </div>
+
+        {/* Cartes statistiques principales */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          {/* Employés actifs/Total */}
+          <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <Badge className="text-xs bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-300">Employés</Badge>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                {`${statistics?.active_employees || 0}/${statistics?.total_employees || 0}`}
+              </p>
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                Employés actifs/Total
+              </p>
+            </div>
+          </div>
+
+          {/* Demandes totales */}
+          <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <FileText className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Demandes</Badge>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                {statistics?.total_demandes || 0}
+              </p>
+              <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+                Demandes totales
+              </p>
+            </div>
+          </div>
+
+          {/* Demandes par employé */}
+          <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30/30 rounded-lg">
+                <ClipboardList className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <Badge variant="info" className="text-xs">Moyenne</Badge>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                {statistics?.demandes_per_employee || "0.0"}
+              </p>
+              <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+                Demandes par employé
+              </p>
+            </div>
+          </div>
+
+          {/* Note moyenne */}
+          <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Star className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <Badge variant="success" className="text-xs">Avis</Badge>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                {statistics?.average_rating || "0.0"}
+              </p>
+              <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                Note moyenne
+              </p>
+            </div>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
-            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Date limite de remboursement
-            </span>
-            <span className="text-lg font-bold dark:text-white">
-              {financialPerformance?.date_limite_remboursement
-                ? new Date(
+
+        {/* Performance financière - Avances */}
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-8 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold" style={{ color: "var(--zalama-orange)" }}>
+              Performance financière - Avances sur salaire
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => loadDashboardData()}
+                disabled={isLoading}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
+                title="Actualiser les données"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 text-gray-500 ${isLoading ? "animate-spin" : ""
+                    }`}
+                />
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                Montant total débloqué (Avances)
+              </span>
+              <span className="text-2xl font-bold dark:text-white">
+                {gnfFormatter(financialPerformance?.debloque_mois)}
+              </span>
+            </div>
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                À rembourser (Avances)
+              </span>
+              <span className="text-2xl font-bold dark:text-white">
+                {gnfFormatter(financialPerformance?.a_rembourser_mois)}
+              </span>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                Date limite de remboursement
+              </span>
+              <span className="text-lg font-bold dark:text-white">
+                {financialPerformance?.date_limite_remboursement
+                  ? new Date(
                     financialPerformance.date_limite_remboursement
                   ).toLocaleDateString("fr-FR", {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
                   })
-                : "Non définie"}
-            </span>
-          </div>
-          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
-            <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
-              Jours restants avant remboursement
-            </span>
-            <span className="text-lg font-bold dark:text-white">
-              {financialPerformance?.jours_restants || "0"} jours
-            </span>
-            <div className="w-full bg-gray-700 rounded-full h-2 mt-2 overflow-hidden">
-              <div
-                className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${
-                    financialPerformance?.debloque_mois &&
-                    financialPerformance?.a_rembourser_mois
-                      ? Math.min(
-                          (financialPerformance.a_rembourser_mois /
-                          financialPerformance.debloque_mois) *
-                            100,
-                        100
-                        )
-                      : 0
-                  }%`,
-                }}
-              ></div>
+                  : "Non définie"}
+              </span>
             </div>
-            <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-              Taux de remboursement:{" "}
-              {financialPerformance?.taux_remboursement || "0%"}
-            </span>
+            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 flex flex-col items-start backdrop-blur-sm">
+              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1">
+                Jours restants avant remboursement
+              </span>
+              <span className="text-lg font-bold dark:text-white">
+                {financialPerformance?.jours_restants || "0"} jours
+              </span>
+              <div className="w-full bg-gray-700 rounded-full h-2 mt-2 overflow-hidden">
+                <div
+                  className="bg-yellow-400 h-2 rounded-full transition-all duration-300"
+                  style={{
+                    width: `${financialPerformance?.debloque_mois &&
+                        financialPerformance?.a_rembourser_mois
+                        ? Math.min(
+                          (financialPerformance.a_rembourser_mois /
+                            financialPerformance.debloque_mois) *
+                          100,
+                          100
+                        )
+                        : 0
+                      }%`,
+                  }}
+                ></div>
+              </div>
+              <span className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                Taux de remboursement:{" "}
+                {financialPerformance?.taux_remboursement || "0%"}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Performance Paiements de Salaire */}
-      {paymentSalaryStats && (
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--zalama-orange)" }}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              Paiements de Salaires
-            </h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
-                Total paiements effectués
-              </span>
-              <span className="text-2xl font-bold dark:text-white">
-                {paymentSalaryStats.paiements_effectues || 0}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                sur {paymentSalaryStats.total_paiements || 0} paiements
-              </span>
-            </div>
-            
-            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
-                Montant total versé
-              </span>
-              <span className="text-xl font-bold dark:text-white">
-                {gnfFormatter(paymentSalaryStats.montant_total_salaires)}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                à {paymentSalaryStats.employes_payes_distincts || 0} employés
-              </span>
+        {/* Performance Paiements de Salaire */}
+        {paymentSalaryStats && (
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 mt-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2" style={{ color: "var(--zalama-orange)" }}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                Paiements de Salaires
+              </h2>
             </div>
 
-            <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-              <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
-                Total à rembourser
-              </span>
-              <span className="text-xl font-bold dark:text-white">
-                {gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
-                Salaire Net + Frais (6%)
-              </span>
-            </div>
-            
-            {paymentSalaryStats.delai_remboursement && (
+            {/* ⚠️ Alerte de retard */}
+            {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="text-sm font-medium text-red-800 dark:text-red-200">
+                      ⚠️ Retard de remboursement ZaLaMa
+                    </h4>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                      Vous avez <strong>{Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours de retard</strong> ({paymentSalaryStats.semaines_retard || 0} semaine{(paymentSalaryStats.semaines_retard || 0) > 1 ? 's' : ''}).
+                      Une pénalité de <strong>{paymentSalaryStats.penalite_retard_pourcentage || 0}%</strong> s'applique, soit <strong>{gnfFormatter(paymentSalaryStats.montant_penalite_retard || 0)}</strong>.
+                    </p>
+                    <p className="text-sm text-red-700 dark:text-red-300 mt-2 font-medium">
+                      💰 Total à rembourser avec pénalité : {gnfFormatter(paymentSalaryStats.montant_total_avec_penalite || paymentSalaryStats.montant_total_remboursements)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
                 <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
-                  Délai remboursement ZaLaMa
+                  Total paiements effectués
                 </span>
-                <span className="text-lg font-bold dark:text-white">
-                  {formatDate(paymentSalaryStats.delai_remboursement)}
+                <span className="text-2xl font-bold dark:text-white">
+                  {paymentSalaryStats.paiements_effectues || 0}
                 </span>
-                {paymentSalaryStats.jours_restants_remboursement !== null && (
-                  <div className="mt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      paymentSalaryStats.jours_restants_remboursement > 7 
-                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                        : paymentSalaryStats.jours_restants_remboursement > 0
-                        ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-                    }`}>
-                      {paymentSalaryStats.jours_restants_remboursement > 0
-                        ? `${paymentSalaryStats.jours_restants_remboursement} jours restants`
-                        : paymentSalaryStats.jours_restants_remboursement === 0
-                        ? "Échéance aujourd'hui"
-                        : `Retard de ${Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours`
-                      }
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-          
-          {paymentSalaryStats.montant_total_avances_deduites > 0 && (
-            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-blue-700 dark:text-blue-400">
-                  Avances déduites des salaires
-                </span>
-                <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
-                  {gnfFormatter(paymentSalaryStats.montant_total_avances_deduites)}
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                  sur {paymentSalaryStats.total_paiements || 0} paiements
                 </span>
               </div>
+
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                  Montant total versé
+                </span>
+                <span className="text-xl font-bold dark:text-white">
+                  {gnfFormatter(paymentSalaryStats.montant_total_salaires)}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                  à {paymentSalaryStats.employes_payes_distincts || 0} employés
+                </span>
+              </div>
+
+              <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                  Total à rembourser
+                </span>
+                <span className="text-xl font-bold dark:text-white">
+                  {gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 mt-1 block">
+                  Salaire Net + Frais (6%)
+                </span>
+              </div>
+
+              {/* Pénalités de retard */}
+              {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+                <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-lg p-4 backdrop-blur-sm">
+                  <span className="text-red-600 dark:text-red-400 text-xs mb-1 block flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Pénalités de retard
+                  </span>
+                  <span className="text-xl font-bold text-red-700 dark:text-red-300">
+                    {paymentSalaryStats.montant_penalite_retard ? gnfFormatter(paymentSalaryStats.montant_penalite_retard) : '0 GNF'}
+                  </span>
+                  <span className="text-xs text-red-600 dark:text-red-400 mt-1 block">
+                    +{paymentSalaryStats.penalite_retard_pourcentage || 0}% ({paymentSalaryStats.semaines_retard || 0} sem.)
+                  </span>
+                </div>
+              )}
+
+              {/* Total avec pénalité (si retard) */}
+              {paymentSalaryStats.jours_restants_remboursement !== null && paymentSalaryStats.jours_restants_remboursement < 0 && (
+                <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800 rounded-lg p-4 backdrop-blur-sm">
+                  <span className="text-orange-600 dark:text-orange-400 text-xs mb-1 block">
+                    Total avec pénalité
+                  </span>
+                  <span className="text-xl font-bold text-orange-700 dark:text-orange-300">
+                    {paymentSalaryStats.montant_total_avec_penalite ? gnfFormatter(paymentSalaryStats.montant_total_avec_penalite) : gnfFormatter(paymentSalaryStats.montant_total_remboursements)}
+                  </span>
+                  <span className="text-xs text-orange-600 dark:text-orange-400 mt-1 block">
+                    Montant final à payer
+                  </span>
+                </div>
+              )}
+
+              {paymentSalaryStats.delai_remboursement && (
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
+                  <span className="text-gray-600 dark:text-gray-400 text-xs mb-1 block">
+                    Délai remboursement ZaLaMa
+                  </span>
+                  <span className="text-lg font-bold dark:text-white">
+                    {formatDate(paymentSalaryStats.delai_remboursement)}
+                  </span>
+                  {paymentSalaryStats.jours_restants_remboursement !== null && (
+                    <div className="mt-2">
+                      <span className={`text-xs px-2 py-1 rounded-full ${paymentSalaryStats.jours_restants_remboursement > 7
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                          : paymentSalaryStats.jours_restants_remboursement > 0
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                            : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                        }`}>
+                        {paymentSalaryStats.jours_restants_remboursement > 0
+                          ? `${paymentSalaryStats.jours_restants_remboursement} jours restants`
+                          : paymentSalaryStats.jours_restants_remboursement === 0
+                            ? "Échéance aujourd'hui"
+                            : `Retard de ${Math.abs(paymentSalaryStats.jours_restants_remboursement)} jours`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-      )}
 
-      {/* Visualisations et Graphiques */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        {/* Évolution des demandes */}
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
-              Évolution des demandes
-            </h3>
-            {filters?.applied && (
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                Données filtrées
-              </span>
+            {paymentSalaryStats.montant_total_avances_deduites > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-blue-700 dark:text-blue-400">
+                    Avances déduites des salaires
+                  </span>
+                  <span className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                    {gnfFormatter(paymentSalaryStats.montant_total_avances_deduites)}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart
-              data={demandesEvolutionData}
-              key={`demandes-${filters?.month}-${filters?.year}`}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
-              <XAxis dataKey="mois" stroke="#A0AEC0" />
-              <YAxis stroke="#A0AEC0" />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="demandes"
-                stroke="#4F8EF7"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-        {/* Montants débloqués */}
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
-              Montants débloqués
-            </h3>
-            {filters?.applied && (
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                Données filtrées
-              </span>
-            )}
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart
-              data={montantsEvolutionData}
-              key={`montants-${filters?.month}-${filters?.year}`}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
-              <XAxis dataKey="mois" stroke="#A0AEC0" />
-              <YAxis stroke="#A0AEC0" />
-              <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
-              <Legend />
-              <Bar dataKey="montant" fill="#4F8EF7" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+        )}
 
-      {/* Répartition par motif + Remboursements récents */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        {/* Répartition par motif */}
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
-              Répartition par motif
-            </h3>
-            {filters?.applied && (
-              <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
-                Données filtrées
-              </span>
-            )}
-          </div>
-          <ResponsiveContainer width="100%" height={450}>
-            <PieChart key={`motifs-${filters?.month}-${filters?.year}`}>
-              <Pie
-                data={repartitionMotifsData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ motif, valeur }) => `${motif} (${valeur})`}
-                outerRadius={100}
-                innerRadius={40}
-                fill="#4F8EF7"
-                dataKey="valeur"
-                paddingAngle={2}
+        {/* Visualisations et Graphiques */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          {/* Évolution des demandes */}
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
+                Évolution des demandes
+              </h3>
+              {filters?.applied && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  Données filtrées
+                </span>
+              )}
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart
+                data={demandesEvolutionData}
+                key={`demandes-${filters?.month}-${filters?.year}`}
               >
-                {repartitionMotifsData.map((entry: any, index: number) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(value, name) => [`demandes`, name]}
-                labelStyle={{ color: "#374151" }}
-                contentStyle={{
-                  backgroundColor: "#ffffff",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "8px",
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+                <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
+                <XAxis dataKey="mois" stroke="#A0AEC0" />
+                <YAxis stroke="#A0AEC0" />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="demandes"
+                  stroke="#4F8EF7"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Montants débloqués */}
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
+                Montants débloqués
+              </h3>
+              {filters?.applied && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  Données filtrées
+                </span>
+              )}
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart
+                data={montantsEvolutionData}
+                key={`montants-${filters?.month}-${filters?.year}`}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#232C3B" />
+                <XAxis dataKey="mois" stroke="#A0AEC0" />
+                <YAxis stroke="#A0AEC0" />
+                <Tooltip formatter={(value) => gnfFormatter(Number(value))} />
+                <Legend />
+                <Bar dataKey="montant" fill="#4F8EF7" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        {/* Remboursements récents */}
-        <RemboursementsRecents
-          compact={true}
-          remboursements={dashboardData?.remboursements}
-          isLoading={isLoading}
-        />
+
+        {/* Répartition par motif + Remboursements récents */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+          {/* Répartition par motif */}
+          <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-base font-semibold" style={{ color: "var(--zalama-orange)" }}>
+                Répartition par motif
+              </h3>
+              {filters?.applied && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full dark:bg-blue-900 dark:text-blue-300">
+                  Données filtrées
+                </span>
+              )}
+            </div>
+            <ResponsiveContainer width="100%" height={450}>
+              <PieChart key={`motifs-${filters?.month}-${filters?.year}`}>
+                <Pie
+                  data={repartitionMotifsData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ motif, valeur }) => `${motif} (${valeur})`}
+                  outerRadius={100}
+                  innerRadius={40}
+                  fill="#4F8EF7"
+                  dataKey="valeur"
+                  paddingAngle={2}
+                >
+                  {repartitionMotifsData.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(value, name) => [`demandes`, name]}
+                  labelStyle={{ color: "#374151" }}
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "8px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          {/* Remboursements récents */}
+          <RemboursementsRecents
+            compact={true}
+            remboursements={dashboardData?.remboursements}
+            isLoading={isLoading}
+          />
+        </div>
       </div>
-    </div>
+    </AlertModalWrapper>
   );
 }

@@ -45,7 +45,7 @@ const getNavItems = () => [
     href: `/dashboard/remboursements`,
   },
   { label: "Avis des Salariés", icon: Star, href: `/dashboard/avis` },
-  { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
+  // { label: "Finances", icon: CreditCard, href: `/dashboard/finances` },
   // Ajout du lien Test Djomy
   /* {
     label: "Test Djomy",

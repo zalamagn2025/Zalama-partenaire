@@ -164,11 +164,11 @@ export default function AvisPage() {
 
   // Filtrer les avis
   const filteredAvis = (avis || []).filter((avis) => {
-    const matchesSearch = 
+    const matchesSearch =
       avis.employee?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       avis.employee?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       avis.commentaire?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesCategory = selectedCategory === "all" || avis.type_retour === selectedCategory;
     const matchesEmployee = selectedEmployee === "all" || avis.employee_id === selectedEmployee;
 
@@ -212,9 +212,8 @@ export default function AvisPage() {
     return Array.from({ length: 5 }, (_, i) => (
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i < note ? "text-yellow-400 fill-current" : "text-gray-300"
-        }`}
+        className={`w-4 h-4 ${i < note ? "text-yellow-400 fill-current" : "text-gray-300"
+          }`}
       />
     ));
   };
@@ -258,9 +257,9 @@ export default function AvisPage() {
                 <div className="flex-1 space-y-2">
                   <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/4"></div>
                   <div className="h-3 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
-          </div>
+                </div>
                 <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-16"></div>
-            </div>
+              </div>
             ))}
           </div>
         </div>
@@ -275,8 +274,8 @@ export default function AvisPage() {
         {/* Total Avis */}
         <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between mb-3">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <MessageSquare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <MessageSquare className="w-6 h-6 text-orange-600 dark:text-orange-400" />
             </div>
             <Badge variant="info" className="text-xs">Total</Badge>
           </div>
@@ -284,7 +283,7 @@ export default function AvisPage() {
             <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
               {totalAvis}
             </p>
-            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
               Total Avis
             </p>
           </div>
@@ -363,14 +362,14 @@ export default function AvisPage() {
           {/* Boutons de filtres */}
           <div className="flex items-center gap-3">
             <div className="relative" ref={filterMenuRef}>
-            <button
+              <button
                 onClick={() => setShowFilters(!showFilters)}
                 className="flex items-center gap-2 px-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm"
               >
                 <Filter className="w-4 h-4" />
                 Filtres
                 <ChevronDown className="w-4 h-4" />
-            </button>
+              </button>
 
               {showFilters && (
                 <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-lg shadow-lg z-10 backdrop-blur-sm">
@@ -380,7 +379,7 @@ export default function AvisPage() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Catégorie
                       </label>
-                    <select
+                      <select
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                         className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
@@ -389,55 +388,55 @@ export default function AvisPage() {
                         {avisCategories.map((category) => (
                           <option key={category.id} value={category.id}>
                             {category.label}
-                        </option>
-                      ))}
-                    </select>
-                </div>
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     {/* Filtre par employé */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Employé
+                        Employé
                       </label>
-                  <select
+                      <select
                         value={selectedEmployee}
                         onChange={(e) => setSelectedEmployee(e.target.value)}
                         className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
                       >
                         <option value="all">Tous les employés</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
+                        {employees.map((employee) => (
+                          <option key={employee.id} value={employee.id}>
                             {employee.prenom} {employee.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
                     {/* Boutons d'action */}
                     <div className="flex gap-2 pt-2">
-                  <button
+                      <button
                         onClick={() => {
                           setSelectedCategory("all");
                           setSelectedEmployee("all");
                           setSearchTerm("");
                         }}
                         className="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Réinitialiser
-                  </button>
-                  <button
+                      >
+                        Réinitialiser
+                      </button>
+                      <button
                         onClick={() => setShowFilters(false)}
                         className="flex-1 px-3 py-2 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
-                  >
-                    Appliquer
-                  </button>
+                      >
+                        Appliquer
+                      </button>
                     </div>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <button
+            <button
               onClick={loadAllData}
               disabled={loadingData}
               className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -448,7 +447,7 @@ export default function AvisPage() {
                 <RefreshCw className="w-4 h-4" />
               )}
               Actualiser
-          </button>
+            </button>
           </div>
         </div>
       </div>
@@ -464,8 +463,8 @@ export default function AvisPage() {
         <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg p-8 text-center backdrop-blur-sm">
           <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                Aucun avis trouvé
-              </h3>
+            Aucun avis trouvé
+          </h3>
           <p className="text-gray-500 dark:text-gray-400">
             Aucun avis ne correspond aux critères de recherche.
           </p>
@@ -507,7 +506,7 @@ export default function AvisPage() {
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {(avis.employee as any)?.photo_url ? (
                             <Image
                               src={(avis.employee as any).photo_url}
@@ -517,7 +516,7 @@ export default function AvisPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {avis.employee?.prenom?.charAt(0)}
                               {avis.employee?.nom?.charAt(0)}
                             </span>
@@ -547,8 +546,8 @@ export default function AvisPage() {
                       </div>
                     </td>
                     <td className="px-3 py-4 text-center">
-                      <Badge 
-                        variant={avis.note >= 3 ? "success" : "error"} 
+                      <Badge
+                        variant={avis.note >= 3 ? "success" : "error"}
                         className="text-xs"
                       >
                         {avis.note >= 3 ? "Positif" : "Négatif"}
@@ -563,25 +562,25 @@ export default function AvisPage() {
                       {formatDate(avis.date_avis || avis.created_at)}
                     </td>
                     <td className="px-3 py-4 text-center">
-              <button
-                onClick={() => {
+                      <button
+                        onClick={() => {
                           setSelectedAvis(avis);
                           setShowDetailModal(true);
-                }}
+                        }}
                         className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         title="Voir les détails"
-              >
+                      >
                         <Eye className="h-4 w-4" />
                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                           Voir
                         </div>
-              </button>
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            </div>
+          </div>
 
           {/* Pagination */}
           {filteredAvis.length > 0 && (
@@ -593,7 +592,7 @@ export default function AvisPage() {
               onPageChange={setCurrentPage}
             />
           )}
-          </div>
+        </div>
       )}
 
       {/* Modal de détails */}
@@ -621,14 +620,14 @@ export default function AvisPage() {
               >
                 <X className="h-5 w-5" />
               </button>
-                    </div>
-            
+            </div>
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {(selectedAvis.employee as any)?.photo_url ? (
                       <Image
                         src={(selectedAvis.employee as any).photo_url}
@@ -638,7 +637,7 @@ export default function AvisPage() {
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                         {selectedAvis.employee?.prenom?.charAt(0)}
                         {selectedAvis.employee?.nom?.charAt(0)}
                       </span>
@@ -647,33 +646,33 @@ export default function AvisPage() {
                   <div>
                     <h3 className="text-2xl font-bold text-white">
                       {selectedAvis.employee?.prenom} {selectedAvis.employee?.nom}
-                  </h3>
+                    </h3>
                     <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
                       {selectedAvis.employee?.poste || "N/A"}
-                  </p>
+                    </p>
+                  </div>
                 </div>
-                      </div>
                 <div className="flex items-center gap-3">
                   <Badge variant={getApprovalBadgeVariant(selectedAvis.approuve)} className="text-sm">
                     {selectedAvis.approuve ? "Approuvé" : "En attente"}
                   </Badge>
-                    </div>
-                  </div>
+                </div>
+              </div>
 
               {/* Informations en grille */}
               <div className="space-y-4">
                 {/* Email - prend toute la largeur */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedAvis.employee?.email || "Non renseigné"}
-                    </p>
-                  </div>
+                  </p>
+                </div>
 
                 {/* Autres informations en grille */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -682,54 +681,54 @@ export default function AvisPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
-                    </div>
-                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                       </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
+                    </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedAvis.employee?.telephone ? `+224${selectedAvis.employee.telephone}` : "Non renseigné"}
                     </p>
-                    </div>
+                  </div>
 
                   {/* Note */}
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                         <Star className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                    </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Note</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         {renderStars(selectedAvis.note)}
-                    </div>
+                      </div>
                       <span className="font-medium text-gray-900 dark:text-white">
                         {selectedAvis.note}/5
                       </span>
+                    </div>
                   </div>
-                </div>
 
                   {/* Catégorie */}
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                         <BarChart2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Catégorie</span>
-            </div>
-                    <Badge 
-                      variant={selectedAvis.note >= 3 ? "success" : "error"} 
+                    </div>
+                    <Badge
+                      variant={selectedAvis.note >= 3 ? "success" : "error"}
                       className="text-xs"
                     >
                       {selectedAvis.note >= 3 ? "Positif" : "Négatif"}
                     </Badge>
-      </div>
+                  </div>
 
                   {/* Date */}
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
                         <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-        </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
@@ -750,9 +749,9 @@ export default function AvisPage() {
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedAvis.commentaire}
                     </p>
-          </div>
-        )}
-      </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

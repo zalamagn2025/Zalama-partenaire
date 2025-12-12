@@ -9,6 +9,7 @@ const PARTNER_REIMBURSEMENTS_BASE_URL = `${SUPABASE_URL}/functions/v1/partner-re
 const PARTNER_APPROVAL_URL = `${SUPABASE_URL}/functions/v1/partner-approval`;
 const PAYMENT_EXECUTION_URL = `${SUPABASE_URL}/functions/v1/payment-execution`;
 const PAYMENT_EMPLOYEES_URL = `${SUPABASE_URL}/functions/v1/payment-employees`;
+const PARTNER_PAYMENT_HISTORY_URL = `${SUPABASE_URL}/functions/v1/partner-payment-history`;
 
 export interface PartnerAuthResponse {
   success: boolean;
@@ -268,7 +269,12 @@ class EdgeFunctionService {
       "Content-Type": "application/json",
     };
 
-    // Ne pas ajouter le token depuis this.accessToken si options.headers contient déjà Authorization
+    // ✅ Ajouter le token d'authentification si disponible et non déjà présent
+    const optionsHeaders = options.headers as Record<string, string> | undefined;
+    if (this.accessToken && !optionsHeaders?.['Authorization']) {
+      defaultHeaders["Authorization"] = `Bearer ${this.accessToken}`;
+    }
+
     // Les headers passés en options ont la priorité
     const config: RequestInit = {
       ...options,
@@ -1162,6 +1168,90 @@ class EdgeFunctionService {
       return data;
     } catch (error) {
       console.error("Erreur lors de l'exécution des paiements:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
+  }
+
+  // ✅ Récupérer l'historique des paiements de salaire (partner-payment-history)
+  async getPartnerPaymentHistory(filters: any = {}): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("action", "list");
+    
+    // Ajouter les filtres
+    if (filters.page) params.append("page", filters.page.toString());
+    if (filters.limit) params.append("limit", filters.limit.toString());
+    if (filters.employe_id) params.append("employe_id", filters.employe_id);
+    if (filters.mois) params.append("mois", filters.mois.toString());
+    if (filters.annee) params.append("annee", filters.annee.toString());
+    if (filters.statut) params.append("statut", filters.statut);
+
+    const queryString = params.toString();
+    const url = `${PARTNER_PAYMENT_HISTORY_URL}?${queryString}`;
+
+    if (!this.accessToken) {
+      console.error('❌ Token manquant dans getPartnerPaymentHistory');
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const config: RequestInit = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    };
+
+    console.log('🔐 Appel partner-payment-history avec filtres:', filters);
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('❌ Erreur HTTP:', response.status, response.statusText);
+        console.error('❌ Détails erreur:', data);
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de la récupération de l'historique des paiements:", error);
+      throw error instanceof Error ? error : new Error("Erreur de connexion");
+    }
+  }
+
+  // ✅ Récupérer les statistiques des paiements de salaire
+  async getPartnerPaymentHistoryStatistics(filters: any = {}): Promise<any> {
+    const params = new URLSearchParams();
+    params.append("action", "statistics");
+    
+    const queryString = params.toString();
+    const url = `${PARTNER_PAYMENT_HISTORY_URL}?${queryString}`;
+
+    if (!this.accessToken) {
+      console.error('❌ Token manquant dans getPartnerPaymentHistoryStatistics');
+      throw new Error('Token d\'authentification manquant. Veuillez vous reconnecter.');
+    }
+
+    const config: RequestInit = {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${this.accessToken}`,
+      },
+    };
+
+    try {
+      const response = await fetch(url, config);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('❌ Erreur HTTP:', response.status, response.statusText);
+        console.error('❌ Détails erreur:', data);
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de la récupération des statistiques des paiements:", error);
       throw error instanceof Error ? error : new Error("Erreur de connexion");
     }
   }

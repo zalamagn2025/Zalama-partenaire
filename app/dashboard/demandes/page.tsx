@@ -138,6 +138,18 @@ export default function DemandesPage() {
       const partnerService = new PartnerDataService(session.partner.id);
       const demandes = await partnerService.getSalaryAdvanceRequests();
 
+      // ✅ Log pour vérifier si les remboursements sont bien récupérés
+      if (demandes.length > 0) {
+        console.log('📋 Exemple demande avec remboursement:', {
+          id: demandes[0].id,
+          statut: demandes[0].statut,
+          remboursement: (demandes[0] as any).remboursement,
+          hasRemboursement: !!(demandes[0] as any).remboursement,
+          isArray: Array.isArray((demandes[0] as any).remboursement),
+          length: Array.isArray((demandes[0] as any).remboursement) ? (demandes[0] as any).remboursement.length : 0
+        });
+      }
+
       setDemandesAvance(demandes);
     } catch (error: any) {
       console.error("Erreur lors du chargement des demandes:", error);
@@ -214,32 +226,33 @@ export default function DemandesPage() {
 
       // Mettre à jour les données locales
       if (demandesData.data && Array.isArray(demandesData.data)) {
-        const firstDemande = demandesData.data[0] as any;
-        console.log("🔍 Première demande brute:", firstDemande);
-        console.log("🔍 Structure employé première demande:", {
-          hasEmploye: !!firstDemande?.employe,
-          employeType: typeof firstDemande?.employe,
-          employeKeys: firstDemande?.employe
-            ? Object.keys(firstDemande.employe)
-            : [],
-          employePrenom: firstDemande?.employe?.prenom,
-          employeNom: firstDemande?.employe?.nom,
-          employeData: firstDemande?.employe,
-          employeStringified: JSON.stringify(firstDemande?.employe),
+        // ✅ APLATIR LES DONNÉES : transformer les données groupées en demandes individuelles
+        const demandesAplaties: any[] = [];
+
+        demandesData.data.forEach((groupe: any) => {
+          // Pour chaque groupe (employé), extraire les demandes_detailes
+          if (groupe.demandes_detailes && Array.isArray(groupe.demandes_detailes)) {
+            groupe.demandes_detailes.forEach((demande: any) => {
+              demandesAplaties.push({
+                ...demande,
+                // Ajouter les infos de l'employé
+                employe: groupe.employe,
+                employees: groupe.employe, // Compatibilité avec l'ancien format
+                partenaire: groupe.partenaire,
+                // Ajouter le remboursement_info comme remboursement (format attendu par le tableau)
+                remboursement: demande.remboursement_info ? [demande.remboursement_info] : [],
+                remboursements: demande.remboursement_info ? [demande.remboursement_info] : [],
+                // Formater la date pour l'affichage
+                date: demande.date_creation ? new Date(demande.date_creation).toLocaleDateString('fr-FR') : 'N/A'
+              });
+            });
+          }
         });
 
-        // Debug pour toutes les demandes
-        demandesData.data.forEach((demande: any, index: number) => {
-          console.log(`🔍 Demande ${index}:`, {
-            employe_id: demande.employe_id,
-            hasEmploye: !!demande.employe,
-            employeKeys: demande.employe ? Object.keys(demande.employe) : [],
-            employePrenom: demande.employe?.prenom,
-            employeNom: demande.employe?.nom,
-          });
-        });
+        console.log(`✅ ${demandesAplaties.length} demandes individuelles extraites de ${demandesData.data.length} groupes`);
+        console.log('📋 Exemple demande aplatie:', demandesAplaties[0]);
 
-        setDemandesAvance(demandesData.data);
+        setDemandesAvance(demandesAplaties);
       }
 
       console.log(
@@ -580,7 +593,7 @@ export default function DemandesPage() {
 
   const pendingRHResponsable =
     currentMonthData?.statistics?.status_breakdown?.[
-      "En attente RH/Responsable"
+    "En attente RH/Responsable"
     ] ||
     currentMonthData?.statistics?.by_status?.pending_rh_responsable ||
     allDemandes.filter((d) => d.statut === "En attente RH/Responsable").length;
@@ -589,6 +602,31 @@ export default function DemandesPage() {
     currentMonthData?.statistics?.status_breakdown?.Rejeté ||
     currentMonthData?.statistics?.by_status?.rejected ||
     allDemandes.filter((d) => d.statut === "Rejeté").length;
+
+  // ✅ Statistiques des remboursements (montants)
+  const remboursementsPaye = allDemandes.reduce((total, d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "PAYE") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
+
+  const remboursementsEnAttente = allDemandes.reduce((total, d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_ATTENTE") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
+
+  const remboursementsEnRetard = allDemandes.reduce((total, d) => {
+    const remb = (d as any).remboursement || (d as any).remboursements;
+    if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_RETARD") {
+      return total + (remb[0]?.montant_total_remboursement || 0);
+    }
+    return total;
+  }, 0);
 
   const stats = [
     {
@@ -619,6 +657,24 @@ export default function DemandesPage() {
       title: "Rejetées",
       value: rejectedDemandes,
       icon: AlertCircle,
+      color: "red" as const,
+    },
+    {
+      title: "Remboursements payés",
+      value: remboursementsPaye,
+      icon: Receipt,
+      color: "green" as const,
+    },
+    {
+      title: "Remboursements en attente",
+      value: remboursementsEnAttente,
+      icon: Receipt,
+      color: "yellow" as const,
+    },
+    {
+      title: "Remboursements en retard",
+      value: remboursementsEnRetard,
+      icon: Receipt,
       color: "red" as const,
     },
   ];
@@ -771,10 +827,10 @@ export default function DemandesPage() {
           <div className="space-y-3">
             {/* En-tête du tableau */}
             <div className="grid grid-cols-6 gap-4 pb-3 border-b border-gray-300 dark:border-gray-700">
-            {[...Array(6)].map((_, i) => (
+              {[...Array(6)].map((_, i) => (
                 <div key={i} className="bg-gray-300 dark:bg-gray-700 rounded h-5"></div>
               ))}
-                  </div>
+            </div>
             {/* Lignes du tableau */}
             {[...Array(6)].map((_, i) => (
               <div key={i} className="grid grid-cols-6 gap-4 py-3">
@@ -794,8 +850,8 @@ export default function DemandesPage() {
 
   return (
     <div className="p-6">
-     {/* Filtres avancés - Style identique à la page dashboard */}
-     <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+      {/* Filtres avancés - Style identique à la page dashboard */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium text-gray-900 dark:text-white">
@@ -809,158 +865,158 @@ export default function DemandesPage() {
                 <Filter className="h-3 w-3" />
                 {showFilters ? "Masquer" : "Afficher"}
               </button>
-            <button
-              onClick={resetFilters}
-              className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              Réinitialiser
-            </button>
-            <button
-              onClick={() => loadSalaryDemandsData(filters)}
-              disabled={edgeFunctionLoading}
-              className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-            >
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => loadSalaryDemandsData(filters)}
+                disabled={edgeFunctionLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
                 {edgeFunctionLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : null}
                 Actualiser
-            </button>
+              </button>
             </div>
           </div>
         </div>
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-          {/* Filtre par mois */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Mois
-            </label>
-            <select
-              value={filters.mois || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "mois",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
+            {/* Filtre par mois */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mois
+              </label>
+              <select
+                value={filters.mois || ""}
+                onChange={(e) =>
+                  applyFilter(
+                    "mois",
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les mois</option>
-              {activityPeriods?.mois?.map((mois: number) => (
-                <option key={mois} value={mois}>
-                  {new Date(0, mois - 1).toLocaleString("fr-FR", {
-                    month: "long",
-                  })}
+              >
+                <option value="">Tous les mois</option>
+                {activityPeriods?.mois?.map((mois: number) => (
+                  <option key={mois} value={mois}>
+                    {new Date(0, mois - 1).toLocaleString("fr-FR", {
+                      month: "long",
+                    })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par année */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Année
+              </label>
+              <select
+                value={filters.annee || ""}
+                onChange={(e) =>
+                  applyFilter(
+                    "annee",
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Toutes les années</option>
+                {activityPeriods?.annees?.map((annee: number) => (
+                  <option key={annee} value={annee}>
+                    {annee}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par statut */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut
+              </label>
+              <select
+                value={filters.status || ""}
+                onChange={(e) => applyFilter("status", e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="En attente RH/Responsable">
+                  En attente RH/Responsable
                 </option>
-              ))}
-            </select>
-          </div>
+                <option value="Validé">Validé</option>
+                <option value="Rejeté">Rejeté</option>
+              </select>
+            </div>
 
-          {/* Filtre par année */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Année
-            </label>
-            <select
-              value={filters.annee || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "annee",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
+            {/* Filtre par catégorie */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Catégorie
+              </label>
+              <select
+                value={filters.categorie || ""}
+                onChange={(e) => applyFilter("categorie", e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Toutes les années</option>
-              {activityPeriods?.annees?.map((annee: number) => (
-                <option key={annee} value={annee}>
-                  {annee}
-                </option>
-              ))}
-            </select>
-          </div>
+              >
+                <option value="">Toutes les catégories</option>
+                <option value="mono-mois">Mono-mois</option>
+                <option value="multi-mois">Multi-mois</option>
+              </select>
+            </div>
 
-          {/* Filtre par statut */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Statut
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) => applyFilter("status", e.target.value || null)}
+            {/* Filtre par type de motif */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Type de motif
+              </label>
+              <select
+                value={filters.type_motif || ""}
+                onChange={(e) =>
+                  applyFilter("type_motif", e.target.value || null)
+                }
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="En attente RH/Responsable">
-                En attente RH/Responsable
-              </option>
-              <option value="Validé">Validé</option>
-              <option value="Rejeté">Rejeté</option>
-            </select>
-          </div>
+              >
+                <option value="">Tous les motifs</option>
+                <option value="sante">Santé</option>
+                <option value="education">Éducation</option>
+                <option value="transport">Transport</option>
+                <option value="logement">Logement</option>
+                <option value="alimentation">Alimentation</option>
+                <option value="autre">Autre</option>
+              </select>
+            </div>
 
-          {/* Filtre par catégorie */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Catégorie
-            </label>
-            <select
-              value={filters.categorie || ""}
-              onChange={(e) => applyFilter("categorie", e.target.value || null)}
+            {/* Filtre par statut de remboursement */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut remboursement
+              </label>
+              <select
+                value={filters.statut_remboursement || ""}
+                onChange={(e) =>
+                  applyFilter("statut_remboursement", e.target.value || null)
+                }
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Toutes les catégories</option>
-              <option value="mono-mois">Mono-mois</option>
-              <option value="multi-mois">Multi-mois</option>
-            </select>
-          </div>
-
-          {/* Filtre par type de motif */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Type de motif
-            </label>
-            <select
-              value={filters.type_motif || ""}
-              onChange={(e) =>
-                applyFilter("type_motif", e.target.value || null)
-              }
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les motifs</option>
-              <option value="sante">Santé</option>
-              <option value="education">Éducation</option>
-              <option value="transport">Transport</option>
-              <option value="logement">Logement</option>
-              <option value="alimentation">Alimentation</option>
-              <option value="autre">Autre</option>
-            </select>
-          </div>
-
-          {/* Filtre par statut de remboursement */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Statut remboursement
-            </label>
-            <select
-              value={filters.statut_remboursement || ""}
-              onChange={(e) =>
-                applyFilter("statut_remboursement", e.target.value || null)
-              }
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
-              <option value="EN_ATTENTE">En attente</option>
-              <option value="PAYE">Payé</option>
-              <option value="EN_RETARD">En retard</option>
-              <option value="ANNULE">Annulé</option>
-            </select>
-          </div>
+              >
+                <option value="">Tous les statuts</option>
+                <option value="SANS_REMBOURSEMENT">Sans remboursement</option>
+                <option value="EN_ATTENTE">En attente</option>
+                <option value="PAYE">Payé</option>
+                <option value="EN_RETARD">En retard</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+            </div>
           </div>
         )}
-        </div>
+      </div>
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
@@ -1055,6 +1111,63 @@ export default function DemandesPage() {
         </div>
       </div>
 
+      {/* Statistiques des remboursements */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {/* Remboursements payés */}
+        <div className="bg-emerald-50 dark:bg-emerald-900/10 rounded-lg p-5 border border-emerald-200 dark:border-emerald-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Payés</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+              {remboursementsPaye.toLocaleString()} GNF
+            </p>
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 mt-1">
+              Remboursements payés
+            </p>
+          </div>
+        </div>
+
+        {/* Remboursements en attente */}
+        <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg p-5 border border-amber-200 dark:border-amber-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+              {remboursementsEnAttente.toLocaleString()} GNF
+            </p>
+            <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+              Remboursements en attente
+            </p>
+          </div>
+        </div>
+
+        {/* Remboursements en retard */}
+        <div className="bg-rose-50 dark:bg-rose-900/10 rounded-lg p-5 border border-rose-200 dark:border-rose-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-lg">
+              <Receipt className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+            </div>
+            <Badge variant="error" className="text-xs">En retard</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+              {remboursementsEnRetard.toLocaleString()} GNF
+            </p>
+            <p className="text-sm text-rose-600 dark:text-rose-400 mt-1">
+              Remboursements en retard
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Barre de recherche simple */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm p-4 mb-4">
         <div className="relative">
@@ -1069,7 +1182,7 @@ export default function DemandesPage() {
         </div>
       </div>
 
-      
+
 
       {/* Liste des demandes */}
       <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-2 rounded-lg shadow-sm relative">
@@ -1099,213 +1212,252 @@ export default function DemandesPage() {
             <div className="overflow-x-auto">
               <table className="w-full table-fixed dark:divide-gray-700">
                 <thead className="bg-gray-50 dark:bg-[var(--zalama-card)]">
-                <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Nom de l'employé
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Salaire Net
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Catégorie
-                  </th>
-                  <th className="px-3 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Montant
-                  </th>
-                  <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Motif
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
-                {currentItems.map((demande) => (
-                  <tr
-                    key={demande.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    <td className="px-3 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <tr>
+                    <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Nom de l'employé
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Salaire Net
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Catégorie
+                    </th>
+                    <th className="px-3 py-4 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Montant
+                    </th>
+                    <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Motif
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Statut
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Remboursement
+                    </th>
+                    <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                  {currentItems.map((demande) => (
+                    <tr
+                      key={demande.id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                    >
+                      <td className="px-3 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                            {(() => {
+                              const employeeData = employeesData.get(demande.employe_id);
+                              const photoUrl = employeeData?.photo_url || (demande.employees as any)?.photo_url;
+                              console.log(`🔍 Demande ${demande.id}:`, {
+                                employe_id: demande.employe_id,
+                                hasEmployeeData: !!employeeData,
+                                photoUrl: photoUrl,
+                                employeesPhotoUrl: (demande.employees as any)?.photo_url
+                              });
+                              return photoUrl ? (
+                                <Image
+                                  src={photoUrl}
+                                  alt={demande.demandeur}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover rounded-full"
+                                />
+                              ) : (
+                                <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
+                                  {demande.demandeur.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm text-gray-900 dark:text-white">
+                              {demande.demandeur}
+                            </div>
+                            {demande.poste &&
+                              demande.poste !== "Non spécifié" && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  {demande.poste}
+                                </div>
+                              )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
                           {(() => {
                             const employeeData = employeesData.get(demande.employe_id);
-                            const photoUrl = employeeData?.photo_url || (demande.employees as any)?.photo_url;
-                            console.log(`🔍 Demande ${demande.id}:`, {
-                              employe_id: demande.employe_id,
-                              hasEmployeeData: !!employeeData,
-                              photoUrl: photoUrl,
-                              employeesPhotoUrl: (demande.employees as any)?.photo_url
-                            });
-                            return photoUrl ? (
-                              <Image
-                                src={photoUrl}
-                                alt={demande.demandeur}
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-cover rounded-full"
-                              />
-                            ) : (
-                              <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                                {demande.demandeur.split(' ').map(n => n.charAt(0)).join('').slice(0, 2)}
-                              </span>
-                            );
+                            const salaireNet = employeeData?.salaire_net || (demande as any).employe?.salaire_net || 0;
+                            return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
                           })()}
-                          </div>
-                        <div>
-                          <div className="font-medium text-sm text-gray-900 dark:text-white">
-                            {demande.demandeur}
-                          </div>
-                          {demande.poste &&
-                            demande.poste !== "Non spécifié" && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                {demande.poste}
-                              </div>
-                            )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 text-center">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {(() => {
-                          const employeeData = employeesData.get(demande.employe_id);
-                          const salaireNet = employeeData?.salaire_net || (demande as any).employe?.salaire_net || 0;
-                          return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
-                        })()}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 text-center">
-                      <Badge
-                        variant={
-                          demande.categorie === "mono-mois"
-                            ? "info"
-                            : demande.categorie === "multi-mois"
-                            ? "purple"
-                            : "default"
-                        }
-                        className="text-xs"
-                      >
-                        {demande.categorie === "mono-mois"
-                          ? "Mono-mois"
-                          : demande.categorie === "multi-mois"
-                          ? "Multi-mois"
-                          : demande.categorie || "N/A"}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-4 text-right">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {(demande.montant || 0).toLocaleString()} GNF
-                      </div>
-                    </td>
-                    <td className="px-3 py-4">
-                      <div className="text-sm text-gray-900 dark:text-white truncate max-w-20">
-                        {demande.type_motif || "Autre"}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 text-center">
-                      <div className="text-sm text-gray-900 dark:text-white">
-                        {demande.date}
-                      </div>
-                    </td>
-                    <td className="px-3 py-4 text-center">
-                      <Badge
-                        variant={
-                          demande.statut === "En attente" ||
-                          demande.statut === "En attente RH/Responsable"
-                            ? "warning"
-                            : demande.statut === "Validé"
-                            ? "success"
-                            : demande.statut === "Rejeté"
-                            ? "error"
-                            : "default"
-                        }
-                        className="text-xs"
-                      >
-                        {demande.statut}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        {/* Actions pour les demandes en attente RH/Responsable */}
-                        {demande.statut === "En attente RH/Responsable" ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApproveRequest(demande.id);
-                              }}
-                              disabled={
-                                approvingRequest === demande.id ||
-                                rejectingRequest === demande.id ||
-                                tableLoading
-                              }
-                              className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Approuver la demande"
-                            >
-                              {approvingRequest === demande.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                              ) : (
-                                <Check className="h-4 w-4" />
-                              )}
-                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                {approvingRequest === demande.id ? "Traitement..." : "Approuver"}
-                              </div>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRejectRequest(demande.id);
-                              }}
-                              disabled={
-                                rejectingRequest === demande.id ||
-                                approvingRequest === demande.id ||
-                                tableLoading
-                              }
-                              className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Rejeter la demande"
-                            >
-                              {rejectingRequest === demande.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                {rejectingRequest === demande.id ? "Traitement..." : "Rejeter"}
-                              </div>
-                            </button>
-                          </div>
-                        ) : null}
-                        <button
-                          onClick={() => {
-                            setSelectedDemande(demande);
-                            setShowDetailsModal(true);
-                          }}
-                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                          title="Voir les détails"
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <Badge
+                          variant={
+                            demande.categorie === "mono-mois"
+                              ? "info"
+                              : demande.categorie === "multi-mois"
+                                ? "purple"
+                                : "default"
+                          }
+                          className="text-xs"
                         >
-                          <Eye className="h-4 w-4" />
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                            Voir
-                          </div>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {demande.categorie === "mono-mois"
+                            ? "Mono-mois"
+                            : demande.categorie === "multi-mois"
+                              ? "Multi-mois"
+                              : demande.categorie || "N/A"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-4 text-right">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {(demande.montant || 0).toLocaleString()} GNF
+                        </div>
+                      </td>
+                      <td className="px-3 py-4">
+                        <div className="text-sm text-gray-900 dark:text-white truncate max-w-20">
+                          {demande.type_motif || "Autre"}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <div className="text-sm text-gray-900 dark:text-white">
+                          {demande.date}
+                        </div>
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <Badge
+                          variant={
+                            demande.statut === "En attente" ||
+                              demande.statut === "En attente RH/Responsable"
+                              ? "warning"
+                              : demande.statut === "Validé"
+                                ? "success"
+                                : demande.statut === "Rejeté"
+                                  ? "error"
+                                  : "default"
+                          }
+                          className="text-xs"
+                        >
+                          {demande.statut}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        {(() => {
+                          // ✅ Compatibilité: Edge Function = "remboursement", Supabase direct = "remboursements"
+                          const remboursement = (demande as any).remboursement || (demande as any).remboursements;
+
+                          // Vérifier si remboursement existe et n'est pas vide
+                          if (Array.isArray(remboursement) && remboursement.length > 0 && remboursement[0]) {
+                            const statut = remboursement[0].statut;
+                            return (
+                              <Badge
+                                variant={
+                                  statut === "PAYE"
+                                    ? "success"
+                                    : statut === "EN_ATTENTE"
+                                      ? "warning"
+                                      : statut === "EN_RETARD"
+                                        ? "error"
+                                        : statut === "ANNULE"
+                                          ? "default"
+                                          : "default"
+                                }
+                                className="text-xs"
+                              >
+                                {statut}
+                              </Badge>
+                            );
+                          }
+
+                          // Pas de remboursement : afficher selon le statut de la demande
+                          if (demande.statut === "Validé" || demande.statut === "Approuvée") {
+                            return <span className="text-xs text-yellow-500 dark:text-yellow-400">Pas encore</span>;
+                          }
+
+                          return <span className="text-xs text-gray-400 dark:text-gray-500">—</span>;
+                        })()}
+                      </td>
+                      <td className="px-3 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          {/* Actions pour les demandes en attente RH/Responsable */}
+                          {demande.statut === "En attente RH/Responsable" ? (
+                            <div className="flex flex-col items-center gap-1">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveRequest(demande.id);
+                                }}
+                                disabled={
+                                  approvingRequest === demande.id ||
+                                  rejectingRequest === demande.id ||
+                                  tableLoading
+                                }
+                                className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                title="Approuver la demande"
+                              >
+                                {approvingRequest === demande.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                  {approvingRequest === demande.id ? "Traitement..." : "Approuver"}
+                                </div>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRejectRequest(demande.id);
+                                }}
+                                disabled={
+                                  rejectingRequest === demande.id ||
+                                  approvingRequest === demande.id ||
+                                  tableLoading
+                                }
+                                className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                title="Rejeter la demande"
+                              >
+                                {rejectingRequest === demande.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
+                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                  {rejectingRequest === demande.id ? "Traitement..." : "Rejeter"}
+                                </div>
+                              </button>
+                            </div>
+                          ) : null}
+                          <button
+                            onClick={() => {
+                              setSelectedDemande(demande);
+                              setShowDetailsModal(true);
+                            }}
+                            className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            title="Voir les détails"
+                          >
+                            <Eye className="h-4 w-4" />
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                              Voir
+                            </div>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-      </div>
         )}
 
-      {/* Pagination */}
+        {/* Pagination */}
         {filteredDemandes.length > 0 && (
           <Pagination
             currentPage={currentPage}
@@ -1327,13 +1479,13 @@ export default function DemandesPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
                   <FileText className="w-6 h-6 text-white" />
                 </div>
-              <div>
+                <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  Détails de la demande
-                </h2>
+                    Détails de la demande
+                  </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                  Référence: {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
-                </p>
+                    Référence: {selectedDemande.demandes_detailes?.[0]?.numero_reception || selectedDemande.id || "N/A"}
+                  </p>
                 </div>
               </div>
               <button
@@ -1343,13 +1495,13 @@ export default function DemandesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {(() => {
                       const employeeData = employeesData.get(selectedDemande.employe_id);
                       const photoUrl = employeeData?.photo_url || (selectedDemande.employees as any)?.photo_url;
@@ -1362,17 +1514,17 @@ export default function DemandesPage() {
                           className="w-full h-full object-cover rounded-full"
                         />
                       ) : (
-                        <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                        <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                           {selectedDemande.employees
                             ? `${selectedDemande.employees.prenom.charAt(0)}${selectedDemande.employees.nom.charAt(0)}`
                             : selectedDemande.demandeur
-                            ? selectedDemande.demandeur.split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2)
-                            : "??"}
+                              ? selectedDemande.demandeur.split(' ').map((n: string) => n.charAt(0)).join('').slice(0, 2)
+                              : "??"}
                         </span>
                       );
                     })()}
                   </div>
-              <div>
+                  <div>
                     <h3 className="text-2xl font-bold text-white">
                       {selectedDemande.employees
                         ? `${selectedDemande.employees.prenom} ${selectedDemande.employees.nom}`
@@ -1382,15 +1534,15 @@ export default function DemandesPage() {
                       {selectedDemande.employees?.poste || selectedDemande.poste || "N/A"}
                     </p>
                   </div>
-                  </div>
+                </div>
                 <div className="flex items-center gap-3">
                   <Badge
                     variant={
                       selectedDemande.statut_global === "Validé" || selectedDemande.statut === "Validé"
                         ? "success"
                         : selectedDemande.statut_global === "Rejeté" || selectedDemande.statut === "Rejeté"
-                        ? "error"
-                        : "warning"
+                          ? "error"
+                          : "warning"
                     }
                     className="text-xs"
                   >
@@ -1401,19 +1553,19 @@ export default function DemandesPage() {
                       selectedDemande.categorie === "mono-mois"
                         ? "info"
                         : selectedDemande.categorie === "multi-mois"
-                        ? "purple"
-                        : "default"
+                          ? "purple"
+                          : "default"
                     }
                     className="text-xs"
                   >
                     {selectedDemande.categorie === "mono-mois"
                       ? "Mono-mois"
                       : selectedDemande.categorie === "multi-mois"
-                      ? "Multi-mois"
-                      : selectedDemande.categorie || "N/A"}
+                        ? "Multi-mois"
+                        : selectedDemande.categorie || "N/A"}
                   </Badge>
-                  </div>
-                  </div>
+                </div>
+              </div>
 
               {/* Informations en grille */}
               <div className="space-y-4">
@@ -1422,13 +1574,13 @@ export default function DemandesPage() {
                   <div className="flex items-center gap-3 mb-2">
                     <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
                       <MailWarning className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
+                    </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedDemande.employe?.email || "Non renseigné"}
                   </p>
-              </div>
+                </div>
 
                 {/* Autres informations en grille */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1436,9 +1588,9 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <Phone className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
-                  </div>
+                    </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.employe?.telephone || "Non renseigné"}
                     </p>
@@ -1448,9 +1600,9 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                         <DollarSign className="w-4 h-4 text-yellow-600 dark:text-yellow-400" />
-                  </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Montant demandé</span>
-                  </div>
+                    </div>
                     <p className="font-medium text-green-600 dark:text-green-400">
                       {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
                     </p>
@@ -1460,36 +1612,36 @@ export default function DemandesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-purple-100 dark:bg-purple-900/20 rounded-lg">
                         <FileText className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Type de motif</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}
                     </p>
-              </div>
+                  </div>
 
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="p-2 bg-green-100 dark:bg-green-900/20 rounded-lg">
                         <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  </div>
+                      </div>
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date de création</span>
-                  </div>
+                    </div>
                     <p className="font-medium text-gray-900 dark:text-white">
                       {selectedDemande.date_creation_premiere
                         ? new Date(selectedDemande.date_creation_premiere).toLocaleDateString("fr-FR")
                         : selectedDemande.date
-                        ? new Date(selectedDemande.date).toLocaleDateString("fr-FR")
-                        : "Non définie"}
+                          ? new Date(selectedDemande.date).toLocaleDateString("fr-FR")
+                          : "Non définie"}
                     </p>
-                </div>
+                  </div>
 
                   {selectedDemande.demandes_detailes?.[0]?.date_validation && (
                     <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                       <div className="flex items-center gap-3 mb-2">
                         <div className="p-2 bg-teal-100 dark:bg-teal-900/20 rounded-lg">
                           <Calendar className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-              </div>
+                        </div>
                         <span className="text-gray-600 dark:text-gray-400 text-xs">Date de validation</span>
                       </div>
                       <p className="font-medium text-teal-600 dark:text-teal-400">
@@ -1510,7 +1662,6 @@ export default function DemandesPage() {
                     </p>
                   </div>
                 </div>
-              </div>
 
                 {/* Motif - prend toute la largeur */}
                 {(selectedDemande.demandes_detailes?.[0]?.motif || selectedDemande.motif) && (
@@ -1531,74 +1682,74 @@ export default function DemandesPage() {
                 {(() => {
                   const numInstallments = selectedDemande.demandes_detailes?.[0]?.num_installments || selectedDemande.num_installments;
                   return selectedDemande.categorie === "multi-mois" && numInstallments && numInstallments > 1 && (
-                  <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
+                      <div className="flex items-center gap-3 mb-4">
+                        <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                          <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                            Plan de remboursement Multi-mois
+                          </h4>
+                          <p className="text-xs text-purple-600 dark:text-purple-400">
+                            {numInstallments} mensualités
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
-                          Plan de remboursement Multi-mois
-                        </h4>
-                        <p className="text-xs text-purple-600 dark:text-purple-400">
-                          {numInstallments} mensualités
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {(() => {
-                        const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
-                        const nbMois = numInstallments || 1;
-                        const montantParMois = Math.floor(montantTotal / nbMois);
-                        const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
-                        
-                        return Array.from({ length: nbMois }, (_, i) => {
-                          const moisIndex = i + 1;
-                          const montant = moisIndex === nbMois ? dernierMontant : montantParMois;
-                          const dateEcheance = new Date();
-                          dateEcheance.setMonth(dateEcheance.getMonth() + moisIndex);
-                          
-                          return (
-                            <div key={moisIndex} className="flex items-center justify-between p-3 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-purple-200 dark:border-purple-800/20">
-                              <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                                    {moisIndex}
-                                  </span>
+
+                      <div className="space-y-2">
+                        {(() => {
+                          const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
+                          const nbMois = numInstallments || 1;
+                          const montantParMois = Math.floor(montantTotal / nbMois);
+                          const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
+
+                          return Array.from({ length: nbMois }, (_, i) => {
+                            const moisIndex = i + 1;
+                            const montant = moisIndex === nbMois ? dernierMontant : montantParMois;
+                            const dateEcheance = new Date();
+                            dateEcheance.setMonth(dateEcheance.getMonth() + moisIndex);
+
+                            return (
+                              <div key={moisIndex} className="flex items-center justify-between p-3 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-purple-200 dark:border-purple-800/20">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                                    <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                      {moisIndex}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                      Échéance {moisIndex}
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                      {dateEcheance.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                    Échéance {moisIndex}
+                                <div className="text-right">
+                                  <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
+                                    {montant.toLocaleString()} GNF
                                   </p>
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {dateEcheance.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
+                                  <p className="text-xs text-purple-600 dark:text-purple-400">
+                                    {Math.round((montant / montantTotal) * 100)}% du total
                                   </p>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                                  {montant.toLocaleString()} GNF
-                                </p>
-                                <p className="text-xs text-purple-600 dark:text-purple-400">
-                                  {Math.round((montant / montantTotal) * 100)}% du total
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                    
-                    <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
-                        <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                          {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
-                        </span>
+                            );
+                          });
+                        })()}
+                      </div>
+
+                      <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
+                          <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                            {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
                   );
                 })()}
 
@@ -1615,7 +1766,7 @@ export default function DemandesPage() {
                             Reçu disponible
                           </h4>
                           <p className="text-xs text-green-600 dark:text-green-400">
-                            Généré le {selectedDemande.demandes_detailes?.[0]?.receipt_generated_at 
+                            Généré le {selectedDemande.demandes_detailes?.[0]?.receipt_generated_at
                               ? new Date(selectedDemande.demandes_detailes[0].receipt_generated_at).toLocaleDateString('fr-FR')
                               : 'N/A'}
                           </p>
@@ -1633,7 +1784,7 @@ export default function DemandesPage() {
                     </div>
                   </div>
                 )}
-                </div>
+              </div>
             </div>
           </div>
         </div>

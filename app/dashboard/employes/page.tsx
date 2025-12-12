@@ -226,7 +226,7 @@ export default function EmployesPage() {
         const fullName = `${employee.prenom} ${employee.nom}`.toLowerCase();
         const email = employee.email?.toLowerCase() || '';
         const poste = employee.poste?.toLowerCase() || '';
-        
+
         return (
           fullName.includes(searchTerm.toLowerCase()) ||
           email.includes(searchTerm.toLowerCase()) ||
@@ -237,7 +237,7 @@ export default function EmployesPage() {
 
     // Filtre par type de contrat
     if (selectedContractType) {
-      filtered = filtered.filter((employee) => 
+      filtered = filtered.filter((employee) =>
         employee.type_contrat === selectedContractType
       );
     }
@@ -400,7 +400,7 @@ export default function EmployesPage() {
 
   return (
     <div className="p-6 space-y-6 max-w-full overflow-hidden">
-      
+
 
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -574,8 +574,8 @@ export default function EmployesPage() {
               {selectedStatus === "actif"
                 ? "Actifs"
                 : selectedStatus === "inactif"
-                ? "Inactifs"
-                : "Statut"}
+                  ? "Inactifs"
+                  : "Statut"}
               <ChevronDown className="w-4 h-4 ml-2" />
             </button>
             {isStatusDropdownOpen && (
@@ -650,7 +650,7 @@ export default function EmployesPage() {
                 >
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {(employee as any).photo_url ? (
                           <Image
                             src={(employee as any).photo_url}
@@ -660,7 +660,7 @@ export default function EmployesPage() {
                             className="w-full h-full object-cover rounded-full"
                           />
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                          <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                             {employee.prenom.charAt(0)}
                             {employee.nom.charAt(0)}
                           </span>
@@ -769,13 +769,13 @@ export default function EmployesPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {(selectedEmployee as any).photo_url ? (
                       <Image
                         src={(selectedEmployee as any).photo_url}
@@ -785,7 +785,7 @@ export default function EmployesPage() {
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                         {selectedEmployee.prenom.charAt(0)}
                         {selectedEmployee.nom.charAt(0)}
                       </span>
@@ -815,8 +815,8 @@ export default function EmployesPage() {
                 {/* Email - prend toute la largeur */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
@@ -995,7 +995,7 @@ export default function EmployesPage() {
                 </div>
               </div>
             </div>
-            
+
           </div>
         </div>
       )}

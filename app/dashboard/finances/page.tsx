@@ -148,7 +148,7 @@ export default function FinancesPage() {
   // États pour les mois et années actifs
   const [activeMonths, setActiveMonths] = useState<number[]>([]);
   const [activeYears, setActiveYears] = useState<number[]>([]);
-  
+
   // État pour afficher/masquer les filtres
   const [showFilters, setShowFilters] = useState(false);
 
@@ -447,9 +447,9 @@ export default function FinancesPage() {
     const montantMoyen =
       totalTransactions > 0
         ? remboursements.reduce(
-            (sum, r) => sum + (r.montant_total_remboursement || 0),
-            0
-          ) / totalTransactions
+          (sum, r) => sum + (r.montant_total_remboursement || 0),
+          0
+        ) / totalTransactions
         : 0;
 
     // Calcul de l'évolution mensuelle
@@ -929,8 +929,7 @@ export default function FinancesPage() {
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `transactions_${session.partner.company_name}_${
-        new Date().toISOString().split("T")[0]
+      `transactions_${session.partner.company_name}_${new Date().toISOString().split("T")[0]
       }.csv`
     );
     link.style.visibility = "hidden";
@@ -944,7 +943,7 @@ export default function FinancesPage() {
   if (loading || isLoading) {
     return (
       <div className="p-6 space-y-6 w-full max-w-full overflow-hidden animate-pulse">
-        
+
         {/* Skeleton pour les filtres avancés */}
         <div className="bg-gray-200 dark:bg-gray-800 rounded-lg h-20"></div>
 
@@ -1049,97 +1048,97 @@ export default function FinancesPage() {
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-          {/* Filtre par mois */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Mois
-            </label>
-            <select
-              value={filters.mois || ""}
-              onChange={(e) => {
-                const mois = e.target.value ? parseInt(e.target.value) : null;
-                // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                if (mois && !filters.annee) {
-                  const newFilters = {
-                    ...filters,
-                    mois,
-                    annee: new Date().getFullYear(),
-                  };
-                  setFilters(newFilters);
-                  loadFinancesData(newFilters);
-                  loadTransactionsWithFilters(newFilters);
-                } else {
-                  applyFilter("mois", mois);
-                }
-              }}
-              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les mois</option>
-              {activeMonths.length > 0
-                ? activeMonths.map((month) => (
+            {/* Filtre par mois */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mois
+              </label>
+              <select
+                value={filters.mois || ""}
+                onChange={(e) => {
+                  const mois = e.target.value ? parseInt(e.target.value) : null;
+                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+                  if (mois && !filters.annee) {
+                    const newFilters = {
+                      ...filters,
+                      mois,
+                      annee: new Date().getFullYear(),
+                    };
+                    setFilters(newFilters);
+                    loadFinancesData(newFilters);
+                    loadTransactionsWithFilters(newFilters);
+                  } else {
+                    applyFilter("mois", mois);
+                  }
+                }}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les mois</option>
+                {activeMonths.length > 0
+                  ? activeMonths.map((month) => (
                     <option key={month} value={month}>
                       {new Date(0, month - 1).toLocaleString("fr-FR", {
                         month: "long",
                       })}
                     </option>
                   ))
-                : Array.from({ length: 12 }, (_, i) => (
+                  : Array.from({ length: 12 }, (_, i) => (
                     <option key={i + 1} value={i + 1}>
                       {new Date(0, i).toLocaleString("fr-FR", {
                         month: "long",
                       })}
                     </option>
                   ))}
-            </select>
-          </div>
+              </select>
+            </div>
 
-          {/* Filtre par année */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Année
-            </label>
-            <select
-              value={filters.annee || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "annee",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
-              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Toutes les années</option>
-              {activeYears.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Filtre par année */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Année
+              </label>
+              <select
+                value={filters.annee || ""}
+                onChange={(e) =>
+                  applyFilter(
+                    "annee",
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
+                }
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Toutes les années</option>
+                {activeYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Filtre par statut */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Statut
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) => applyFilter("status", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="PAYE">Payé</option>
-              <option value="EN_ATTENTE">En attente</option>
-              <option value="EN_RETARD">En retard</option>
-              <option value="ANNULE">Annulé</option>
-            </select>
-          </div>
+            {/* Filtre par statut */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut
+              </label>
+              <select
+                value={filters.status || ""}
+                onChange={(e) => applyFilter("status", e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="PAYE">Payé</option>
+                <option value="EN_ATTENTE">En attente</option>
+                <option value="EN_RETARD">En retard</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+            </div>
           </div>
         )}
 
         {/* Indicateur de chargement */}
         {edgeFunctionLoading && (
-          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
             Mise à jour des données...
           </div>
@@ -1169,8 +1168,8 @@ export default function FinancesPage() {
         {/* Débloqué ce mois */}
         <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30/30 rounded-lg">
+              <Calendar className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <Badge variant="info" className="text-xs">Débloqué</Badge>
           </div>
@@ -1178,7 +1177,7 @@ export default function FinancesPage() {
             <p className="text-lg font-bold text-blue-900 dark:text-blue-100">
               {gnfFormatter(stats.debloqueMois)}
             </p>
-            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
               Montant débloqué {currentMonthData ? "ce mois" : "ce mois ci"}
             </p>
           </div>
@@ -1411,8 +1410,8 @@ export default function FinancesPage() {
                             statusDisplay === "Payé"
                               ? "success"
                               : statusDisplay === "En attente"
-                              ? "warning"
-                              : "error"
+                                ? "warning"
+                                : "error"
                           }
                           className="text-xs"
                         >
