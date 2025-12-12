@@ -549,7 +549,7 @@ export default function PaymentSalaryPage() {
                         }`}
                         onClick={() => toggleEmployeeSelection(employee.id)}
                       >
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {employee.photo_url ? (
                             <Image
                               src={employee.photo_url}
@@ -559,7 +559,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {employee.prenom?.charAt(0)}
                               {employee.nom?.charAt(0)}
             </span>
@@ -1201,7 +1201,7 @@ export default function PaymentSalaryPage() {
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {payment.employe?.photo_url ? (
                             <Image
                               src={payment.employe.photo_url}
@@ -1211,7 +1211,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {payment.employe?.prenom?.charAt(0)}
                               {payment.employe?.nom?.charAt(0)}
                     </span>
@@ -1981,7 +1981,7 @@ function BulletinsDePaieSection({ employees, payments }: { employees: Employee[]
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {bulletin.employe.photo_url ? (
                             <Image
                               src={bulletin.employe.photo_url}
@@ -1991,7 +1991,7 @@ function BulletinsDePaieSection({ employees, payments }: { employees: Employee[]
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                               {bulletin.employe.prenom?.charAt(0)}
                               {bulletin.employe.nom?.charAt(0)}
                             </span>

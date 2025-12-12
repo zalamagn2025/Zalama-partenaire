@@ -148,6 +148,18 @@ export default function PaymentListTable({
                               width={40}
                               height={40}
                               className="rounded-full object-cover"
+                              onError={(e) => {
+                                // Si l'image échoue, afficher les initiales avec le design orange
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = "none";
+                                const parent = target.parentElement;
+                                if (parent) {
+                                  parent.className = "h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center";
+                                  parent.innerHTML = `
+                                    <span class=\"text-sm font-medium text-orange-600 dark:text-orange-400\">${initials}</span>
+                                  `;
+                                }
+                              }}
                             />
                           ) : (
                             <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">

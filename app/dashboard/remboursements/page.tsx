@@ -113,7 +113,7 @@ type Remboursement = {
 const getStatusBadge = (statut: string) => {
   // Normaliser le statut
   const statutUpper = statut?.toUpperCase() || '';
-  
+
   switch (statutUpper) {
     case "PAYE":
     case "PAYÉ":
@@ -133,7 +133,7 @@ const getStatusBadge = (statut: string) => {
 
 export default function RemboursementsPage() {
   const { session, loading } = useEdgeAuth();
-  
+
   // ✅ Utilisation du hook pour les paiements de salaire
   const {
     payments: paymentHistory,
@@ -189,16 +189,16 @@ export default function RemboursementsPage() {
   // ✅ Pagination pour les données regroupées par employé avec filtrage par type
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
-  
+
   // Filtrer les données selon le type sélectionné
   const getFilteredData = () => {
     const avances = currentMonthData?.data || [];
     const paiements = paymentHistory || [];
-    
-      console.log('🔍 getFilteredData - dataType:', dataType);
+
+    console.log('🔍 getFilteredData - dataType:', dataType);
     console.log('🔍 getFilteredData - avances:', avances.length);
     console.log('🔍 getFilteredData - paiements:', paiements.length);
-    
+
     if (dataType === 'avances') {
       return avances;
     } else if (dataType === 'paiements') {
@@ -206,13 +206,13 @@ export default function RemboursementsPage() {
       console.log('🔍 Premier paiement brut:', paiements[0]);
       console.log('🔍 Premier paiement - salaire_net:', paiements[0]?.salaire_net);
       console.log('🔍 Premier paiement - employe:', paiements[0]?.employe);
-      
+
       // Transformer les paiements pour avoir la même structure que les avances
       const transformed = paiements.map((payment: any) => {
         // ✅ Utiliser montant_total_remboursement ou calculer (salaire_net + 6%)
-        const montantRemboursement = payment.montant_total_remboursement || 
-                                      Math.round((payment.salaire_net || 0) * 1.06);
-        
+        const montantRemboursement = payment.montant_total_remboursement ||
+          Math.round((payment.salaire_net || 0) * 1.06);
+
         const result = {
           employe_id: payment.employe_id,
           employe: payment.employe,
@@ -224,30 +224,30 @@ export default function RemboursementsPage() {
           salaire_restant: payment.salaire_disponible_total || payment.montant || payment.salaire_disponible || payment.salaire_net,
           statut_global: payment.statut,
           periode: {
-            periode_complete: payment.periode_debut && payment.periode_fin 
-              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}` 
+            periode_complete: payment.periode_debut && payment.periode_fin
+              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`
               : 'N/A',
-            description: payment.date_paiement 
-              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}` 
+            description: payment.date_paiement
+              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
               : 'N/A'
           },
           // Détails du paiement
           paiement_details: payment
         };
-        
+
         return result;
       });
-      
+
       console.log('✅ Paiements transformés:', transformed.length);
       console.log('🔍 Premier paiement transformé:', transformed[0]);
-      
+
       return transformed;
     } else {
       // Tous : combiner les deux
       const paymentsTransformed = paiements.map((payment: any) => {
-        const montantRemboursement = payment.montant_total_remboursement || 
-                                      Math.round((payment.salaire_net || 0) * 1.06);
-        
+        const montantRemboursement = payment.montant_total_remboursement ||
+          Math.round((payment.salaire_net || 0) * 1.06);
+
         return {
           employe_id: payment.employe_id,
           employe: payment.employe,
@@ -259,24 +259,24 @@ export default function RemboursementsPage() {
           salaire_restant: payment.salaire_disponible_total || payment.montant || payment.salaire_disponible || payment.salaire_net,
           statut_global: payment.statut,
           periode: {
-            periode_complete: payment.periode_debut && payment.periode_fin 
-              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}` 
+            periode_complete: payment.periode_debut && payment.periode_fin
+              ? `${new Date(payment.periode_debut).toLocaleDateString('fr-FR')} - ${new Date(payment.periode_fin).toLocaleDateString('fr-FR')}`
               : 'N/A',
-            description: payment.date_paiement 
-              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}` 
+            description: payment.date_paiement
+              ? `Paiement ${new Date(payment.date_paiement).toLocaleDateString('fr-FR')}`
               : 'N/A'
           },
           paiement_details: payment
         };
       });
-      
+
       // Ajouter un marqueur 'type' aux avances aussi
       const avancesMarked = avances.map((a: any) => ({ ...a, type: 'avance' }));
-      
+
       return [...avancesMarked, ...paymentsTransformed];
     }
   };
-  
+
   const dataForPagination = getFilteredData();
   const totalPages = Math.ceil(dataForPagination.length / itemsPerPage);
   const paginatedEmployees = dataForPagination.slice(
@@ -587,8 +587,8 @@ export default function RemboursementsPage() {
     if (remboursement.statut !== "EN_ATTENTE") {
       alert(
         "Ce remboursement ne peut pas être payé (statut: " +
-          remboursement.statut +
-          ")"
+        remboursement.statut +
+        ")"
       );
       return;
     }
@@ -911,7 +911,7 @@ export default function RemboursementsPage() {
   const getStatsByType = () => {
     const avances = currentMonthData?.data || [];
     const paiements = paymentHistory || [];
-    
+
     if (dataType === 'avances') {
       // Statistiques uniquement des avances
       return {
@@ -930,18 +930,18 @@ export default function RemboursementsPage() {
       // - EN_ATTENTE = ZaLaMa n'a pas encore payé → PAS encore à rembourser
       const paiementsPaye = paiements.filter((p: any) => p.statut === "PAYE");
       const paiementsEnAttente = paiements.filter((p: any) => p.statut === "EN_ATTENTE");
-      
+
       return {
         total: paiements.length,
         enAttente: paiementsPaye.length, // ✅ Nombre de paiements PAYE = à rembourser
         payes: 0, // Les paiements "remboursés" ne sont pas trackés ici
         // ✅ Utiliser montant_total_remboursements de l'API (salaire_net + 6%) comme dans la page paiements
         montantEnAttente: paiementsPaye.reduce((sum: number, p: any) => {
-            // Pour chaque paiement PAYE, calculer montant_total_remboursement (salaire_net + 6%)
-            const montantRemboursement = p.montant_total_remboursement || 
-                                        Math.round((p.salaire_net || 0) * 1.06);
-            return sum + montantRemboursement;
-          }, 0),
+          // Pour chaque paiement PAYE, calculer montant_total_remboursement (salaire_net + 6%)
+          const montantRemboursement = p.montant_total_remboursement ||
+            Math.round((p.salaire_net || 0) * 1.06);
+          return sum + montantRemboursement;
+        }, 0),
         // ✅ Montant total à rembourser (tous les paiements PAYE)
         montantTotal: montantTotalRemboursements
       };
@@ -950,12 +950,12 @@ export default function RemboursementsPage() {
       const avancesEnAttente = avances.filter((r: any) => r.statut_global === "EN_ATTENTE");
       // ✅ Pour les paiements: PAYE = à rembourser (ZaLaMa a payé, attend remboursement du partenaire)
       const paiementsPaye = paiements.filter((p: any) => p.statut === "PAYE");
-      
+
       return {
         total: avances.length + paiements.length,
         enAttente: avancesEnAttente.length + paiementsPaye.length, // ✅ Avances EN_ATTENTE + Paiements PAYE
         payes: avances.filter((r: any) => r.statut_global === "PAYE").length,
-        montantEnAttente: 
+        montantEnAttente:
           avancesEnAttente.reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0) +
           (paymentStatistics?.montant_total_remboursements || 0)
       };
@@ -964,8 +964,8 @@ export default function RemboursementsPage() {
 
   const statsFiltered = getStatsByType();
   // ✅ Pour l'onglet paiements, utiliser montantTotal (tous les paiements), sinon montantEnAttente
-  const totalRemboursements = dataType === 'paiements' && (statsFiltered as any).montantTotal 
-    ? (statsFiltered as any).montantTotal 
+  const totalRemboursements = dataType === 'paiements' && (statsFiltered as any).montantTotal
+    ? (statsFiltered as any).montantTotal
     : statsFiltered.montantEnAttente;
 
   // Debug: Log des données pour vérifier
@@ -1044,75 +1044,75 @@ export default function RemboursementsPage() {
   const paymentDetails = isPaymentDetail ? extractPaymentDetails(selectedRemboursement) : null;
   const paymentSummary = isPaymentDetail
     ? {
-        salaireNet: Number(
-          paymentDetails?.salaire_net ??
-            selectedRemboursement?.salaire_net ??
-            detailEmployee?.salaire_net ??
-            0
-        ),
-        avancesDeduites: Number(
-          paymentDetails?.avances_deduites ??
-            selectedRemboursement?.avances_deduites ??
-            paymentDetails?.salaire_net_deductions ??
-            0
-        ),
-        salaireVerse: Number(
-          selectedRemboursement?.salaire_restant ??
-            paymentDetails?.salaire_disponible_total ??
-            paymentDetails?.salaire_disponible ??
-            paymentDetails?.montant ??
-            0
-        ),
-        montantRembourser: Number(
-          selectedRemboursement?.montant_total_remboursement ??
-            paymentDetails?.montant_total_remboursement ??
-            paymentDetails?.montant_a_rembourser ??
-            0
-        ),
-        fraisIntervention: Number(
-          selectedRemboursement?.frais_service_total ??
-            paymentDetails?.frais_intervention ??
-            paymentDetails?.frais_service ??
-            0
-        ),
-        penalite: Number(paymentDetails?.montant_penalite_retard ?? 0),
-      }
+      salaireNet: Number(
+        paymentDetails?.salaire_net ??
+        selectedRemboursement?.salaire_net ??
+        detailEmployee?.salaire_net ??
+        0
+      ),
+      avancesDeduites: Number(
+        paymentDetails?.avances_deduites ??
+        selectedRemboursement?.avances_deduites ??
+        paymentDetails?.salaire_net_deductions ??
+        0
+      ),
+      salaireVerse: Number(
+        selectedRemboursement?.salaire_restant ??
+        paymentDetails?.salaire_disponible_total ??
+        paymentDetails?.salaire_disponible ??
+        paymentDetails?.montant ??
+        0
+      ),
+      montantRembourser: Number(
+        selectedRemboursement?.montant_total_remboursement ??
+        paymentDetails?.montant_total_remboursement ??
+        paymentDetails?.montant_a_rembourser ??
+        0
+      ),
+      fraisIntervention: Number(
+        selectedRemboursement?.frais_service_total ??
+        paymentDetails?.frais_intervention ??
+        paymentDetails?.frais_service ??
+        0
+      ),
+      penalite: Number(paymentDetails?.montant_penalite_retard ?? 0),
+    }
     : null;
   const paymentReference = isPaymentDetail
     ? paymentDetails?.reference_paiement ||
-      selectedRemboursement?.reference_paiement ||
-      selectedRemboursement?.id ||
-      "N/A"
+    selectedRemboursement?.reference_paiement ||
+    selectedRemboursement?.id ||
+    "N/A"
     : selectedRemboursement?.id || "N/A";
   const paymentStatut = isPaymentDetail
     ? selectedRemboursement?.statut_global ||
-      paymentDetails?.statut ||
-      selectedRemboursement?.statut ||
-      "N/A"
+    paymentDetails?.statut ||
+    selectedRemboursement?.statut ||
+    "N/A"
     : selectedRemboursement?.statut || "N/A";
   const paymentMethod = isPaymentDetail
     ? mapPaymentMethodLabel(
-        paymentDetails?.methode_paiement || paymentDetails?.mode_paiement
-      )
+      paymentDetails?.methode_paiement || paymentDetails?.mode_paiement
+    )
     : undefined;
   const paymentDatePaiement = isPaymentDetail
     ? formatDate(
-        paymentDetails?.date_paiement || selectedRemboursement?.date_paiement
-      )
+      paymentDetails?.date_paiement || selectedRemboursement?.date_paiement
+    )
     : null;
   const paymentDateLimite = isPaymentDetail
     ? formatDate(
-        paymentDetails?.date_limite ||
-          paymentDetails?.date_limite_remboursement ||
-          selectedRemboursement?.date_limite ||
-          selectedRemboursement?.date_limite_remboursement
-      )
+      paymentDetails?.date_limite ||
+      paymentDetails?.date_limite_remboursement ||
+      selectedRemboursement?.date_limite ||
+      selectedRemboursement?.date_limite_remboursement
+    )
     : null;
   const paymentDateRemboursement = isPaymentDetail
     ? formatDate(
-        paymentDetails?.date_remboursement_effectue ||
-          selectedRemboursement?.date_remboursement_effectue
-      )
+      paymentDetails?.date_remboursement_effectue ||
+      selectedRemboursement?.date_remboursement_effectue
+    )
     : null;
   const paymentPeriode = isPaymentDetail ? formatPeriod(selectedRemboursement) : null;
   const hasPaymentPenalite = Boolean(paymentSummary && paymentSummary.penalite > 0);
@@ -1135,38 +1135,35 @@ export default function RemboursementsPage() {
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Suivi et traitement des remboursements d'avances salariales
             </p>
-            
+
             {/* ✅ Sélecteur de type de données - Style Notifications */}
-            <div className="flex items-center gap-1 overflow-x-auto mt-4 pb-1" style={{scrollbarWidth: 'none'}}>
+            <div className="flex items-center gap-1 overflow-x-auto mt-4 pb-1" style={{ scrollbarWidth: 'none' }}>
               <button
                 onClick={() => setDataType('tous')}
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
-                  dataType === 'tous'
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${dataType === 'tous'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
-                }`}
+                  }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
                 <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Tous ({(currentMonthData?.data?.length || 0) + (paymentHistory.length || 0)})</span>
               </button>
               <button
                 onClick={() => setDataType('avances')}
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
-                  dataType === 'avances'
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${dataType === 'avances'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
-                }`}
+                  }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
                 <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Avances sur salaire ({currentMonthData?.data?.length || 0})</span>
               </button>
               <button
                 onClick={() => setDataType('paiements')}
-                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
-                  dataType === 'paiements'
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                className={`flex items-center justify-center px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${dataType === 'paiements'
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700'
                     : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
-                }`}
+                  }`}
                 style={{ height: '2rem', lineHeight: '1' }}
               >
                 <span className="flex-shrink-0" style={{ lineHeight: '1' }}>Paiements de salaire ({paymentHistory.length || 0})</span>
@@ -1188,15 +1185,14 @@ export default function RemboursementsPage() {
                 title="Actualiser les données du mois en cours"
               >
                 <RefreshCw
-                  className={`h-4 w-4 text-gray-500 ${
-                    edgeFunctionLoading ? "animate-spin" : ""
-                  }`}
+                  className={`h-4 w-4 text-gray-500 ${edgeFunctionLoading ? "animate-spin" : ""
+                    }`}
                 />
               </button>
             </div>
             <div>
               <div className="flex items-center justify-center space-x-2 px-4 py-2 mb-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-                <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                 <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                   Remboursement
                 </span>
@@ -1240,7 +1236,7 @@ export default function RemboursementsPage() {
               )}
             </Button>
             <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <CreditCard className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
                 Paiement via Chèque
               </span>
@@ -1286,143 +1282,143 @@ export default function RemboursementsPage() {
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
-          {/* Filtre par mois */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Mois
-            </label>
-            <select
-              value={filters.mois || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "mois",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Tous les mois</option>
-              {activeMonths.map((month) => (
-                <option key={month} value={month}>
-                  {new Date(0, month - 1).toLocaleString("fr-FR", {
-                    month: "long",
-                  })}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtre par année */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Année
-            </label>
-            <select
-              value={filters.annee || ""}
-              onChange={(e) =>
-                applyFilter(
-                  "annee",
-                  e.target.value ? parseInt(e.target.value) : null
-                )
-              }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Toutes les années</option>
-              {activeYears.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtre par statut */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Statut
-            </label>
-            <select
-              value={filters.status || ""}
-              onChange={(e) => applyFilter("status", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Tous les statuts</option>
-              <option value="PAYE">Payé</option>
-              <option value="EN_ATTENTE">En attente</option>
-              <option value="EN_RETARD">En retard</option>
-              <option value="ANNULE">Annulé</option>
-            </select>
-          </div>
-
-          {/* Filtre par employé */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Employé
-            </label>
-            <select
-              value={filters.employee_id || ""}
-              onChange={(e) =>
-                applyFilter("employee_id", e.target.value || null)
-              }
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Tous les employés</option>
-              {activeEmployees.map((employee, index) => (
-                <option key={`${employee.id}-${index}`} value={employee.id}>
-                  {employee.nom_complet || `${employee.prenom} ${employee.nom}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtre par catégorie */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Catégorie
-            </label>
-            <select
-              value={filters.categorie || ""}
-              onChange={(e) => applyFilter("categorie", e.target.value || null)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Toutes les catégories</option>
-              <option value="mono-mois">Mono-mois</option>
-              <option value="multi-mois">Multi-mois</option>
-            </select>
-          </div>
-
-          {/* Filtre par période personnalisée */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Période personnalisée
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="date"
-                value={filters.date_debut || ""}
+            {/* Filtre par mois */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Mois
+              </label>
+              <select
+                value={filters.mois || ""}
                 onChange={(e) =>
-                  applyFilter("date_debut", e.target.value || null)
+                  applyFilter(
+                    "mois",
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
                 }
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Date début"
-              />
-              <input
-                type="date"
-                value={filters.date_fin || ""}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Tous les mois</option>
+                {activeMonths.map((month) => (
+                  <option key={month} value={month}>
+                    {new Date(0, month - 1).toLocaleString("fr-FR", {
+                      month: "long",
+                    })}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par année */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Année
+              </label>
+              <select
+                value={filters.annee || ""}
                 onChange={(e) =>
-                  applyFilter("date_fin", e.target.value || null)
+                  applyFilter(
+                    "annee",
+                    e.target.value ? parseInt(e.target.value) : null
+                  )
                 }
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Date fin"
-              />
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Toutes les années</option>
+                {activeYears.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par statut */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut
+              </label>
+              <select
+                value={filters.status || ""}
+                onChange={(e) => applyFilter("status", e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="PAYE">Payé</option>
+                <option value="EN_ATTENTE">En attente</option>
+                <option value="EN_RETARD">En retard</option>
+                <option value="ANNULE">Annulé</option>
+              </select>
+            </div>
+
+            {/* Filtre par employé */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Employé
+              </label>
+              <select
+                value={filters.employee_id || ""}
+                onChange={(e) =>
+                  applyFilter("employee_id", e.target.value || null)
+                }
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Tous les employés</option>
+                {activeEmployees.map((employee, index) => (
+                  <option key={`${employee.id}-${index}`} value={employee.id}>
+                    {employee.nom_complet || `${employee.prenom} ${employee.nom}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par catégorie */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Catégorie
+              </label>
+              <select
+                value={filters.categorie || ""}
+                onChange={(e) => applyFilter("categorie", e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">Toutes les catégories</option>
+                <option value="mono-mois">Mono-mois</option>
+                <option value="multi-mois">Multi-mois</option>
+              </select>
+            </div>
+
+            {/* Filtre par période personnalisée */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Période personnalisée
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={filters.date_debut || ""}
+                  onChange={(e) =>
+                    applyFilter("date_debut", e.target.value || null)
+                  }
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Date début"
+                />
+                <input
+                  type="date"
+                  value={filters.date_fin || ""}
+                  onChange={(e) =>
+                    applyFilter("date_fin", e.target.value || null)
+                  }
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Date fin"
+                />
+              </div>
             </div>
           </div>
-        </div>
         )}
 
         {/* Indicateur de filtres actifs supprimé */}
         {edgeFunctionLoading && (
-          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-orange-600 dark:text-orange-400">
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
             Mise à jour des données...
           </div>
@@ -1448,11 +1444,11 @@ export default function RemboursementsPage() {
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/30 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30/30 rounded-lg">
+              <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div className="ml-3">
-              <div className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+              <div className="text-xs font-medium text-orange-600 dark:text-orange-400 uppercase tracking-wide">
                 Total remboursements
               </div>
               <div className="text-lg font-bold text-blue-900 dark:text-blue-100">
@@ -1514,7 +1510,7 @@ export default function RemboursementsPage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${((currentMonthData?.data?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0)}%` }}
                     ></div>
@@ -1525,12 +1521,12 @@ export default function RemboursementsPage() {
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Paiements de salaire</span>
-                    <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                       {paymentHistory?.length || 0} ({((paymentHistory?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0).toFixed(0)}%)
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${((paymentHistory?.length || 0) / ((currentMonthData?.data?.length || 0) + (paymentHistory?.length || 0)) * 100 || 0)}%` }}
                     ></div>
@@ -1555,7 +1551,7 @@ export default function RemboursementsPage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-yellow-500 to-yellow-600 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${((statsFiltered.enAttente) / (statsFiltered.total) * 100 || 0)}%` }}
                     ></div>
@@ -1571,7 +1567,7 @@ export default function RemboursementsPage() {
                     </span>
                   </div>
                   <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                    <div 
+                    <div
                       className="bg-gradient-to-r from-green-500 to-green-600 h-3 rounded-full transition-all duration-500"
                       style={{ width: `${((statsFiltered.payes) / (statsFiltered.total) * 100 || 0)}%` }}
                     ></div>
@@ -1599,13 +1595,13 @@ export default function RemboursementsPage() {
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-orange-500 to-orange-600 h-3 rounded-full transition-all duration-500"
-                    style={{ 
+                    style={{
                       width: `${(((currentMonthData?.data || [])
                         .filter((r: any) => r.statut_global === "EN_ATTENTE")
-                        .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0)) / 
-                        (totalRemboursements || 1) * 100)}%` 
+                        .reduce((sum: number, r: any) => sum + Number(r.montant_total_remboursement || 0), 0)) /
+                        (totalRemboursements || 1) * 100)}%`
                     }}
                   ></div>
                 </div>
@@ -1615,15 +1611,15 @@ export default function RemboursementsPage() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Paiements de salaire</span>
-                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
                     {gnfFormatter(paymentStatistics?.montant_total_remboursements || 0)}
                   </span>
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
-                  <div 
+                  <div
                     className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500"
-                    style={{ 
-                      width: `${((paymentStatistics?.montant_total_remboursements || 0) / (totalRemboursements || 1) * 100)}%` 
+                    style={{
+                      width: `${((paymentStatistics?.montant_total_remboursements || 0) / (totalRemboursements || 1) * 100)}%`
                     }}
                   ></div>
                 </div>
@@ -1652,10 +1648,10 @@ export default function RemboursementsPage() {
               Vue d'ensemble des remboursements regroupés par employé
             </p>
           </div>
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed dark:divide-gray-700">
-            {/* En-tête pour avances sur salaire */}
-            <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed dark:divide-gray-700">
+              {/* En-tête pour avances sur salaire */}
+              <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
                 <tr>
                   <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Employé
@@ -1683,102 +1679,102 @@ export default function RemboursementsPage() {
                   </th>
                 </tr>
               </thead>
-            <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
-              {currentMonthData?.data?.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="text-center py-6 text-gray-400 text-sm"
-                  >
-                    Aucun remboursement trouvé.
-                  </td>
-                </tr>
-              )}
-              {paginatedEmployees.map((employeeData: any, idx: number) => (
-                <tr
-                  key={`${employeeData.employe_id}-${idx}`}
-                  className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                >
-                  <td className="px-3 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {(employeeData.employe as any)?.photo_url ? (
-                          <Image
-                            src={(employeeData.employe as any).photo_url}
-                            alt={`${employeeData.employe?.prenom} ${employeeData.employe?.nom}`}
-                            width={40}
-                            height={40}
-                            className="w-full h-full object-cover rounded-full"
-                          />
-                        ) : (
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                            {employeeData.employe?.prenom?.charAt(0)}
-                            {employeeData.employe?.nom?.charAt(0)}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {employeeData.employe?.prenom} {employeeData.employe?.nom}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {employeeData.employe?.email}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Salaire: {gnfFormatter(employeeData.salaire_net || employeeData.employe?.salaire_net)}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  {/* Cellules pour avances sur salaire */}
-                      <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
-                        {gnfFormatter(employeeData.montant_total_remboursement)}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-500">
-                        {gnfFormatter(employeeData.frais_service_total)}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                          {employeeData.nombre_remboursements}
-                        </span>
-                      </td>
-                      <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                        {gnfFormatter(employeeData.salaire_restant)}
-                      </td>
-                      <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
-                        {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
-                      </td>
-                      <td className="px-3 py-4">
-                        {getStatusBadge(employeeData.statut_global)}
-                      </td>
-                  <td className="px-3 py-4 text-center">
-                    <button
-                      onClick={() => handleShowEmployeeDetails(employeeData)}
-                      className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                      title="Voir les détails des remboursements"
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {currentMonthData?.data?.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="text-center py-6 text-gray-400 text-sm"
                     >
-                      <Eye className="h-4 w-4" />
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                      Détails
+                      Aucun remboursement trouvé.
+                    </td>
+                  </tr>
+                )}
+                {paginatedEmployees.map((employeeData: any, idx: number) => (
+                  <tr
+                    key={`${employeeData.employe_id}-${idx}`}
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {(employeeData.employe as any)?.photo_url ? (
+                            <Image
+                              src={(employeeData.employe as any).photo_url}
+                              alt={`${employeeData.employe?.prenom} ${employeeData.employe?.nom}`}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
+                              {employeeData.employe?.prenom?.charAt(0)}
+                              {employeeData.employe?.nom?.charAt(0)}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {employeeData.employe?.prenom} {employeeData.employe?.nom}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {employeeData.employe?.email}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            Salaire: {gnfFormatter(employeeData.salaire_net || employeeData.employe?.salaire_net)}
+                          </div>
+                        </div>
                       </div>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    {/* Cellules pour avances sur salaire */}
+                    <td className="px-3 py-4 text-sm font-medium text-orange-600 dark:text-orange-400">
+                      {gnfFormatter(employeeData.montant_total_remboursement)}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-500">
+                      {gnfFormatter(employeeData.frais_service_total)}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
+                        {employeeData.nombre_remboursements}
+                      </span>
+                    </td>
+                    <td className="px-3 py-4 text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                      {gnfFormatter(employeeData.salaire_restant)}
+                    </td>
+                    <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
+                      {employeeData.periode?.periode_complete || employeeData.periode?.description || 'N/A'}
+                    </td>
+                    <td className="px-3 py-4">
+                      {getStatusBadge(employeeData.statut_global)}
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <button
+                        onClick={() => handleShowEmployeeDetails(employeeData)}
+                        className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        title="Voir les détails des remboursements"
+                      >
+                        <Eye className="h-4 w-4" />
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Détails
+                        </div>
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Pagination */}
-        {dataForPagination.length > 0 && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={dataForPagination.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
-        )}
+          {/* Pagination */}
+          {dataForPagination.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={dataForPagination.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
       )}
 
@@ -1792,13 +1788,13 @@ export default function RemboursementsPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
                   <Receipt className="w-6 h-6 text-white" />
                 </div>
-              <div>
+                <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  {detailModalTitle}
-                </h2>
+                    {detailModalTitle}
+                  </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                  {detailReferenceLabel}: {paymentReference}
-                </p>
+                    {detailReferenceLabel}: {paymentReference}
+                  </p>
                 </div>
               </div>
               <button
@@ -1808,7 +1804,7 @@ export default function RemboursementsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Informations de l'employé */}
@@ -1870,8 +1866,8 @@ export default function RemboursementsPage() {
                 {isPaymentDetail ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Salaire net</p>
-                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mb-2">Salaire net</p>
+                      <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
                         {gnfFormatter(paymentSummary?.salaireNet || 0)}
                       </p>
                     </div>
@@ -1905,8 +1901,8 @@ export default function RemboursementsPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-                      <p className="text-xs text-blue-600 dark:text-blue-400 mb-2">Montant demandé</p>
-                      <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                      <p className="text-xs text-orange-600 dark:text-orange-400 mb-2">Montant demandé</p>
+                      <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
                         {gnfFormatter(getMontantDemande(selectedRemboursement))}
                       </p>
                     </div>
@@ -2002,17 +1998,17 @@ export default function RemboursementsPage() {
                 )}
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
               <div className="flex items-center gap-4">
                 <button
-                onClick={() => setShowDetailModal(false)} 
+                  onClick={() => setShowDetailModal(false)}
                   className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
-              >
+                >
                   <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
                   <span className="group-hover:scale-105 transition-all duration-300">
-                Fermer
+                    Fermer
                   </span>
                 </button>
               </div>
@@ -2031,14 +2027,14 @@ export default function RemboursementsPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
                   <Building className="w-6 h-6 text-white" />
                 </div>
-              <div>
+                <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                  Informations Financières - ZaLaMa SARL
-                </h2>
+                    Informations Financières - ZaLaMa SARL
+                  </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
-                  Relevé d'identité bancaire et coordonnées de l'entreprise
-                </p>
-              </div>
+                    Relevé d'identité bancaire et coordonnées de l'entreprise
+                  </p>
+                </div>
               </div>
               <button
                 onClick={() => setShowFinancialInfoModal(false)}
@@ -2047,7 +2043,7 @@ export default function RemboursementsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* Informations bancaires */}
@@ -2234,17 +2230,17 @@ export default function RemboursementsPage() {
                 </div>
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="flex items-center justify-center p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0 bg-[var(--zalama-bg-light)]/30">
               <div className="flex items-center gap-4">
                 <button
-                onClick={() => setShowFinancialInfoModal(false)} 
+                  onClick={() => setShowFinancialInfoModal(false)}
                   className="flex items-center gap-3 px-6 py-3 text-sm font-medium text-gray-400 bg-transparent border border-gray-500/30 rounded-lg hover:bg-gray-500/10 hover:text-gray-300 hover:scale-[1.02] hover:shadow-lg backdrop-blur-sm transition-all duration-300 group"
-              >
+                >
                   <X className="h-4 w-4 group-hover:scale-110 transition-all duration-300" />
                   <span className="group-hover:scale-105 transition-all duration-300">
-                Fermer
+                    Fermer
                   </span>
                 </button>
               </div>
@@ -2263,13 +2259,13 @@ export default function RemboursementsPage() {
                 <div className="w-12 h-12 bg-gradient-to-br from-[var(--zalama-orange)] to-[var(--zalama-orange-accent)] rounded-full flex items-center justify-center">
                   <User className="w-6 h-6 text-white" />
                 </div>
-              <div>
+                <div>
                   <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                     Détails de l'employé
-                </h2>
+                  </h2>
                   <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
                     Informations complètes de l'employé
-                </p>
+                  </p>
                 </div>
               </div>
               <button
@@ -2279,13 +2275,13 @@ export default function RemboursementsPage() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Content - Scrollable */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1">
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {(selectedEmployeeDetails.employe as any)?.photo_url ? (
                       <Image
                         src={(selectedEmployeeDetails.employe as any).photo_url}
@@ -2295,7 +2291,7 @@ export default function RemboursementsPage() {
                         className="w-full h-full object-cover rounded-full"
                       />
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                         {selectedEmployeeDetails.employe?.prenom?.charAt(0)}
                         {selectedEmployeeDetails.employe?.nom?.charAt(0)}
                       </span>
@@ -2322,15 +2318,15 @@ export default function RemboursementsPage() {
                 {/* Email - prend toute la largeur */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
                     {selectedEmployeeDetails.employe?.email || "Non renseigné"}
-                    </p>
-                  </div>
+                  </p>
+                </div>
 
                 {/* Autres informations en grille */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2381,8 +2377,8 @@ export default function RemboursementsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-4 border border-blue-200 dark:border-blue-800/30">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <Receipt className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <div className="p-2 bg-orange-100 dark:bg-orange-900/30/30 rounded-lg">
+                        <Receipt className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                       </div>
                       <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Remboursements</p>
                     </div>
@@ -2482,7 +2478,7 @@ export default function RemboursementsPage() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                           <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-3 border border-blue-200 dark:border-blue-800/30">
                             <div className="flex items-center gap-2 mb-1">
-                              <DollarSign className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                              <DollarSign className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
                               <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">Montant demandé</p>
                             </div>
                             <p className="text-base font-bold text-blue-900 dark:text-blue-100">
