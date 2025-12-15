@@ -140,33 +140,30 @@ export default function PaymentListTable({
                     {/* Employé */}
                     <td className="px-3 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0 h-10 w-10">
+                        <div className="flex-shrink-0 h-10 w-10 bg-orange-100 dark:bg-orange-900/30 rounded-full flex items-center justify-center overflow-hidden">
                           {employee?.photo_url ? (
                             <Image
                               src={employee.photo_url}
                               alt={`${employee.prenom} ${employee.nom}`}
                               width={40}
                               height={40}
-                              className="rounded-full object-cover"
+                              className="w-full h-full object-cover"
                               onError={(e) => {
                                 // Si l'image échoue, afficher les initiales avec le design orange
                                 const target = e.target as HTMLImageElement;
                                 target.style.display = "none";
                                 const parent = target.parentElement;
                                 if (parent) {
-                                  parent.className = "h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center";
                                   parent.innerHTML = `
-                                    <span class=\"text-sm font-medium text-orange-600 dark:text-orange-400\">${initials}</span>
+                                    <span class="text-sm font-medium text-orange-600 dark:text-orange-400">${initials}</span>
                                   `;
                                 }
                               }}
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
-                              <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
-                                {initials}
-                              </span>
-                            </div>
+                            <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                              {initials}
+                            </span>
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
