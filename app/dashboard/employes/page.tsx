@@ -31,13 +31,8 @@ import { toast } from "sonner";
 import { usePartnerEmployees, usePartnerEmployeeStats } from "@/hooks/usePartnerEmployee";
 import type { PartnerEmployee } from "@/types/api";
 
-// Type pour les employés (compatibilité avec l'interface existante)
-type Employee = PartnerEmployee & {
-  type_contrat?: string;
-  salaire_net?: number;
-  date_embauche?: string;
-  photo_url?: string | null;
-};
+// Type pour les employés - utilise directement PartnerEmployee qui contient déjà typeContrat, salaireNet, dateEmbauche
+type Employee = PartnerEmployee;
 
 export default function EmployesPage() {
   const { session, loading } = useEdgeAuthContext();
@@ -164,8 +159,8 @@ export default function EmployesPage() {
         emp.prenom,
         emp.email || "",
         emp.poste || "",
-        emp.type_contrat || "",
-        emp.salaire_net?.toString() || "",
+        emp.typeContrat || "",
+        emp.salaireNet?.toString() || "",
         emp.actif ? "Actif" : "Inactif",
       ]),
     ]
@@ -491,18 +486,28 @@ export default function EmployesPage() {
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                        {(employee as any).photo_url ? (
+                        {employee.photoUrl && !employee.photoUrl.includes('example.com') ? (
                           <Image
-                            src={(employee as any).photo_url}
+                            src={employee.photoUrl}
                             alt={`${employee.prenom} ${employee.nom}`}
                             width={40}
                             height={40}
                             className="w-full h-full object-cover rounded-full"
+                            onError={(e) => {
+                              // En cas d'erreur, masquer l'image et afficher les initiales
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                              const parent = target.parentElement;
+                              if (parent) {
+                                const initials = `${employee.prenom?.charAt(0) || ''}${employee.nom?.charAt(0) || ''}`;
+                                parent.innerHTML = `<span class="text-blue-600 dark:text-blue-400 font-semibold text-sm">${initials}</span>`;
+                              }
+                            }}
                           />
                         ) : (
                           <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                            {employee.prenom.charAt(0)}
-                            {employee.nom.charAt(0)}
+                            {employee.prenom?.charAt(0) || ''}
+                            {employee.nom?.charAt(0) || ''}
                           </span>
                         )}
                       </div>
@@ -528,20 +533,20 @@ export default function EmployesPage() {
                   </td>
                   <td className="px-3 py-4">
                     <Badge variant="info" className="text-xs">
-                      {employee.type_contrat}
+                      {employee.typeContrat || "Non défini"}
                     </Badge>
                   </td>
                   <td className="px-3 py-4">
                     <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                      {employee.salaire_net
-                        ? formatSalary(employee.salaire_net)
+                      {employee.salaireNet
+                        ? formatSalary(employee.salaireNet)
                         : "Non défini"}
                     </div>
                   </td>
                   <td className="px-3 py-4 text-sm text-gray-900 dark:text-white">
                     <div className="truncate">
-                      {employee.date_embauche
-                        ? formatDate(employee.date_embauche)
+                      {employee.dateEmbauche
+                        ? formatDate(employee.dateEmbauche)
                         : "Non définie"}
                     </div>
                   </td>
@@ -575,8 +580,8 @@ export default function EmployesPage() {
         {filteredEmployees.length > 0 && (
           <Pagination
             currentPage={currentPage}
-            totalPages={totalPagesClient}
-            totalItems={filteredEmployees.length}
+            totalPages={totalPages}
+            totalItems={totalEmployees}
             itemsPerPage={employeesPerPage}
             onPageChange={handlePageChange}
           />
@@ -616,18 +621,28 @@ export default function EmployesPage() {
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                    {(selectedEmployee as any).photo_url ? (
+                    {selectedEmployee.photoUrl && !selectedEmployee.photoUrl.includes('example.com') ? (
                       <Image
-                        src={(selectedEmployee as any).photo_url}
+                        src={selectedEmployee.photoUrl}
                         alt={`${selectedEmployee.prenom} ${selectedEmployee.nom}`}
                         width={80}
                         height={80}
                         className="w-full h-full object-cover rounded-full"
+                        onError={(e) => {
+                          // En cas d'erreur, masquer l'image et afficher les initiales
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          const parent = target.parentElement;
+                          if (parent) {
+                            const initials = `${selectedEmployee.prenom?.charAt(0) || ''}${selectedEmployee.nom?.charAt(0) || ''}`;
+                            parent.innerHTML = `<span class="text-blue-600 dark:text-blue-400 font-bold text-2xl">${initials}</span>`;
+                          }
+                        }}
                       />
                     ) : (
                       <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                        {selectedEmployee.prenom.charAt(0)}
-                        {selectedEmployee.nom.charAt(0)}
+                        {selectedEmployee.prenom?.charAt(0) || ''}
+                        {selectedEmployee.nom?.charAt(0) || ''}
                       </span>
                     )}
                   </div>
@@ -723,7 +738,7 @@ export default function EmployesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Type de contrat</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedEmployee.type_contrat}
+                      {selectedEmployee.typeContrat || "Non défini"}
                     </p>
                   </div>
 
@@ -736,8 +751,8 @@ export default function EmployesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
                     </div>
                     <p className="font-medium text-green-600 dark:text-green-400">
-                      {selectedEmployee.salaire_net
-                        ? formatSalary(selectedEmployee.salaire_net)
+                      {selectedEmployee.salaireNet
+                        ? formatSalary(selectedEmployee.salaireNet)
                         : "Non défini"}
                     </p>
                   </div>
@@ -751,8 +766,8 @@ export default function EmployesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedEmployee.date_embauche
-                        ? formatDate(selectedEmployee.date_embauche)
+                      {selectedEmployee.dateEmbauche
+                        ? formatDate(selectedEmployee.dateEmbauche)
                         : "Non définie"}
                     </p>
                   </div>
