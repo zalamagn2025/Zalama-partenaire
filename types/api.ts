@@ -447,24 +447,28 @@ export const PartnerDemandeAdhesionSchema = z.object({
   email: z.string().nullable(),
   telephone: z.string().nullable(),
   adresse: z.string().nullable(),
-  matricule: z.string().nullable(),
-  genre: z.string().nullable(),
+  partenaireId: z.string(),
+  salaireNet: z.number().nullable(),
   poste: z.string(),
-  type_contrat: z.string(),
-  salaire_net: z.number().nullable(),
-  actif: z.boolean(),
-  date_embauche: z.string(),
-  date_expiration: z.string().optional(),
-  created_at: z.string(),
-  status: z.string().optional(),
+  matricule: z.string().nullable(),
+  photoUrl: z.string().nullable().optional(),
+  typeContrat: z.string(),
+  status: z.string().optional(), // 'pending', 'approved', 'rejected'
+  rejectionReason: z.string().nullable().optional(),
+  approvalComment: z.string().nullable().optional(),
+  employeeCreated: z.boolean().optional(),
+  approvedBy: z.string().nullable().optional(),
+  rejectedBy: z.string().nullable().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
 export const PartnerDemandeAdhesionResponseSchema = z.object({
-  success: z.boolean().optional(),
-  data: z.array(PartnerDemandeAdhesionSchema).optional(),
-  total: z.number().optional(),
-  page: z.number().optional(),
-  limit: z.number().optional(),
+  data: z.array(PartnerDemandeAdhesionSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number().optional(),
 });
 
 export const PartnerDemandeAdhesionStatsSchema = z.object({

@@ -8,7 +8,7 @@ import type {
 
 interface PartnerDemandeAdhesionFilters {
   search?: string;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'IN_REVIEW';
+  status?: 'pending' | 'approved' | 'rejected' | 'PENDING' | 'APPROVED' | 'REJECTED';
   limit?: number;
   page?: number;
 }
@@ -40,7 +40,11 @@ export function usePartnerDemandeAdhesion(filters?: PartnerDemandeAdhesionFilter
 
       const params = new URLSearchParams();
       if (filters?.search) params.append('search', filters.search);
-      if (filters?.status) params.append('status', filters.status);
+      if (filters?.status) {
+        // Normaliser le statut en minuscules pour l'API
+        const status = filters.status.toLowerCase();
+        params.append('status', status);
+      }
       if (filters?.limit) params.append('limit', String(filters.limit));
       if (filters?.page) params.append('page', String(filters.page));
 

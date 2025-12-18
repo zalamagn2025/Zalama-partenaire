@@ -51,7 +51,7 @@ export default function DemandesAdhesionPage() {
   const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<
-    "all" | "PENDING" | "APPROVED" | "REJECTED" | "IN_REVIEW"
+    "all" | "pending" | "approved" | "rejected"
   >("all");
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeWithoutAccount | null>(null);
@@ -67,7 +67,7 @@ export default function DemandesAdhesionPage() {
   // Utiliser les hooks pour récupérer les données
   const { data: demandesResponse, isLoading, refetch } = usePartnerDemandeAdhesion({
     search: searchTerm || undefined,
-    status: filterStatus !== 'all' ? filterStatus : undefined,
+    status: filterStatus !== 'all' ? filterStatus as 'pending' | 'approved' | 'rejected' : undefined,
     limit: itemsPerPage,
     page: currentPage,
   });
@@ -122,10 +122,10 @@ export default function DemandesAdhesionPage() {
         id: employeeId,
         data: {
           comment: "Demande approuvée et compte créé",
-          salaireNet: employee.salaire_net || undefined,
+          salaireNet: employee.salaireNet || employee.salaire_net || undefined,
           poste: employee.poste,
           matricule: employee.matricule || undefined,
-          typeContrat: employee.type_contrat,
+          typeContrat: employee.typeContrat || employee.type_contrat,
         },
       });
 
@@ -297,9 +297,10 @@ export default function DemandesAdhesionPage() {
               onChange={(e) => setFilterStatus(e.target.value as any)}
               className="w-full px-3 py-2 border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] focus:border-[var(--zalama-blue)]"
             >
-              <option value="all">Tous les employés</option>
-              <option value="active">Employés actifs</option>
-              <option value="inactive">Employés inactifs</option>
+              <option value="all">Tous les statuts</option>
+              <option value="pending">En attente</option>
+              <option value="approved">Approuvées</option>
+              <option value="rejected">Rejetées</option>
             </select>
           </div>
 
@@ -367,10 +368,18 @@ export default function DemandesAdhesionPage() {
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge
-                            variant={employee.actif ? "success" : "error"}
+                            variant={
+                              employee.status === 'approved' ? "success" :
+                              employee.status === 'rejected' ? "error" :
+                              employee.status === 'pending' ? "warning" :
+                              "default"
+                            }
                             className="text-xs"
                           >
-                            {employee.actif ? "Actif" : "Inactif"}
+                            {employee.status === 'approved' ? 'Approuvée' :
+                             employee.status === 'rejected' ? 'Rejetée' :
+                             employee.status === 'pending' ? 'En attente' :
+                             'Non défini'}
                           </Badge>
                         </div>
                       </div>
@@ -390,12 +399,12 @@ export default function DemandesAdhesionPage() {
                   </td>
                   <td className="px-3 py-4">
                     <Badge variant="info" className="text-xs">
-                      {employee.type_contrat}
+                      {employee.typeContrat || employee.type_contrat || 'N/A'}
                     </Badge>
                   </td>
                   <td className="px-3 py-4">
                     <div className="text-sm font-medium text-green-600 dark:text-green-400">
-                      {formatSalary(employee.salaire_net)}
+                      {formatSalary(employee.salaireNet || employee.salaire_net)}
                     </div>
                   </td>
                   <td className="px-3 py-4">
@@ -431,55 +440,59 @@ export default function DemandesAdhesionPage() {
                          </div>
                        </button>
 
-                      {/* Bouton Rejeter */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRejectEmployee(employee);
-                        }}
-                        disabled={rejectingEmployee === employee.id}
-                        className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                        title="Rejeter l'inscription"
-                      >
-                        {rejectingEmployee === employee.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
-                        ) : (
-                          <X className="h-4 w-4" />
-                        )}
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                          Rejeter
-                        </div>
-                      </button>
+                      {/* Bouton Rejeter - uniquement si status === 'pending' */}
+                      {employee.status === 'pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRejectEmployee(employee);
+                          }}
+                          disabled={rejectingEmployee === employee.id}
+                          className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Rejeter l'inscription"
+                        >
+                          {rejectingEmployee === employee.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Rejeter
+                          </div>
+                        </button>
+                      )}
 
-                      {/* Bouton Créer */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCreateAccount(employee.id);
-                        }}
-                        disabled={
-                          creatingAccount === employee.id || !employee.email
-                        }
-                        className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                          !employee.email
-                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                            : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                        }`}
-                        title={
-                          !employee.email
-                            ? "Email requis pour créer un compte"
-                            : "Créer le compte"
-                        }
-                      >
-                        {creatingAccount === employee.id ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                        ) : (
-                          <UserPlus className="h-4 w-4" />
-                        )}
-                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                          {!employee.email ? "Email requis" : "Créer"}
-                        </div>
-                      </button>
+                      {/* Bouton Créer - uniquement si status === 'pending' */}
+                      {employee.status === 'pending' && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateAccount(employee.id);
+                          }}
+                          disabled={
+                            creatingAccount === employee.id || !employee.email
+                          }
+                          className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                            !employee.email
+                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                              : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                          }`}
+                          title={
+                            !employee.email
+                              ? "Email requis pour créer un compte"
+                              : "Créer le compte"
+                          }
+                        >
+                          {creatingAccount === employee.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                          ) : (
+                            <UserPlus className="h-4 w-4" />
+                          )}
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            {!employee.email ? "Email requis" : "Créer"}
+                          </div>
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -549,8 +562,18 @@ export default function DemandesAdhesionPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={selectedEmployee.actif ? "success" : "error"}>
-                    {selectedEmployee.actif ? "Actif" : "Inactif"}
+                  <Badge
+                    variant={
+                      selectedEmployee.status === 'approved' ? "success" :
+                      selectedEmployee.status === 'rejected' ? "error" :
+                      selectedEmployee.status === 'pending' ? "warning" :
+                      "default"
+                    }
+                  >
+                    {selectedEmployee.status === 'approved' ? 'Approuvée' :
+                     selectedEmployee.status === 'rejected' ? 'Rejetée' :
+                     selectedEmployee.status === 'pending' ? 'En attente' :
+                     'Non défini'}
                   </Badge>
                 </div>
               </div>
@@ -604,7 +627,7 @@ export default function DemandesAdhesionPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Type de contrat</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedEmployee.type_contrat}
+                      {selectedEmployee.typeContrat || selectedEmployee.type_contrat || 'N/A'}
                     </p>
                   </div>
 
@@ -640,7 +663,7 @@ export default function DemandesAdhesionPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'embauche</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(selectedEmployee.date_embauche)}
+                    {formatDate(selectedEmployee.dateEmbauche || selectedEmployee.date_embauche)}
                   </p>
                 </div>
 
@@ -652,7 +675,7 @@ export default function DemandesAdhesionPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
                   </div>
                   <p className="font-medium text-green-600 dark:text-green-400">
-                    {formatSalary(selectedEmployee.salaire_net)}
+                    {formatSalary(selectedEmployee.salaireNet || selectedEmployee.salaire_net)}
                   </p>
                 </div>
 
@@ -664,13 +687,13 @@ export default function DemandesAdhesionPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Date d'ajout</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(selectedEmployee.created_at)}
+                    {formatDate(selectedEmployee.createdAt || selectedEmployee.created_at)}
                   </p>
                 </div>
                 </div>
               </div>
 
-              {selectedEmployee.date_expiration && (
+              {selectedEmployee.dateExpiration && (
                 <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/30 rounded-xl backdrop-blur-sm">
                   <div className="w-10 h-10 bg-orange-500/20 rounded-full flex items-center justify-center">
                     <AlertCircle className="h-5 w-5 text-orange-400" />
@@ -680,7 +703,7 @@ export default function DemandesAdhesionPage() {
                       Contrat à durée déterminée
                     </div>
                     <div className="text-sm text-orange-400">
-                      Expire le {formatDate(selectedEmployee.date_expiration)}
+                      Expire le {formatDate(selectedEmployee.dateExpiration)}
                     </div>
                   </div>
                 </div>
