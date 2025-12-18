@@ -138,6 +138,13 @@ export default function EmployesPage() {
     }
   };
 
+  const formatGenre = (genre: string | null | undefined) => {
+    if (!genre) return "Non renseigné";
+    if (genre.toUpperCase() === "M") return "Homme";
+    if (genre.toUpperCase() === "F") return "Femme";
+    return genre; // Retourner la valeur originale si ce n'est ni M ni F
+  };
+
   // Gestion des modales
   const openViewModal = (employee: Employee) => {
     setSelectedEmployee(employee);
@@ -549,7 +556,7 @@ export default function EmployesPage() {
                           {employee.prenom} {employee.nom}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                          {employee.genre || "Non renseigné"}
+                          {formatGenre((employee as any).genre)}
                         </div>
                       </div>
                     </div>
@@ -735,7 +742,7 @@ export default function EmployesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Genre</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {(selectedEmployee as any).genre || "Non renseigné"}
+                      {formatGenre((selectedEmployee as any).genre)}
                     </p>
                   </div>
 
