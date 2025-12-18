@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
   CreditCard,
   Globe,
@@ -103,7 +103,7 @@ interface DjomyLinkResponse {
 }
 
 export default function RemboursementsTestPage() {
-  const { session } = useEdgeAuth();
+  const { session } = useEdgeAuthContext();
   const [loading, setLoading] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<DjomyPaymentStatus | null>(
     null

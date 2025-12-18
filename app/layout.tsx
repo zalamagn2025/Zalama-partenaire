@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   description: "Tableau de bord des partenaires ZaLaMa",
   applicationName: "Partner-ZaLaMa",
   manifest: "/manifest.json",
-  themeColor: "#0d6efd",
   icons: {
     icon: [
       { url: "/favicon.ico" },
@@ -32,11 +31,13 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   formatDetection: { telephone: false },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    viewportFit: "cover",
-  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover" as const,
+  themeColor: "#0d6efd",
 };
 
 export default function RootLayout({

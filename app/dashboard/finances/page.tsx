@@ -4,6 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Users, Calendar, RefreshCw, Filter, Loader2 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import {
+  usePartnerFinancesDemandes,
+  usePartnerFinancesRemboursements,
+  usePartnerFinancesStats,
+  usePartnerFinancesEvolutionMensuelle,
+} from "@/hooks/usePartnerFinances";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -106,34 +112,13 @@ export default function FinancesPage() {
   const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
 
-  // États pour les données financières
-  const [transactions, setTransactions] = useState<RemboursementWithEmployee[]>(
-    []
-  );
-  const [filteredTransactions, setFilteredTransactions] = useState<
-    RemboursementWithEmployee[]
-  >([]);
-  const [financialStats, setFinancialStats] = useState<FinancialStats | null>(
-    null
-  );
-  const [isLoading, setIsLoading] = useState(true);
+  // États pour les filtres
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [stats, setStats] = useState({
-    fluxFinance: 0,
-    debloqueMois: 0,
-    aRembourserMois: 0,
-    dateLimite: "",
-    nbEmployesApprouves: 0,
-  });
-  const [salaryRequests, setSalaryRequests] = useState<any[]>([]);
-  // Ajoute un état pour le payment_day
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [paymentDay, setPaymentDay] = useState<number | null>(null);
-
-  // États pour les données Edge Functions (mois en cours)
-  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
-  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
 
   // États pour les filtres de l'edge function
   const [filters, setFilters] = useState({
@@ -151,70 +136,88 @@ export default function FinancesPage() {
   // État pour afficher/masquer les filtres
   const [showFilters, setShowFilters] = useState(false);
 
-  // Charger les demandes d'avance de salaire dynamiquement
-  useEffect(() => {
-    if (!loading && session?.partner && session?.access_token) {
-      loadSalaryAdvanceData();
-      loadFinancesData();
-      loadActivePeriods();
-    }
-  }, [loading, session?.partner, session?.access_token]);
+  // Utiliser les hooks pour récupérer les données
+  const { data: demandesResponse, isLoading: isLoadingDemandes } = usePartnerFinancesDemandes({
+    status: selectedStatus as any,
+    mois: selectedMonth || undefined,
+    annee: selectedYear || undefined,
+    limit: 50,
+    offset: (currentPage - 1) * 50,
+  });
 
-  // Fonction pour charger les mois et années actifs
-  const loadActivePeriods = async () => {
-    if (!session?.access_token) return;
+  const { data: remboursementsResponse, isLoading: isLoadingRemboursements } = usePartnerFinancesRemboursements({
+    status: selectedStatus as any,
+    mois: selectedMonth || undefined,
+    annee: selectedYear || undefined,
+    limit: 50,
+    offset: (currentPage - 1) * 50,
+  });
 
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
+  const { data: statsResponse, isLoading: isLoadingStats } = usePartnerFinancesStats({
+    mois: selectedMonth || undefined,
+    annee: selectedYear || undefined,
+  });
 
-      // Récupérer l'évolution mensuelle pour déterminer les mois actifs
-      const evolutionResponse =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesEvolutionMensuelle();
-      if (evolutionResponse.success && evolutionResponse.data) {
-        const evolutionData = evolutionResponse.data;
+  const { data: evolutionResponse } = usePartnerFinancesEvolutionMensuelle(selectedYear || undefined);
 
-        // Extraire les mois et années actifs
-        const months = new Set<number>();
-        const years = new Set<number>();
+  // Extraire les données
+  const transactions = (remboursementsResponse?.data || []) as RemboursementWithEmployee[];
+  const filteredTransactions = transactions;
+  const salaryRequests = (demandesResponse?.data || []) as any[];
+  const financialStatsData = statsResponse?.data;
+  const isLoading = isLoadingDemandes || isLoadingRemboursements || isLoadingStats;
 
-        evolutionData.forEach((item: any) => {
-          if (item.debloque > 0) {
-            // Convertir le nom du mois en numéro
-            const monthNames = [
-              "Jan",
-              "Fév",
-              "Mar",
-              "Avr",
-              "Mai",
-              "Jun",
-              "Jul",
-              "Aoû",
-              "Sep",
-              "Oct",
-              "Nov",
-              "Déc",
-            ];
-            const monthIndex = monthNames.indexOf(item.mois);
-            if (monthIndex !== -1) {
-              months.add(monthIndex + 1); // +1 car les mois commencent à 1
-            }
-          }
-        });
-
-        // Ajouter les années courantes et précédentes
-        const currentYear = new Date().getFullYear();
-        years.add(currentYear);
-        years.add(currentYear - 1);
-
-        setActiveMonths(Array.from(months).sort((a, b) => a - b));
-        setActiveYears(Array.from(years).sort((a, b) => b - a));
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des périodes actives:", error);
-    }
+  // Calculer les statistiques depuis la réponse API
+  const stats = {
+    fluxFinance: financialStatsData?.total_demandes || 0,
+    debloqueMois: financialStatsData?.total_demandes || 0,
+    aRembourserMois: financialStatsData?.total_remboursements || 0,
+    dateLimite: dateLimite,
+    nbEmployesApprouves: financialStatsData?.demandes?.total || 0,
   };
+
+  const financialStats: FinancialStats | null = financialStatsData ? {
+    totalDebloque: financialStatsData.total_demandes || 0,
+    totalRecupere: financialStatsData.total_remboursements || 0,
+    totalRevenus: (financialStatsData.total_demandes || 0) * 0.06,
+    totalRemboursements: financialStatsData.total_remboursements || 0,
+    totalCommissions: (financialStatsData.total_demandes || 0) * 0.06,
+    balance: financialStatsData.solde || 0,
+    pendingTransactions: 0,
+    totalTransactions: (financialStatsData.demandes?.total || 0) + (financialStatsData.remboursements?.total || 0),
+    montantMoyen: 0,
+    evolutionMensuelle: evolutionResponse?.data?.repartition_par_mois || [],
+    repartitionParType: [],
+    repartitionParStatut: [],
+  } : null;
+
+  // Générer les mois et années actifs depuis l'évolution mensuelle
+  useEffect(() => {
+    if (evolutionResponse?.data?.repartition_par_mois) {
+      const months = new Set<number>();
+      const years = new Set<number>();
+
+      evolutionResponse.data.repartition_par_mois.forEach((item: any) => {
+        if (item.total_demandes > 0 || item.total_remboursements > 0) {
+          months.add(item.mois);
+          years.add(item.annee);
+        }
+      });
+
+      const currentYear = new Date().getFullYear();
+      years.add(currentYear);
+      years.add(currentYear - 1);
+
+      setActiveMonths(Array.from(months).sort((a, b) => a - b));
+      setActiveYears(Array.from(years).sort((a, b) => b - a));
+    } else {
+      // Valeurs par défaut
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+      setActiveMonths([currentMonth]);
+      setActiveYears([currentYear, currentYear - 1]);
+    }
+  }, [evolutionResponse]);
 
   // Récupère le payment_day du partenaire connecté via Edge Function
   useEffect(() => {
@@ -269,125 +272,7 @@ export default function FinancesPage() {
     });
   }
 
-  const loadSalaryAdvanceData = async () => {
-    if (!session?.access_token) return;
-
-    setIsLoading(true);
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // 1. Récupérer les statistiques financières via Edge Function
-      const statsResponse = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesStats();
-      if (!statsResponse.success) {
-        console.error(
-          "Erreur lors de la récupération des statistiques:",
-          statsResponse.message
-        );
-        return;
-      }
-
-      const statsData = statsResponse.data || {};
-
-      // 2. Récupérer les demandes via Edge Function
-      const demandesResponse = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesDemandes();
-      if (!demandesResponse.success) {
-        console.error(
-          "Erreur lors de la récupération des demandes:",
-          demandesResponse.message
-        );
-        return;
-      }
-
-      const demandes = demandesResponse.data || [];
-      setSalaryRequests(demandes);
-
-      // 3. Récupérer les remboursements via Edge Function
-      const remboursementsResponse =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesRemboursements();
-      if (!remboursementsResponse.success) {
-        console.error(
-          "Erreur lors de la récupération des remboursements:",
-          remboursementsResponse.message
-        );
-        return;
-      }
-
-      const allRemboursements = remboursementsResponse.data || [];
-
-      // Utiliser directement les données de l'Edge Function
-      setStats({
-        fluxFinance: statsData.montant_total || 0,
-        debloqueMois: statsData.montant_total || 0,
-        aRembourserMois: statsData.montant_restant || 0,
-        dateLimite: dateLimite,
-        nbEmployesApprouves: statsData.total_transactions || 0,
-      });
-
-      // Mettre à jour les statistiques financières pour les graphiques
-      const newFinancialStats: FinancialStats = {
-        totalDebloque: statsData.montant_total || 0,
-        totalRecupere: statsData.montant_paye || 0,
-        totalRevenus: statsData.montant_total || 0,
-        totalRemboursements: statsData.total_remboursements || 0,
-        totalCommissions: statsData.montant_total - statsData.montant_paye || 0,
-        balance: statsData.balance_wallet || 0,
-        pendingTransactions: statsData.remboursements_en_attente || 0,
-        totalTransactions: statsData.total_transactions || 0,
-        montantMoyen: statsData.montant_moyen || 0,
-        evolutionMensuelle: statsData.evolution_mensuelle || [],
-        repartitionParType: statsData.repartition_par_mois || [],
-        repartitionParStatut: statsData.repartition_par_statut || [],
-      };
-      setFinancialStats(newFinancialStats);
-
-      // Mettre à jour les mois et années actifs si nécessaire
-      if (
-        statsData.evolution_mensuelle &&
-        statsData.evolution_mensuelle.length > 0
-      ) {
-        const months = new Set<number>();
-        const years = new Set<number>();
-
-        statsData.evolution_mensuelle.forEach((item: any) => {
-          if (item.debloque > 0) {
-            const monthNames = [
-              "Jan",
-              "Fév",
-              "Mar",
-              "Avr",
-              "Mai",
-              "Jun",
-              "Jul",
-              "Aoû",
-              "Sep",
-              "Oct",
-              "Nov",
-              "Déc",
-            ];
-            const monthIndex = monthNames.indexOf(item.mois);
-            if (monthIndex !== -1) {
-              months.add(monthIndex + 1);
-            }
-          }
-        });
-
-        const currentYear = new Date().getFullYear();
-        years.add(currentYear);
-        years.add(currentYear - 1);
-
-        setActiveMonths(Array.from(months).sort((a, b) => a - b));
-        setActiveYears(Array.from(years).sort((a, b) => b - a));
-      }
-    } catch (e) {
-      console.error("Erreur lors du chargement des données financières:", e);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Les données sont maintenant chargées automatiquement via les hooks
 
   // Calculer les statistiques financières dynamiques
   const calculateFinancialStats = (
@@ -579,53 +464,17 @@ export default function FinancesPage() {
     }));
   };
 
-  // Charger les données financières via Edge Functions
+  // Les données sont maintenant chargées automatiquement via les hooks
+  // Cette fonction est conservée pour la compatibilité avec les filtres
   const loadFinancesData = async (customFilters: any = {}) => {
-    if (!session?.access_token) return;
-
-    setEdgeFunctionLoading(true);
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // Combiner les filtres par défaut avec les filtres personnalisés
-      const activeFilters = { ...filters, ...customFilters };
-
-      // Nettoyer les filtres (enlever les valeurs null/undefined)
-      const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(
-          ([_, value]) => value !== null && value !== undefined && value !== ""
-        )
-      );
-
-      // Valider les filtres
-      validateFilters(cleanFilters);
-
-      console.log(
-        "🔄 Chargement des données financières avec filtres:",
-        cleanFilters
-      );
-      console.log(
-        "📊 URL Edge Function:",
-        `/api/proxy/partner-finances/stats?${new URLSearchParams(
-          cleanFilters as any
-        ).toString()}`
-      );
-
-      // Charger les statistiques financières
-      const statsData = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesStats(
-        cleanFilters
-      );
-
-      if (!statsData.success) {
-        console.error("Erreur Edge Function:", statsData.message);
-        return;
-      }
-
-      // Les données sont dans statsData.data selon la réponse Edge Function
-      const data = statsData.data || statsData;
-      setCurrentMonthData(data);
+    // Les données sont rechargées automatiquement quand les filtres changent via les hooks
+    console.log("🔄 Filtres mis à jour, rechargement automatique via hooks...");
+    
+    // Mettre à jour les filtres locaux si nécessaire
+    if (customFilters.mois !== undefined) setSelectedMonth(customFilters.mois);
+    if (customFilters.annee !== undefined) setSelectedYear(customFilters.annee);
+    if (customFilters.status !== undefined) setSelectedStatus(customFilters.status);
+  };
 
       // Mettre à jour les statistiques financières
       if (data) {
@@ -668,28 +517,18 @@ export default function FinancesPage() {
 
   // Fonction pour appliquer un filtre
   const applyFilter = async (filterKey: string, value: any) => {
-    const newFilters = { ...filters, [filterKey]: value };
-    setFilters(newFilters);
-
-    // Recharger les données avec les nouveaux filtres
-    await loadFinancesData(newFilters);
-
-    // Recharger aussi les remboursements avec les nouveaux filtres
-    await loadTransactionsWithFilters(newFilters);
+    // Mettre à jour les états de filtres - les hooks rechargeront automatiquement
+    if (filterKey === 'mois') setSelectedMonth(value);
+    if (filterKey === 'annee') setSelectedYear(value);
+    if (filterKey === 'status') setSelectedStatus(value);
   };
 
   // Fonction pour réinitialiser tous les filtres
   const resetFilters = async () => {
-    const defaultFilters = {
-      mois: null,
-      annee: null,
-      status: null,
-      limit: 50,
-      offset: 0,
-    };
-    setFilters(defaultFilters);
-    await loadFinancesData(defaultFilters);
-    await loadTransactionsWithFilters(defaultFilters);
+    setSelectedMonth(null);
+    setSelectedYear(null);
+    setSelectedStatus(null);
+    setCurrentPage(1);
   };
 
   // Fonction pour valider les paramètres de filtres
@@ -721,139 +560,7 @@ export default function FinancesPage() {
     return invalidParams.length === 0;
   };
 
-  // Pour l'historique des remboursements, charge les données de remboursements :
-  const loadTransactions = async () => {
-    if (!session?.access_token) return;
-
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesRemboursements();
-      if (!response.success) {
-        console.error(
-          "Erreur lors du chargement des remboursements:",
-          response.message
-        );
-        return;
-      }
-
-      const data = response.data || [];
-      console.log("Remboursements chargés:", data);
-      console.log("Nombre de remboursements:", data?.length);
-
-      setTransactions(data);
-
-      // Calculer les statistiques financières
-      const stats = calculateFinancialStats(data);
-      console.log("Stats calculées:", stats);
-      setFinancialStats(stats);
-    } catch (e: any) {
-      console.error("Erreur lors du chargement des remboursements:", e);
-
-      // Gérer les erreurs d'authentification et serveur
-      if (
-        e.message &&
-        (e.message.includes("Erreur serveur") ||
-          e.message.includes("500") ||
-          e.message.includes("401") ||
-          e.message.includes("403") ||
-          e.message.includes("404") ||
-          e.message.includes("503"))
-      ) {
-        console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(
-          new CustomEvent("session-error", {
-            detail: {
-              message: e.message,
-              status: e.status || 500,
-            },
-          })
-        );
-        return;
-      }
-
-    }
-  };
-
-  // Fonction pour charger les remboursements avec des filtres spécifiques
-  const loadTransactionsWithFilters = async (customFilters: any = {}) => {
-    if (!session?.access_token) return;
-
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // Nettoyer les filtres (enlever les valeurs null/undefined)
-      const cleanFilters = Object.fromEntries(
-        Object.entries(customFilters).filter(
-          ([_, value]) => value !== null && value !== undefined && value !== ""
-        )
-      );
-
-      // Valider les filtres
-      validateFilters(cleanFilters);
-
-      console.log(
-        "🔄 Chargement des remboursements avec filtres:",
-        cleanFilters
-      );
-      console.log(
-        "📋 URL Edge Function:",
-        `/api/proxy/partner-finances/remboursements?${new URLSearchParams(
-          cleanFilters as any
-        ).toString()}`
-      );
-
-      const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getFinancesRemboursements(
-        cleanFilters
-      );
-      if (!response.success) {
-        console.error(
-          "Erreur lors du chargement des remboursements filtrés:",
-          response.message
-        );
-        return;
-      }
-
-      const data = response.data || [];
-      console.log("Remboursements filtrés chargés:", data);
-      console.log("Nombre de remboursements filtrés:", data?.length);
-
-      setTransactions(data);
-    } catch (e: any) {
-      console.error("Erreur lors du chargement des remboursements filtrés:", e);
-
-      // Gérer les erreurs d'authentification et serveur
-      if (
-        e.message &&
-        (e.message.includes("Erreur serveur") ||
-          e.message.includes("500") ||
-          e.message.includes("401") ||
-          e.message.includes("403") ||
-          e.message.includes("404") ||
-          e.message.includes("503"))
-      ) {
-        console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(
-          new CustomEvent("session-error", {
-            detail: {
-              message: e.message,
-              status: e.status || 500,
-            },
-          })
-        );
-        return;
-      }
-    }
-  };
-  useEffect(() => {
-    if (!loading && session?.partner) {
-      loadTransactions();
-    }
-  }, [loading, session?.partner]);
+  // Les données sont maintenant chargées automatiquement via les hooks
 
   // Rediriger vers la page de login si l'utilisateur n'est pas authentifié
   useEffect(() => {
@@ -862,45 +569,11 @@ export default function FinancesPage() {
     }
   }, [loading, session, router]);
 
-  // Filtrer les transactions
-  useEffect(() => {
-    let filtered = transactions;
-
-    if (selectedType) {
-      filtered = filtered.filter((transaction) => {
-        if (selectedType === "Payé") return transaction.statut === "PAYE";
-        if (selectedType === "En attente")
-          return transaction.statut === "EN_ATTENTE";
-        if (selectedType === "Annulé") return transaction.statut === "ANNULE";
-        return false;
-      });
-    }
-
-    if (selectedStatus) {
-      filtered = filtered.filter((transaction) => {
-        if (selectedStatus === "En attente")
-          return transaction.statut === "EN_ATTENTE";
-        if (selectedStatus === "Payé") return transaction.statut === "PAYE";
-        if (selectedStatus === "Annulé") return transaction.statut === "ANNULE";
-        return false;
-      });
-    }
-
-    setFilteredTransactions(filtered);
-    setCurrentPage(1);
-  }, [transactions, selectedType, selectedStatus]);
-
-  // Pagination
+  // Les filtres sont gérés côté serveur via les hooks
+  // Pagination côté serveur - les données sont déjà paginées
   const transactionsPerPage = 10;
-  const totalPages = Math.ceil(
-    filteredTransactions.length / transactionsPerPage
-  );
-  const indexOfLastTransaction = currentPage * transactionsPerPage;
-  const indexOfFirstTransaction = indexOfLastTransaction - transactionsPerPage;
-  const currentTransactions = filteredTransactions.slice(
-    indexOfFirstTransaction,
-    indexOfLastTransaction
-  );
+  const totalPages = Math.ceil((remboursementsResponse?.total || 0) / transactionsPerPage);
+  const currentTransactions = filteredTransactions;
 
   // Exporter les données au format CSV
   const handleExportCSV = () => {
@@ -1047,7 +720,10 @@ export default function FinancesPage() {
                 Réinitialiser
               </button>
               <button
-                onClick={() => loadFinancesData(filters)}
+                onClick={() => {
+                  // Les données sont rechargées automatiquement via les hooks
+                  console.log("🔄 Filtres mis à jour");
+                }}
                 disabled={edgeFunctionLoading}
                 className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
               >
@@ -1079,8 +755,8 @@ export default function FinancesPage() {
                     annee: new Date().getFullYear(),
                   };
                   setFilters(newFilters);
-                  loadFinancesData(newFilters);
-                  loadTransactionsWithFilters(newFilters);
+                  // Les données sont rechargées automatiquement via les hooks
+                  console.log("🔄 Filtres mis à jour");
                 } else {
                   applyFilter("mois", mois);
                 }

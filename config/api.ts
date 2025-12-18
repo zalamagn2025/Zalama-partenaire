@@ -12,7 +12,7 @@ export const API_CONFIG = {
  * Routes de l'API ZaLaMa
  */
 export const API_ROUTES = {
-  // Authentification
+  // Authentification générique (pour admin/front office)
   auth: {
     login: '/auth/login',
     logout: '/auth/logout',
@@ -21,6 +21,51 @@ export const API_ROUTES = {
     forgotPassword: '/auth/forgot-password',
     resetPassword: '/auth/reset-password',
     changePassword: '/auth/change-password',
+  },
+  
+  // Authentification partenaire
+  partnerAuth: {
+    login: '/partner-auth/login',
+    getme: '/partner-auth/getme',
+    apiKey: '/partner-auth/api-key',
+    regenerateApiKey: '/partner-auth/regenerate-api-key',
+  },
+  
+  // Dashboard partenaire
+  partnerDashboard: {
+    dashboardData: '/partner-dashboard/dashboard-data',
+    data: '/partner-dashboard/data',
+  },
+  
+  // Demandes d'adhésion
+  partnerDemandeAdhesion: {
+    list: '/partner-demande-adhesion',
+    getById: (id: string) => `/partner-demande-adhesion/${id}`,
+    approve: (id: string) => `/partner-demande-adhesion/${id}/approve`,
+    reject: (id: string) => `/partner-demande-adhesion/${id}/reject`,
+    stats: '/partner-demande-adhesion/stats',
+  },
+  
+  // Employés
+  partnerEmployee: {
+    list: '/partner-employee',
+    listAlias: '/partner-employe',
+    avis: '/partner-employee/avis',
+    stats: '/partner-employee/stats',
+  },
+  
+  // Finances
+  partnerFinances: {
+    demandes: '/partner-finances/demandes',
+    remboursements: '/partner-finances/remboursements',
+    stats: '/partner-finances/stats',
+    evolutionMensuelle: '/partner-finances/evolution-mensuelle',
+    partnerEmployeeStats: '/partner-finances/partner-employee-stats',
+  },
+  
+  // Informations partenaire
+  partnerInfo: {
+    get: '/partner-info',
   },
   
   // Partenaires
@@ -101,17 +146,21 @@ export const getApiUrl = (route: string): string => {
 
 /**
  * Headers par défaut pour les requêtes
+ * Pour les routes de login (/auth/login, /partner-auth/login), on ne doit PAS envoyer de token
  */
-export const getDefaultHeaders = (accessToken?: string): HeadersInit => {
-  const headers: HeadersInit = {
+export const getDefaultHeaders = (accessToken?: string, route?: string): HeadersInit => {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   };
   
-  if (accessToken) {
+  // Ne pas ajouter le token pour les routes de login
+  const isLoginRoute = route?.includes('/login') || route?.includes('/auth/login') || route?.includes('/partner-auth/login');
+  
+  if (accessToken && !isLoginRoute) {
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
   
-  return headers;
+  return headers as HeadersInit;
 };
 

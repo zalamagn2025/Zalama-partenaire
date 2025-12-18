@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef } from "react";
 import {} from "lucide-react";
-import { getNotifications } from "./notificationService";
+// TODO: Migrer vers le nouveau backend
+// import { getNotifications } from "./notificationService";
 import { Notification } from "./types";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import NotificationHeader from "./NotificationHeader";
@@ -25,15 +26,38 @@ export default function NotificationsDrawer({
   const [filter, setFilter] = React.useState<string>("all");
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Charger les notifications depuis la base de données
+  // Charger les notifications (mock pour l'instant)
   useEffect(() => {
     const loadNotifications = async () => {
       if (!session?.partner?.id) return;
 
       setIsLoading(true);
       try {
-        const notifications = await getNotifications(session.partner.id);
-        setNotifications(notifications);
+        // TODO: Migrer vers le nouveau backend
+        // Pour l'instant, utiliser des données mock
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        const mockNotifications: Notification[] = [
+          {
+            id: 1,
+            type: "info",
+            title: "Nouvelle demande d'avance",
+            message: "Une nouvelle demande d'avance sur salaire a été soumise",
+            read: false,
+            createdAt: new Date().toISOString(),
+          },
+          {
+            id: 2,
+            type: "success",
+            title: "Paiement effectué",
+            message: "Le paiement de salaire a été effectué avec succès",
+            read: false,
+            createdAt: new Date(Date.now() - 3600000).toISOString(),
+          },
+        ];
+        
+        setNotifications(mockNotifications);
+        console.log("✅ Notifications chargées (mock):", mockNotifications);
       } catch (error) {
         console.error("Erreur lors du chargement des notifications:", error);
       } finally {

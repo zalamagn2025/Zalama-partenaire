@@ -1,6 +1,13 @@
 "use client";
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import {
+  usePartnerDemandeAdhesion,
+  usePartnerDemandeAdhesionStats,
+  useApproveDemandeAdhesion,
+  useRejectDemandeAdhesion,
+} from "@/hooks/usePartnerDemandeAdhesion";
+import type { PartnerDemandeAdhesion } from "@/types/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,42 +43,20 @@ import {
   Hash,
 } from "lucide-react";
 
-interface EmployeeWithoutAccount {
-  id: string;
-  nom: string;
-  prenom: string;
-  email: string | null;
-  telephone: string | null;
-  adresse: string | null;
-  matricule: string | null;
-  genre: string | null;
-  poste: string;
-  type_contrat: string;
-  salaire_net: number | null;
-  actif: boolean;
-  date_embauche: string;
-  date_expiration?: string;
-  created_at: string;
-}
+// Utiliser le type depuis types/api.ts
+type EmployeeWithoutAccount = PartnerDemandeAdhesion;
 
 export default function DemandesAdhesionPage() {
   const { session } = useEdgeAuthContext();
-  const [employees, setEmployees] = useState<EmployeeWithoutAccount[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<
-    EmployeeWithoutAccount[]
-  >([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<
-    "all" | "active" | "inactive"
+    "all" | "PENDING" | "APPROVED" | "REJECTED" | "IN_REVIEW"
   >("all");
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeWithoutAccount | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [rejectingEmployee, setRejectingEmployee] = useState<string | null>(
-    null
-  );
+  const [rejectingEmployee, setRejectingEmployee] = useState<string | null>(null);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -79,67 +64,32 @@ export default function DemandesAdhesionPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Charger les employés sans compte
+  // Utiliser les hooks pour récupérer les données
+  const { data: demandesResponse, isLoading, refetch } = usePartnerDemandeAdhesion({
+    search: searchTerm || undefined,
+    status: filterStatus !== 'all' ? filterStatus : undefined,
+    limit: itemsPerPage,
+    page: currentPage,
+  });
+
+  const { data: statsResponse } = usePartnerDemandeAdhesionStats();
+  const approveMutation = useApproveDemandeAdhesion();
+  const rejectMutation = useRejectDemandeAdhesion();
+
+  // Extraire les données
+  const employees = (demandesResponse?.data || []) as EmployeeWithoutAccount[];
+  const filteredEmployees = employees; // Les filtres sont gérés côté serveur
+  const totalEmployees = demandesResponse?.total || 0;
+  const totalPages = Math.ceil(totalEmployees / itemsPerPage);
+
+  // Les filtres sont gérés côté serveur via les hooks
+  // Réinitialiser la pagination quand les filtres changent
   useEffect(() => {
-    const loadEmployeesWithoutAccount = async () => {
-      if (!session?.access_token) return;
-
-      setIsLoading(true);
-      try {
-        const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getEmployeesWithoutAccount(
-          session.access_token
-        );
-
-        if (response.success && response.data) {
-          setEmployees(response.data);
-          setFilteredEmployees(response.data);
-        } else {
-          throw new Error(response.message || "Erreur lors du chargement");
-        }
-      } catch (error) {
-        console.error("Erreur lors du chargement des employés:", error);
-        toast.error("Erreur lors du chargement des employés");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadEmployeesWithoutAccount();
-  }, [session?.access_token]);
-
-  // Filtrer les employés
-  useEffect(() => {
-    let filtered = employees;
-
-    // Filtre par recherche
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (emp) =>
-          emp.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          emp.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          emp.poste.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Filtre par statut
-    if (filterStatus === "active") {
-      filtered = filtered.filter((emp) => emp.actif);
-    } else if (filterStatus === "inactive") {
-      filtered = filtered.filter((emp) => !emp.actif);
-    }
-
-    setFilteredEmployees(filtered);
-    // Réinitialiser la pagination quand les filtres changent
     setCurrentPage(1);
-  }, [employees, searchTerm, filterStatus]);
+  }, [searchTerm, filterStatus]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredEmployees.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
+  // Pagination côté serveur - les données sont déjà paginées
+  const currentEmployees = filteredEmployees;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
@@ -167,22 +117,23 @@ export default function DemandesAdhesionPage() {
 
     setCreatingAccount(employeeId);
     try {
-      const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.createEmployeeAccount(
-        session.access_token,
-        { employee_id: employeeId }
-      );
+      // Approuver la demande d'adhésion (cela crée automatiquement l'employé)
+      await approveMutation.mutateAsync({
+        id: employeeId,
+        data: {
+          comment: "Demande approuvée et compte créé",
+          salaireNet: employee.salaire_net || undefined,
+          poste: employee.poste,
+          matricule: employee.matricule || undefined,
+          typeContrat: employee.type_contrat,
+        },
+      });
 
-      if (response.success) {
-        toast.success("Compte employé créé avec succès");
-        // Retirer l'employé de la liste
-        setEmployees((prev) => prev.filter((emp) => emp.id !== employeeId));
-      } else {
-        throw new Error(response.message || "Erreur lors de la création");
-      }
+      toast.success("Demande approuvée et compte employé créé avec succès");
+      await refetch(); // Recharger la liste
     } catch (error: any) {
-      console.error("Erreur lors de la création du compte:", error);
-      toast.error(error.message || "Erreur lors de la création du compte");
+      console.error("Erreur lors de l'approbation:", error);
+      toast.error(error.message || "Erreur lors de l'approbation de la demande");
     } finally {
       setCreatingAccount(null);
     }
@@ -207,30 +158,19 @@ export default function DemandesAdhesionPage() {
 
     setRejectingEmployee(selectedEmployee.id);
     try {
-      const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.rejectEmployeeRegistration(
-        session.access_token,
-        {
-          employee_id: selectedEmployee.id,
+      // Rejeter la demande d'adhésion
+      await rejectMutation.mutateAsync({
+        id: selectedEmployee.id,
+        data: {
           reason: rejectReason.trim() || undefined,
-        }
-      );
+        },
+      });
 
-      if (response.success) {
-        toast.success("Inscription d'employé rejetée avec succès");
-        // Retirer l'employé de la liste
-        setEmployees((prev) =>
-          prev.filter((emp) => emp.id !== selectedEmployee.id)
-        );
-        setFilteredEmployees((prev) =>
-          prev.filter((emp) => emp.id !== selectedEmployee.id)
-        );
-        setIsRejectModalOpen(false);
-        setSelectedEmployee(null);
-        setRejectReason("");
-      } else {
-        throw new Error(response.message || "Erreur lors du rejet");
-      }
+      toast.success("Demande d'adhésion rejetée avec succès");
+      setIsRejectModalOpen(false);
+      setSelectedEmployee(null);
+      setRejectReason("");
+      await refetch(); // Recharger la liste
     } catch (error: any) {
       console.error("Erreur lors du rejet de l'inscription:", error);
       toast.error(error.message || "Erreur lors du rejet de l'inscription");

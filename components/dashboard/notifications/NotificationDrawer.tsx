@@ -21,7 +21,42 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
   const [filter, setFilter] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   
-  // Charger les notifications filtrées par user_id (admin connecté)
+  // Générer des notifications mock (en attendant l'intégration du backend)
+  const generateMockNotifications = (): Notification[] => {
+    const types: ('info' | 'success' | 'warning' | 'error')[] = ['info', 'success', 'warning', 'error'];
+    const mockNotifications: Notification[] = [];
+    
+    const messages = [
+      { title: 'Nouvelle demande d\'avance', message: 'Une nouvelle demande d\'avance de salaire a été soumise', type: 'info' as const },
+      { title: 'Paiement effectué', message: 'Le paiement de salaire pour le mois de décembre a été effectué avec succès', type: 'success' as const },
+      { title: 'Remboursement en attente', message: 'Un remboursement est en attente de validation', type: 'warning' as const },
+      { title: 'Nouvel employé ajouté', message: 'Un nouvel employé a été ajouté à votre entreprise', type: 'info' as const },
+      { title: 'Demande approuvée', message: 'Votre demande d\'avance a été approuvée et sera traitée sous peu', type: 'success' as const },
+      { title: 'Document requis', message: 'Veuillez fournir les documents manquants pour finaliser votre demande', type: 'warning' as const },
+    ];
+
+    for (let i = 0; i < 8; i++) {
+      const message = messages[i % messages.length];
+      const hoursAgo = Math.floor(Math.random() * 72); // 0-72 heures
+      const timestamp = new Date();
+      timestamp.setHours(timestamp.getHours() - hoursAgo);
+      
+      mockNotifications.push({
+        id: i + 1,
+        title: message.title,
+        message: message.message,
+        type: message.type,
+        timestamp,
+        read: Math.random() > 0.5, // 50% de chance d'être lu
+        link: undefined
+      });
+    }
+
+    // Trier par date (plus récentes en premier)
+    return mockNotifications.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  };
+
+  // Charger les notifications (mock pour le moment)
   const loadNotifications = async () => {
     if (!session?.admin?.id) {
       console.log('Pas de session admin disponible pour charger les notifications');
@@ -30,34 +65,12 @@ export default function NotificationDrawer({ isOpen, onClose }: NotificationDraw
     }
     setLoading(true);
     try {
-      const response = await fetch(`/api/proxy/notifications?user_id=${session.admin.id}&limit=20`, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const data = await response.json();
+      // Simuler un délai de chargement
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (data.success && Array.isArray(data.data)) {
-        const notifList: Notification[] = data.data.map((notif: any) => ({
-          id: notif.id,
-          title: notif.titre,
-          message: notif.message,
-          type: notif.type,
-          timestamp: new Date(notif.date_creation),
-          read: notif.lu,
-          link: undefined
-        }));
-        setNotifications(notifList);
-      } else {
-        console.error('Format de données inattendu:', data);
-        setNotifications([]);
-      }
+      // Utiliser des données mock
+      const mockNotifications = generateMockNotifications();
+      setNotifications(mockNotifications);
     } catch (error) {
       console.error('Erreur lors du chargement des notifications:', error);
       toast.error(`Erreur lors du chargement des notifications: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);

@@ -3,7 +3,6 @@
  */
 
 import { API_CONFIG, getApiUrl, getDefaultHeaders } from '@/config/api';
-import type { ApiError } from '@/types/api';
 
 export interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -37,7 +36,7 @@ export class ApiClient {
 
     const url = getApiUrl(route);
     const headers = {
-      ...getDefaultHeaders(accessToken),
+      ...getDefaultHeaders(accessToken, route),
       ...customHeaders,
     };
 
@@ -57,11 +56,28 @@ export class ApiClient {
         method,
         url,
         hasBody: !!body,
+        bodyContent: body ? JSON.stringify(body, null, 2) : null,
         hasToken: !!accessToken,
+        baseURL: this.baseURL,
+        headers: {
+          'Content-Type': (headers as Record<string, string>)['Content-Type'],
+          'Accept': (headers as Record<string, string>)['Accept'],
+          'Authorization': (headers as Record<string, string>)['Authorization'] ? 'Bearer ***' : undefined,
+        },
+        fullHeaders: headers,
       });
     }
 
     try {
+      // Vérifier que l'URL est valide avant de faire la requête
+      if (!url || !url.startsWith('http')) {
+        throw new ApiError(
+          `URL invalide: ${url}`,
+          0,
+          { url, baseURL: this.baseURL }
+        );
+      }
+
       const response = await fetch(url, config);
 
       // Vérifier le Content-Type de la réponse
@@ -75,6 +91,16 @@ export class ApiClient {
         if (isJson) {
           try {
             errorData = await response.json();
+            // Log pour le débogage
+            if (process.env.NODE_ENV === 'development') {
+              console.error('❌ Erreur API (JSON):', {
+                status: response.status,
+                statusText: response.statusText,
+                errorData,
+                url,
+                fullError: JSON.stringify(errorData, null, 2),
+              });
+            }
           } catch {
             errorData = {
               statusCode: response.status,

@@ -14,8 +14,10 @@ export const LoginRequestSchema = z.object({
 export const LoginResponseSchema = z.object({
   success: z.boolean(),
   message: z.string(),
-  accessToken: z.string(),
-  refreshToken: z.string(),
+  accessToken: z.string().optional(), // Support camelCase
+  refreshToken: z.string().optional(), // Support camelCase
+  access_token: z.string().optional(), // Support snake_case (API retourne ça)
+  refresh_token: z.string().optional(), // Support snake_case (API retourne ça)
   user: z.object({
     id: z.string(),
     email: z.string(),
@@ -165,4 +167,420 @@ export const ApiSuccessSchema = z.object({
 
 export type ApiError = z.infer<typeof ApiErrorSchema>;
 export type ApiSuccess = z.infer<typeof ApiSuccessSchema>;
+
+// ==================== Routes Partenaire ====================
+
+// Authentification Partenaire
+export const PartnerLoginRequestSchema = z.object({
+  email: z.string().email('Email invalide'),
+  password: z.string().min(1, 'Le mot de passe est requis'),
+});
+
+export const PartnerLoginResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  access_token: z.string(),
+  refresh_token: z.string(),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    display_name: z.string().optional(),
+    role: z.string(), // L'API retourne "role" (singulier) et non "roles"
+    partenaireId: z.string(),
+    active: z.boolean(),
+    require_password_change: z.boolean(),
+  }),
+  partner_info: z.object({
+    id: z.string(),
+    companyName: z.string(),
+    legalStatus: z.string(),
+    activityDomain: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    headquartersAddress: z.string(),
+    employeesCountMin: z.number().nullable(),
+    employeesCountMax: z.number().nullable(),
+    status: z.string(),
+    logoUrl: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+});
+
+export const PartnerGetMeResponseSchema = z.object({
+  success: z.boolean(),
+  user: z.object({
+    id: z.string(),
+    email: z.string(),
+    firstName: z.string(),
+    lastName: z.string(),
+    display_name: z.string().optional(),
+    role: z.string().optional(), // L'API peut retourner "role" (singulier)
+    roles: z.array(z.string()).optional(), // Ou "roles" (pluriel)
+    partenaireId: z.string(),
+    active: z.boolean(),
+    require_password_change: z.boolean(),
+  }),
+  partner_info: z.object({
+    id: z.string(),
+    companyName: z.string(),
+    legalStatus: z.string(),
+    activityDomain: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    headquartersAddress: z.string(),
+    employeesCountMin: z.number().nullable(),
+    employeesCountMax: z.number().nullable(),
+    status: z.string(),
+    logoUrl: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+});
+
+export const ApiKeyResponseSchema = z.object({
+  success: z.boolean(),
+  api_key: z.string(),
+});
+
+export type PartnerLoginRequest = z.infer<typeof PartnerLoginRequestSchema>;
+export type PartnerLoginResponse = z.infer<typeof PartnerLoginResponseSchema>;
+export type PartnerGetMeResponse = z.infer<typeof PartnerGetMeResponseSchema>;
+export type ApiKeyResponse = z.infer<typeof ApiKeyResponseSchema>;
+
+// Dashboard Partenaire - Réponse complète de /partner-dashboard/data
+export const PartnerDashboardDataResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: z.object({
+    statistics: z.object({
+      total_employees: z.number(),
+      active_employees: z.number(),
+      total_demandes: z.number(),
+      demandes_per_employee: z.string(),
+      average_rating: z.string(),
+      pending_demandes: z.number().optional(),
+      total_alerts: z.number().optional(),
+      active_alerts: z.number().optional(),
+      total_avis: z.number().optional(),
+      total_salary: z.number().optional(),
+      flux_finance: z.number().optional(),
+      a_rembourser_mois: z.number().optional(),
+    }),
+    financial_performance: z.object({
+      debloque_mois: z.number(),
+      a_rembourser_mois: z.number(),
+      taux_remboursement: z.string(),
+      date_limite_remboursement: z.string(),
+      jours_restants: z.union([z.string(), z.number()]),
+      employes_approuves_periode: z.number().optional(),
+      dernier_paiement: z.string().optional(),
+      prochain_paiement: z.string().optional(),
+      payment_day: z.number().optional(),
+      total_paiements_salaires: z.number().optional(),
+      paiements_effectues: z.number().optional(),
+      montant_total_salaires_payes: z.number().optional(),
+      delai_remboursement_salaires: z.string().optional(),
+      jours_restants_remboursement_salaires: z.number().optional(),
+      dernier_paiement_salaire: z.string().nullable().optional(),
+    }),
+    charts: z.object({
+      demandes_evolution: z.array(z.object({
+        mois: z.string(),
+        demandes: z.number(),
+      })),
+      montants_evolution: z.array(z.object({
+        mois: z.string(),
+        montant: z.number(),
+      })),
+      repartition_motifs: z.array(z.object({
+        motif: z.string(),
+        valeur: z.number(),
+        color: z.string().optional(),
+      })),
+    }),
+    partner_info: z.object({
+      id: z.string(),
+      company_name: z.string(),
+      legal_status: z.string().optional(),
+      rccm: z.string().optional(),
+      nif: z.string().optional(),
+      activity_domain: z.string(),
+      headquarters_address: z.string().optional(),
+      phone: z.string().optional(),
+      email: z.string(),
+      employees_count: z.number().optional(),
+      payroll: z.string().optional(),
+      cdi_count: z.number().optional(),
+      cdd_count: z.number().optional(),
+      payment_date: z.string().nullable().optional(),
+      rep_full_name: z.string().nullable().optional(),
+      rep_position: z.string().nullable().optional(),
+      rep_email: z.string().nullable().optional(),
+      rep_phone: z.string().nullable().optional(),
+      hr_full_name: z.string().nullable().optional(),
+      hr_email: z.string().nullable().optional(),
+      hr_phone: z.string().nullable().optional(),
+      agreement: z.boolean().optional(),
+      status: z.string(),
+      created_at: z.string(),
+      updated_at: z.string(),
+      motivation_letter_url: z.string().nullable().optional(),
+      motivation_letter_text: z.string().nullable().optional(),
+      payment_day: z.number().optional(),
+      logo_url: z.string().nullable().optional(),
+      api_key: z.string().optional(),
+      inscription_enabled: z.boolean().optional(),
+    }),
+    payment_salary_stats: z.object({
+      total_paiements: z.number(),
+      paiements_effectues: z.number(),
+      paiements_en_attente: z.number(),
+      montant_total_salaires: z.number(),
+      montant_total_avances_deduites: z.number(),
+      montant_total_salaires_recus: z.number(),
+      montant_total_frais: z.number(),
+      montant_total_remboursements: z.number(),
+      semaines_retard: z.number(),
+      penalite_retard_pourcentage: z.number(),
+      montant_penalite_retard: z.number(),
+      montant_total_avec_penalite: z.number(),
+      paiements_par_mois: z.record(z.any()).optional(),
+      dernier_paiement: z.string().nullable().optional(),
+      dernier_paiement_paye: z.string().nullable().optional(),
+      delai_remboursement: z.string(),
+      jours_restants_remboursement: z.number(),
+      employes_payes_distincts: z.number(),
+    }).optional(),
+    filters: z.object({
+      month: z.number().optional(),
+      year: z.number().optional(),
+      payment_day: z.number().optional(),
+      applied: z.boolean().optional(),
+      period_start: z.string().optional(),
+      period_end: z.string().optional(),
+      period_description: z.string().optional(),
+    }),
+    remboursements: z.array(z.any()),
+    alerts: z.array(z.any()),
+    avis: z.array(z.any()),
+    demandes: z.array(z.any()),
+  }),
+});
+
+export type PartnerDashboardDataResponse = z.infer<typeof PartnerDashboardDataResponseSchema>;
+export type PartnerDashboardData = PartnerDashboardDataResponse['data'];
+
+// Employés Partenaire
+export const PartnerEmployeeSchema = z.object({
+  id: z.string(),
+  nom: z.string(),
+  prenom: z.string(),
+  email: z.string().optional(),
+  telephone: z.string().optional(),
+  poste: z.string().optional(),
+  typeContrat: z.string().optional(),
+  salaireNet: z.number().optional(),
+  dateEmbauche: z.string().optional(),
+  actif: z.boolean().optional(),
+  photoUrl: z.string().nullable().optional(),
+  matricule: z.string().optional(),
+});
+
+export const PartnerEmployeesResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.array(PartnerEmployeeSchema).optional(),
+  employees: z.array(PartnerEmployeeSchema).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+export const PartnerEmployeeStatsSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.object({
+    total: z.number().optional(),
+    actifs: z.number().optional(),
+    inactifs: z.number().optional(),
+    par_type_contrat: z.record(z.number()).optional(),
+    salaire_moyen: z.number().optional(),
+  }).optional(),
+});
+
+export type PartnerEmployee = z.infer<typeof PartnerEmployeeSchema>;
+export type PartnerEmployeesResponse = z.infer<typeof PartnerEmployeesResponseSchema>;
+export type PartnerEmployeeStats = z.infer<typeof PartnerEmployeeStatsSchema>;
+
+// Avis Employés
+export const PartnerEmployeeAvisSchema = z.object({
+  id: z.string(),
+  note: z.number(),
+  commentaire: z.string().optional(),
+  date_avis: z.string(),
+  approuve: z.boolean(),
+  created_at: z.string(),
+  updated_at: z.string(),
+  employee_id: z.string(),
+  partner_id: z.string(),
+  type_retour: z.string().optional(),
+  employee: PartnerEmployeeSchema.optional(),
+});
+
+export const PartnerEmployeeAvisResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.array(PartnerEmployeeAvisSchema).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+export type PartnerEmployeeAvis = z.infer<typeof PartnerEmployeeAvisSchema>;
+export type PartnerEmployeeAvisResponse = z.infer<typeof PartnerEmployeeAvisResponseSchema>;
+
+// Demandes d'adhésion
+export const PartnerDemandeAdhesionSchema = z.object({
+  id: z.string(),
+  nom: z.string(),
+  prenom: z.string(),
+  email: z.string().nullable(),
+  telephone: z.string().nullable(),
+  adresse: z.string().nullable(),
+  matricule: z.string().nullable(),
+  genre: z.string().nullable(),
+  poste: z.string(),
+  type_contrat: z.string(),
+  salaire_net: z.number().nullable(),
+  actif: z.boolean(),
+  date_embauche: z.string(),
+  date_expiration: z.string().optional(),
+  created_at: z.string(),
+  status: z.string().optional(),
+});
+
+export const PartnerDemandeAdhesionResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.array(PartnerDemandeAdhesionSchema).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+export const PartnerDemandeAdhesionStatsSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.object({
+    total: z.number().optional(),
+    pending: z.number().optional(),
+    approved: z.number().optional(),
+    rejected: z.number().optional(),
+  }).optional(),
+});
+
+export type PartnerDemandeAdhesion = z.infer<typeof PartnerDemandeAdhesionSchema>;
+export type PartnerDemandeAdhesionResponse = z.infer<typeof PartnerDemandeAdhesionResponseSchema>;
+export type PartnerDemandeAdhesionStats = z.infer<typeof PartnerDemandeAdhesionStatsSchema>;
+
+// Finances Partenaire
+export const PartnerFinancesDemandesResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.array(z.any()).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+export const PartnerFinancesRemboursementsResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: z.array(z.any()).optional(),
+  total: z.number().optional(),
+  page: z.number().optional(),
+  limit: z.number().optional(),
+});
+
+export const PartnerFinancesStatsSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    demandes: z.object({
+      total: z.number(),
+      montantTotal: z.number(),
+    }).optional(),
+    remboursements: z.object({
+      total: z.number(),
+      montantTotal: z.number(),
+    }).optional(),
+    total_demandes: z.number().optional(),
+    total_remboursements: z.number().optional(),
+    solde: z.number().optional(),
+  }),
+});
+
+export const PartnerFinancesEvolutionMensuelleSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    repartition_par_mois: z.array(z.object({
+      mois: z.number(),
+      annee: z.number(),
+      total_demandes: z.number(),
+      total_remboursements: z.number(),
+      solde: z.number(),
+    })),
+  }),
+});
+
+export const PartnerFinancesEmployeeStatsSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    total_paiements: z.number(),
+    paiements_effectues: z.number(),
+    paiements_en_attente: z.number(),
+    montant_total_salaires: z.number(),
+    montant_total_avances_deduites: z.number(),
+    montant_total_salaires_recus: z.number(),
+    montant_total_frais: z.number(),
+    montant_total_remboursements: z.number(),
+    semaines_retard: z.number(),
+    penalite_retard_pourcentage: z.number(),
+    montant_penalite_retard: z.number(),
+    montant_total_avec_penalite: z.number(),
+    paiements_par_mois: z.record(z.any()).optional(),
+    dernier_paiement: z.string().optional(),
+    dernier_paiement_paye: z.string().optional(),
+    delai_remboursement: z.string().optional(),
+    jours_restants_remboursement: z.number().nullable(),
+    employes_payes_distincts: z.number(),
+  }),
+});
+
+export type PartnerFinancesDemandesResponse = z.infer<typeof PartnerFinancesDemandesResponseSchema>;
+export type PartnerFinancesRemboursementsResponse = z.infer<typeof PartnerFinancesRemboursementsResponseSchema>;
+export type PartnerFinancesStats = z.infer<typeof PartnerFinancesStatsSchema>;
+export type PartnerFinancesEvolutionMensuelle = z.infer<typeof PartnerFinancesEvolutionMensuelleSchema>;
+export type PartnerFinancesEmployeeStats = z.infer<typeof PartnerFinancesEmployeeStatsSchema>;
+
+// Informations Partenaire
+export const PartnerInfoResponseSchema = z.object({
+  success: z.boolean(),
+  data: z.object({
+    id: z.string(),
+    companyName: z.string(),
+    legalStatus: z.string(),
+    activityDomain: z.string(),
+    email: z.string(),
+    phone: z.string(),
+    headquartersAddress: z.string(),
+    employeesCount: z.number().optional(),
+    employeesCountMin: z.number().nullable().optional(),
+    employeesCountMax: z.number().nullable().optional(),
+    activeEmployeesCount: z.number().optional(),
+    totalSalary: z.number().optional(),
+    avgSalary: z.number().optional(),
+    status: z.string(),
+    logoUrl: z.string().nullable().optional(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+});
+
+export type PartnerInfoResponse = z.infer<typeof PartnerInfoResponseSchema>;
 

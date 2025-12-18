@@ -25,7 +25,7 @@ import {
   Eye,
   Receipt,
 } from "lucide-react";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
 // TODO: Migrer vers le nouveau backend
@@ -72,7 +72,7 @@ const getStatusBadge = (statut: string) => {
 };
 
 export default function DemandesPage() {
-  const { session } = useEdgeAuth();
+  const { session } = useEdgeAuthContext();
   const router = useRouter();
   const [demandesAvance, setDemandesAvance] = useState<
     SalaryAdvanceRequestWithEmployee[]
@@ -214,12 +214,18 @@ export default function DemandesPage() {
       // Utiliser l'endpoint des demandes avec filtres
       // TODO: Migrer vers le nouveau backend
       // const demandesData = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list, {
-      const demandesData: any = null; // Temporaire
-        cleanFilters
-      );
+      //   cleanFilters
+      // });
+      
+      // Générer des données mock temporaires
+      const demandesData: any = {
+        success: true,
+        message: "Données mock - en attente de migration backend",
+        data: [], // Tableau vide pour le moment
+      };
 
-      if (!demandesData.success) {
-        console.error("Erreur Edge Function:", demandesData.message);
+      if (!demandesData || !demandesData.success) {
+        console.error("Erreur Edge Function:", demandesData?.message);
         toast.error("Erreur lors du chargement des données");
         return;
       }
@@ -342,11 +348,12 @@ export default function DemandesPage() {
     try {
       // TODO: Migrer vers le nouveau backend
       // const periodsData = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list + '/activity-periods');
-      const periodsData: any = { success: false, data: [] }; // Temporaire
+      // Utiliser directement le fallback pour le moment
+      const periodsData: any = { success: false, data: null }; // Temporaire - utiliser le fallback
 
       console.log("🔍 Périodes d'activité reçues:", periodsData);
 
-      if (periodsData.success && periodsData.data) {
+      if (periodsData?.success && periodsData?.data) {
         // Transformer les données pour correspondre au format attendu
         const transformedData = {
           mois: periodsData.data.months?.map((m: any) => m.numero) || [],

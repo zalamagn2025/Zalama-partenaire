@@ -22,29 +22,30 @@ import {
   Hash,
   UserCheck,
 } from "lucide-react";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
-// TODO: Migrer vers le nouveau backend
-// import type { Employee } from "@/types/api";
+import { usePartnerEmployees, usePartnerEmployeeStats } from "@/hooks/usePartnerEmployee";
+import type { PartnerEmployee } from "@/types/api";
+
+// Type pour les employés (compatibilité avec l'interface existante)
+type Employee = PartnerEmployee & {
+  type_contrat?: string;
+  salaire_net?: number;
+  date_embauche?: string;
+  photo_url?: string | null;
+};
 
 export default function EmployesPage() {
-  const { session, loading } = useEdgeAuth();
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
-
-  // États pour les données
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
 
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedContractType, setSelectedContractType] = useState<
-    string | null
-  >(null);
+  const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
@@ -52,161 +53,37 @@ export default function EmployesPage() {
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
   const employeesPerPage = 10;
-  const [totalPages, setTotalPages] = useState(0);
-  const [totalEmployees, setTotalEmployees] = useState(0);
 
   // États pour les modales
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
-  );
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  // États pour les données Edge Functions (mois en cours)
-  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
-  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
-  const [statistics, setStatistics] = useState<any>(null);
-  const [statisticsLoading, setStatisticsLoading] = useState(false);
+  // Utiliser les hooks pour récupérer les données
+  const { data: employeesResponse, isLoading, refetch: refetchEmployees } = usePartnerEmployees({
+    search: searchTerm || undefined,
+    typeContrat: selectedContractType || undefined,
+    actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+    limit: employeesPerPage,
+    page: currentPage,
+  });
 
-  // Charger les employés au montage du composant
-  useEffect(() => {
-    if (!loading && session?.partner) {
-      loadEmployees();
-      loadStatistics();
-    }
-  }, [loading, session?.partner]);
+  const { data: statsResponse, isLoading: statisticsLoading } = usePartnerEmployeeStats();
 
-  const loadEmployees = async () => {
-    if (!session?.access_token) return;
+  // Extraire les données des réponses
+  const employees = (employeesResponse?.data || employeesResponse?.employees || []) as Employee[];
+  const filteredEmployees = employees; // Les filtres sont gérés côté serveur
+  const totalEmployees = employeesResponse?.total || 0;
+  const totalPages = Math.ceil(totalEmployees / employeesPerPage);
+  const statistics = statsResponse?.data || null;
 
-    setIsLoading(true);
-    try {
-      // Charger TOUS les employés d'un coup pour le filtrage côté client
-      const response = await fetch(`/api/proxy/employees?limit=1000`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const employeesData = await response.json();
-
-      if (!employeesData.success) {
-        console.error("Erreur Edge Function:", employeesData.message);
-        toast.error("Erreur lors du chargement des employés");
-        return;
-      }
-
-      const employeesList = employeesData.data?.employees || [];
-      const pagination = employeesData.data?.pagination || {};
-
-      setEmployees(employeesList);
-      setTotalEmployees(pagination.total || 0);
-
-      console.log("Employés chargés via proxy:", employeesList);
-      console.log("Pagination:", pagination);
-    } catch (error) {
-      console.error("Erreur lors du chargement des employés:", error);
-      toast.error("Erreur lors du chargement des employés");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Charger les statistiques des employés
-  const loadStatistics = async () => {
-    if (!session?.access_token) return;
-
-    setStatisticsLoading(true);
-    try {
-      const response = await fetch("/api/proxy/employees-statistics", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const statisticsData = await response.json();
-
-      if (!statisticsData.success) {
-        console.error(
-          "Erreur Edge Function (statistics):",
-          statisticsData.message
-        );
-        return;
-      }
-
-      setStatistics(statisticsData.data);
-      console.log("Statistiques chargées:", statisticsData.data);
-      console.log(
-        "Structure des statistiques:",
-        JSON.stringify(statisticsData.data, null, 2)
-      );
-    } catch (error) {
-      console.error("Erreur lors du chargement des statistiques:", error);
-    } finally {
-      setStatisticsLoading(false);
-    }
-  };
-
-  // Charger les données du mois en cours via Edge Functions
+  // Fonction pour recharger les données du mois en cours
   const loadCurrentMonthData = async () => {
-    if (!session?.access_token) return;
-
-    setEdgeFunctionLoading(true);
     try {
-      // Utiliser le proxy pour les données du dashboard
-      const response = await fetch("/api/proxy/employees", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const employeesData = await response.json();
-
-      if (!employeesData.success) {
-        console.error("Erreur Edge Function:", employeesData.message);
-        toast.error("Erreur lors du chargement des données du mois en cours");
-        return;
-      }
-
-      const employeesList = employeesData.data || [];
-      setCurrentMonthData({ employees: employeesList });
-
-      // Mettre à jour les données locales avec les données du mois en cours
-      setEmployees(employeesList);
-      setFilteredEmployees(employeesList);
-
-      console.log(
-        "Données des employés du mois en cours chargées:",
-        employeesData
-      );
-      toast.success(
-        "Données des employés du mois en cours mises à jour avec succès"
-      );
+      await refetchEmployees();
+      toast.success("Données des employés du mois en cours mises à jour avec succès");
     } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données Edge Functions:",
-        error
-      );
+      console.error("Erreur lors du chargement des données:", error);
       toast.error("Erreur lors du chargement des données du mois en cours");
-    } finally {
-      setEdgeFunctionLoading(false);
     }
   };
 
@@ -217,57 +94,19 @@ export default function EmployesPage() {
     }
   }, [loading, session, router]);
 
-  // Filtrage côté client uniquement - AUCUN rechargement de page
-  useEffect(() => {
-    let filtered = [...employees];
-
-    // Filtre par recherche (côté client)
-    if (searchTerm) {
-      filtered = filtered.filter((employee) => {
-        const fullName = `${employee.prenom} ${employee.nom}`.toLowerCase();
-        const email = employee.email?.toLowerCase() || '';
-        const poste = employee.poste?.toLowerCase() || '';
-        
-        return (
-          fullName.includes(searchTerm.toLowerCase()) ||
-          email.includes(searchTerm.toLowerCase()) ||
-          poste.includes(searchTerm.toLowerCase())
-        );
-      });
-    }
-
-    // Filtre par type de contrat
-    if (selectedContractType) {
-      filtered = filtered.filter((employee) => 
-        employee.type_contrat === selectedContractType
-      );
-    }
-
-    // Filtre par statut
-    if (selectedStatus === "actif") {
-      filtered = filtered.filter((employee) => employee.actif);
-    } else if (selectedStatus === "inactif") {
-      filtered = filtered.filter((employee) => !employee.actif);
-    }
-
-    setFilteredEmployees(filtered);
-    setCurrentPage(1);
-  }, [employees, searchTerm, selectedContractType, selectedStatus]);
+  // Les filtres sont gérés côté serveur via les hooks, mais on peut aussi faire un filtrage client supplémentaire si nécessaire
+  // Pour l'instant, on utilise directement les données du serveur
 
   // Les statistiques sont globales et ne changent pas avec les filtres
 
-  // Calculer les statistiques (utiliser les données de l'Edge Function pour les totaux globaux)
-  const activeEmployees = statistics?.statistics?.active_employees || 0;
-  const newThisMonth = statistics?.statistics?.new_this_month || 0;
-  const retentionRate = statistics?.statistics?.activation_rate || 0;
-  const totalEmployeesFromStats = statistics?.statistics?.total_employees || 0;
+  // Calculer les statistiques depuis la réponse API
+  const activeEmployees = statistics?.actifs || 0;
+  const newThisMonth = 0; // À implémenter si disponible dans l'API
+  const retentionRate = 0; // À implémenter si disponible dans l'API
+  const totalEmployeesFromStats = statistics?.total || totalEmployees;
 
-  // Pagination
-  // Pagination côté client
-  const totalPagesClient = Math.ceil(filteredEmployees.length / employeesPerPage);
-  const startIndex = (currentPage - 1) * employeesPerPage;
-  const endIndex = startIndex + employeesPerPage;
-  const currentEmployees = filteredEmployees.slice(startIndex, endIndex);
+  // Pagination côté serveur - les données sont déjà paginées
+  const currentEmployees = filteredEmployees;
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);

@@ -3,6 +3,7 @@
 import RemboursementsRecents from "@/components/dashboard/RemboursementsRecents";
 import AlertModalWrapper from "@/components/AlertModalWrapper";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { usePartnerDashboardAllData } from "@/hooks/usePartnerDashboard";
 import {
   ClipboardList,
   FileText,
@@ -57,14 +58,24 @@ export default function EntrepriseDashboardPage() {
   const toast = useCustomToast();
   const router = useRouter();
 
-  // États pour les données Edge Function
-  const [dashboardData, setDashboardData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // États pour les filtres
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  
+  // Utiliser le hook pour récupérer les données du dashboard
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth() + 1;
+  
+  const selectedYearForQuery = selectedYear || currentYear;
+  const selectedMonthForQuery = selectedMonth || currentMonth;
+  
+  const { data: dashboardData, isLoading, error: dashboardError, refetch: refetchDashboard } = usePartnerDashboardAllData(
+    selectedYearForQuery,
+    selectedMonthForQuery
+  );
+  
+  const error = dashboardError ? (dashboardError instanceof Error ? dashboardError.message : 'Erreur inconnue') : null;
   const [showFilters, setShowFilters] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<
     Array<{ value: number; label: string }>
@@ -79,115 +90,37 @@ export default function EntrepriseDashboardPage() {
     return false;
   });
 
-  // Fonction pour générer des données mock
-  const generateMockDashboardData = () => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth() + 1;
-    const currentYear = currentDate.getFullYear();
-
-    return {
-      statistics: {
-        total_employees: 25,
-        active_employees: 20,
-        total_demandes: 45,
-        demandes_per_employee: "1.8",
-        average_rating: "4.5",
-      },
-      financial_performance: {
-        debloque_mois: 15000000,
-        a_rembourser_mois: 12000000,
-        date_limite_remboursement: new Date(currentYear, currentMonth, 25).toISOString(),
-        jours_restants: 15,
-        taux_remboursement: "80%",
-      },
-      charts: {
-        demandes_evolution: [
-          { mois: "Jan", demandes: 12 },
-          { mois: "Fév", demandes: 15 },
-          { mois: "Mar", demandes: 18 },
-        ],
-        montants_evolution: [
-          { mois: "Jan", montant: 5000000 },
-          { mois: "Fév", montant: 7500000 },
-          { mois: "Mar", montant: 10000000 },
-        ],
-        repartition_motifs: [
-          { motif: "Frais médicaux", valeur: 15, color: "#4F8EF7" },
-          { motif: "Paiement loyer", valeur: 20, color: "#FF6B6B" },
-          { motif: "Frais scolarité", valeur: 10, color: "#51CF66" },
-        ],
-      },
-      partner_info: session?.partner ? {
-        company_name: session.partner.companyName,
-        activity_domain: session.partner.activityDomain || "Commerce",
-        logo_url: session.partner.logoUrl,
-        created_at: session.partner.createdAt,
-      } : null,
-      filters: {
-        period_description: "Mois en cours",
-        payment_day: 25,
-        applied: false,
-      },
-      remboursements: [],
-      payment_salary_stats: null,
-    };
-  };
-
-  // Charger les données du dashboard (mock pour l'instant)
+  // Fonction pour recharger les données avec les filtres
   const loadDashboardData = async (month?: number, year?: number) => {
-    if (!session?.access_token) return;
-
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // Pour l'instant, utiliser des données mock
-      console.log("🔄 Chargement des données dashboard (mock)...");
-      
-      // Simuler un délai de chargement
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const data = generateMockDashboardData();
-      setDashboardData(data);
-
-      // Générer les options de filtres basées sur les données disponibles
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-
-      // Générer les mois disponibles (6 derniers mois + mois actuel)
-      const monthsWithData = [];
-      for (let i = 5; i >= 0; i--) {
-        const date = new Date(currentYear, currentMonth - i - 1, 1);
-        const monthValue = date.getMonth() + 1;
-        const monthLabel = date.toLocaleDateString("fr-FR", { month: "long" });
-        monthsWithData.push({ value: monthValue, label: monthLabel });
-      }
-
-      setAvailableMonths(monthsWithData);
-
-      // Générer les années disponibles (année actuelle et 2 précédentes)
-      const years = [currentYear, currentYear - 1, currentYear - 2];
-      setAvailableYears(years);
-
-      console.log("✅ Données dashboard chargées (mock):", data);
-    } catch (error) {
-      console.error("❌ Erreur lors du chargement des données:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "Erreur inconnue";
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    // Mettre à jour les filtres pour déclencher le rechargement via le hook
+    if (month !== undefined) setSelectedMonth(month);
+    if (year !== undefined) setSelectedYear(year);
+    
+    // Le hook se rechargera automatiquement grâce à la queryKey qui inclut year et month
+    await refetchDashboard();
   };
 
-  // Charger les données au montage du composant
+  // Générer les options de filtres basées sur les données disponibles
   useEffect(() => {
-    if (!loading && session?.access_token) {
-      loadDashboardData();
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+
+    // Générer les mois disponibles (6 derniers mois + mois actuel)
+    const monthsWithData = [];
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(currentYear, currentMonth - i - 1, 1);
+      const monthValue = date.getMonth() + 1;
+      const monthLabel = date.toLocaleDateString("fr-FR", { month: "long" });
+      monthsWithData.push({ value: monthValue, label: monthLabel });
     }
-  }, [loading, session?.access_token]);
+
+    setAvailableMonths(monthsWithData);
+
+    // Générer les années disponibles (année actuelle et 2 précédentes)
+    const years = [currentYear, currentYear - 1, currentYear - 2];
+    setAvailableYears(years);
+  }, []);
 
   // Fonction pour appliquer les filtres
   const applyFilters = () => {
@@ -231,13 +164,13 @@ export default function EntrepriseDashboardPage() {
     }
   }, [error]);
 
-  // Utiliser les données Edge Function directement
+  // Utiliser les données de l'API directement
   const statistics = dashboardData?.statistics;
   const financialPerformance = dashboardData?.financial_performance;
   const charts = dashboardData?.charts;
   const partnerInfo = dashboardData?.partner_info;
   const filters = dashboardData?.filters;
-  const paymentSalaryStats = dashboardData?.payment_salary_stats; // ✅ NOUVEAU
+  const paymentSalaryStats = dashboardData?.payment_salary_stats;
   
   // Le montant_total_remboursements est maintenant correctement calculé dans l'Edge Function
   // Formule: Salaire Net + 6% de frais
@@ -246,7 +179,7 @@ export default function EntrepriseDashboardPage() {
   useEffect(() => {
     if (session?.partner && !isLoading && dashboardData && !welcomeToastShown) {
       console.log("Données du partenaire:", session.partner);
-      toast.welcome(session.partner.company_name);
+      toast.welcome(session.partner.companyName);
       setWelcomeToastShown(true);
       // Sauvegarder dans localStorage pour persister entre les rechargements
       localStorage.setItem('welcome_toast_shown', 'true');
@@ -399,11 +332,11 @@ export default function EntrepriseDashboardPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold dark:text-white">
-              {partnerInfo?.company_name || session?.partner?.company_name}
+              {partnerInfo?.company_name || session?.partner?.companyName}
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
               {partnerInfo?.activity_domain ||
-                session?.partner?.activity_domain}{" "}
+                session?.partner?.activityDomain}{" "}
               • {statistics?.active_employees || 0} employés actifs
             </p>
           </div>
@@ -729,7 +662,9 @@ export default function EntrepriseDashboardPage() {
               Jours restants avant remboursement
             </span>
             <span className="text-lg font-bold dark:text-white">
-              {financialPerformance?.jours_restants || "0"} jours
+              {typeof financialPerformance?.jours_restants === 'string' 
+                ? financialPerformance.jours_restants 
+                : financialPerformance?.jours_restants || 0} jours
             </span>
             <div className="w-full bg-gray-700 rounded-full h-2 mt-2 overflow-hidden">
               <div

@@ -24,7 +24,10 @@ import {
   ChevronDown,
   Clock,
 } from "lucide-react";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { usePartnerEmployeeAvis } from "@/hooks/usePartnerEmployee";
+import { usePartnerEmployees } from "@/hooks/usePartnerEmployee";
+import type { PartnerEmployeeAvis } from "@/types/api";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -38,29 +41,8 @@ const avisCategories = [
   { id: "general", label: "Général" },
 ];
 
-// Types pour les données
-type Avis = {
-  id: string;
-  note: number;
-  commentaire?: string;
-  date_avis: string;
-  approuve: boolean;
-  created_at: string;
-  updated_at: string;
-  employee_id: string;
-  partner_id: string;
-  type_retour?: string;
-  employee?: {
-    id: string;
-    nom: string;
-    prenom: string;
-    poste?: string;
-    email?: string;
-    telephone?: string;
-    photo_url?: string;
-  };
-};
-
+// Utiliser les types depuis types/api.ts
+type Avis = PartnerEmployeeAvis;
 type Employee = {
   id: string;
   nom: string;
@@ -76,11 +58,8 @@ interface AvisWithEmployee extends Avis {
 }
 
 export default function AvisPage() {
-  const { session, loading } = useEdgeAuth();
+  const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
-  const [avis, setAvis] = useState<AvisWithEmployee[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
@@ -91,76 +70,24 @@ export default function AvisPage() {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const filterMenuRef = useRef<HTMLDivElement>(null);
 
-  // Charger les données
-  useEffect(() => {
-    if (session?.access_token) {
-      loadAllData();
-    }
-  }, [session?.access_token]);
+  // Utiliser les hooks pour récupérer les données
+  const { data: avisResponse, isLoading: loadingAvis } = usePartnerEmployeeAvis({
+    userId: selectedEmployee !== 'all' ? selectedEmployee : undefined,
+    typeRetour: selectedCategory !== 'all' ? selectedCategory : undefined,
+    limit: itemsPerPage,
+    page: currentPage,
+  });
 
-  const loadAllData = async () => {
-    setLoadingData(true);
-    try {
-      await Promise.all([loadAvis(), loadEmployees()]);
-    } catch (error) {
-      console.error("Erreur lors du chargement des données:", error);
-    } finally {
-      setLoadingData(false);
-    }
-  };
+  const { data: employeesResponse } = usePartnerEmployees({
+    limit: 1000, // Récupérer tous les employés pour le filtre
+  });
 
-  const loadAvis = async () => {
-    try {
-      console.log('🔄 Chargement des avis...');
-      const response = await fetch("/api/proxy/avis", {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des avis");
-      }
-
-      const data = await response.json();
-      console.log('📊 Données reçues:', data);
-      if (data.success) {
-        // L'API retourne les avis dans data.data.avis
-        const avisData = data.data?.avis || data.data || [];
-        setAvis(Array.isArray(avisData) ? avisData : []);
-        console.log('✅ Avis chargés:', avisData.length, 'avis');
-      } else {
-        throw new Error(data.message || "Erreur lors du chargement des avis");
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des avis:", error);
-      toast.error("Erreur lors du chargement des avis");
-      setAvis([]); // S'assurer que avis reste un tableau vide en cas d'erreur
-    }
-  };
-
-  const loadEmployees = async () => {
-    try {
-      const response = await fetch("/api/proxy/employees", {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des employés");
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        setEmployees(data.data || []);
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des employés:", error);
-    }
-  };
+  // Extraire les données
+  const avis = (avisResponse?.data || []) as AvisWithEmployee[];
+  const employees = (employeesResponse?.data || employeesResponse?.employees || []) as Employee[];
+  const loadingData = loadingAvis;
+  const totalAvisCount = avisResponse?.total || 0;
+  const totalPages = Math.ceil(totalAvisCount / itemsPerPage);
 
   // Filtrer les avis
   const filteredAvis = (avis || []).filter((avis) => {
@@ -175,16 +102,14 @@ export default function AvisPage() {
     return matchesSearch && matchesCategory && matchesEmployee;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredAvis.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentAvis = filteredAvis.slice(startIndex, startIndex + itemsPerPage);
+  // Pagination côté serveur - les données sont déjà paginées
+  const currentAvis = filteredAvis;
 
   // Statistiques
-  const totalAvis = (avis || []).length;
-  const averageNote = (avis || []).length > 0 ? (avis || []).reduce((sum, avis) => sum + avis.note, 0) / (avis || []).length : 0;
-  const approvedAvis = (avis || []).filter(avis => avis.approuve).length;
-  const pendingAvis = (avis || []).filter(avis => !avis.approuve).length;
+  const totalAvis = totalAvisCount || avis.length;
+  const averageNote = avis.length > 0 ? avis.reduce((sum, a) => sum + a.note, 0) / avis.length : 0;
+  const approvedAvis = avis.filter(a => a.approuve).length;
+  const pendingAvis = avis.filter(a => !a.approuve).length;
 
   // Fonction pour obtenir la couleur du badge selon la note
   const getNoteBadgeVariant = (note: number) => {
@@ -438,7 +363,10 @@ export default function AvisPage() {
           </div>
 
           <button
-              onClick={loadAllData}
+                onClick={() => {
+                  // Les données sont rechargées automatiquement via les hooks
+                  console.log("🔄 Rechargement des données...");
+                }}
               disabled={loadingData}
               className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >

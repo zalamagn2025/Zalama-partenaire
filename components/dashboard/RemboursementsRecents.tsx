@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { Clock, User, CreditCard, Calendar, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -13,8 +13,11 @@ interface Remboursement {
   categorie: string;
   employe: {
     id: string;
-    nom: string;
-    prenom: string;
+    nom?: string;
+    prenom?: string;
+    firstName?: string;
+    lastName?: string;
+    photoUrl?: string;
     photo_url?: string;
   };
   montant_total_remboursement: number;
@@ -34,6 +37,37 @@ interface Remboursement {
   }>;
 }
 
+// Helper pour obtenir le prénom (gère les deux formats)
+const getPrenom = (employe: Remboursement['employe']): string => {
+  return employe?.prenom || employe?.firstName || '';
+};
+
+// Helper pour obtenir le nom (gère les deux formats)
+const getNom = (employe: Remboursement['employe']): string => {
+  return employe?.nom || employe?.lastName || '';
+};
+
+// Helper pour obtenir le nom complet
+const getNomComplet = (employe: Remboursement['employe']): string => {
+  const prenom = getPrenom(employe);
+  const nom = getNom(employe);
+  return `${prenom} ${nom}`.trim() || 'Employé inconnu';
+};
+
+// Helper pour obtenir les initiales
+const getInitiales = (employe: Remboursement['employe']): string => {
+  const prenom = getPrenom(employe);
+  const nom = getNom(employe);
+  const initialePrenom = prenom ? prenom.charAt(0).toUpperCase() : '';
+  const initialeNom = nom ? nom.charAt(0).toUpperCase() : '';
+  return `${initialePrenom}${initialeNom}` || '?';
+};
+
+// Helper pour obtenir l'URL de la photo
+const getPhotoUrl = (employe: Remboursement['employe']): string | undefined => {
+  return employe?.photoUrl || employe?.photo_url;
+};
+
 interface RemboursementsRecentsProps {
   compact?: boolean;
   remboursements?: Remboursement[];
@@ -46,7 +80,7 @@ export default function RemboursementsRecents({
   isLoading: propIsLoading 
 }: RemboursementsRecentsProps) {
   const router = useRouter();
-  const { session } = useEdgeAuth();
+  const { session } = useEdgeAuthContext();
   const [localRemboursements, setLocalRemboursements] = useState<Remboursement[]>([]);
   const [localIsLoading, setLocalIsLoading] = useState(false);
 
@@ -194,11 +228,11 @@ export default function RemboursementsRecents({
             >
               <div className="flex items-center gap-3">
                 <div className="flex-shrink-0">
-                  {remboursement.employe.photo_url ? (
+                  {getPhotoUrl(remboursement.employe) ? (
                     <div className="h-10 w-10 rounded-full overflow-hidden bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                       <img
-                        src={remboursement.employe.photo_url}
-                        alt={`${remboursement.employe.prenom} ${remboursement.employe.nom}`}
+                        src={getPhotoUrl(remboursement.employe)}
+                        alt={getNomComplet(remboursement.employe)}
                         className="h-full w-full object-cover"
                         onError={(e) => {
                           // En cas d'erreur de chargement, afficher les initiales
@@ -208,7 +242,7 @@ export default function RemboursementsRecents({
                           if (parent) {
                             parent.innerHTML = `
                               <span class="text-xs font-medium text-gray-700 dark:text-gray-300">
-                                ${remboursement.employe.prenom.charAt(0)}${remboursement.employe.nom.charAt(0)}
+                                ${getInitiales(remboursement.employe)}
                               </span>
                             `;
                           }
@@ -218,15 +252,14 @@ export default function RemboursementsRecents({
                   ) : (
                     <div className="h-10 w-10 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
                       <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
-                        {remboursement.employe.prenom.charAt(0)}
-                        {remboursement.employe.nom.charAt(0)}
+                        {getInitiales(remboursement.employe)}
                       </span>
                     </div>
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {remboursement.employe.prenom} {remboursement.employe.nom}
+                    {getNomComplet(remboursement.employe)}
                   </p>
                   <div className="flex items-center gap-2 mt-1">
                     {getStatusIcon(remboursement.statut_global)}

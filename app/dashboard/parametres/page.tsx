@@ -2,6 +2,7 @@
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { usePartnerApiKey, useRegeneratePartnerApiKey } from "@/hooks/usePartnerAuth";
 import {
   Building,
   Calendar,
@@ -57,12 +58,17 @@ export default function ParametresPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [isRegeneratingApiKey, setIsRegeneratingApiKey] = useState(false);
-  const [apiKeyData, setApiKeyData] = useState({
-    api_key: "",
-    company_name: "",
+  
+  // Utiliser les hooks pour récupérer et régénérer la clé API
+  const { data: apiKeyResponse, isLoading: isLoadingApiKey, refetch: refetchApiKey } = usePartnerApiKey();
+  const regenerateApiKeyMutation = useRegeneratePartnerApiKey();
+  
+  const apiKeyData = {
+    api_key: apiKeyResponse?.api_key || "",
+    company_name: session?.partner?.companyName || "",
     inscription_enabled: true,
-  });
+  };
+  const isRegeneratingApiKey = regenerateApiKeyMutation.isPending;
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -111,25 +117,7 @@ export default function ParametresPage() {
     }
   }, [session]);
 
-  // Charger la clé API
-  useEffect(() => {
-    const loadApiKey = async () => {
-      if (session?.access_token) {
-        try {
-          const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getApiKey(
-            session.access_token
-          );
-          if (response.success && response.data) {
-            setApiKeyData(response.data);
-          }
-        } catch (error) {
-          console.error("Erreur lors du chargement de la clé API:", error);
-        }
-      }
-    };
-    loadApiKey();
-  }, [session?.access_token]);
+  // La clé API est chargée automatiquement via le hook usePartnerApiKey
 
   const handleSaveProfile = async () => {
     setIsEditingProfile(false);
@@ -180,19 +168,12 @@ export default function ParametresPage() {
       return;
     }
 
-    setIsRegeneratingApiKey(true);
     try {
-      const response = await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.regenerateApiKey(
-        session.access_token
-      );
-
-      if (response.success && response.data?.new_api_key) {
-        setApiKeyData((prev) => ({
-          ...prev,
-          api_key: response.data.new_api_key,
-        }));
+      const response = await regenerateApiKeyMutation.mutateAsync();
+      
+      if (response.success && response.apiKey) {
         toast.success("Clé API régénérée avec succès");
+        await refetchApiKey(); // Recharger la clé API
       } else {
         throw new Error(response.message || "Erreur lors de la régénération");
       }
@@ -201,8 +182,6 @@ export default function ParametresPage() {
       toast.error(
         error.message || "Erreur lors de la régénération de la clé API"
       );
-    } finally {
-      setIsRegeneratingApiKey(false);
     }
   };
 

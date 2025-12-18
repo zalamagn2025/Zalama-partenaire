@@ -109,24 +109,43 @@ export default function LoginPage() {
 
       if (error) {
         console.error("Erreur de connexion:", error);
+        console.error("Détails de l'erreur:", {
+          message: error.message,
+          statusCode: error.statusCode,
+          data: error.data,
+        });
+        
         // Afficher des messages d'erreur plus spécifiques
         let errorMessage = error.message || "Erreur de connexion";
+        
+        // Si l'erreur contient des données supplémentaires, les utiliser
+        if (error.data?.message) {
+          errorMessage = error.data.message;
+        } else if (error.data?.error) {
+          errorMessage = error.data.error;
+        }
 
         // Personnaliser les messages d'erreur
         if (
           errorMessage.toLowerCase().includes("email") ||
-          errorMessage.toLowerCase().includes("password")
+          errorMessage.toLowerCase().includes("password") ||
+          errorMessage.toLowerCase().includes("mot de passe") ||
+          errorMessage.toLowerCase().includes("incorrect") ||
+          errorMessage.toLowerCase().includes("invalid")
         ) {
           errorMessage =
-            "Email ou code PIN incorrect. Veuillez vérifier vos identifiants.";
+            "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
+        } else if (errorMessage.toLowerCase().includes("token jwt")) {
+          // Pour une requête de login, ce message est trompeur
+          errorMessage = "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
         } else if (errorMessage.toLowerCase().includes("session expirée")) {
           errorMessage = "Votre session a expiré. Veuillez vous reconnecter.";
-        } else if (errorMessage.toLowerCase().includes("non autorisé")) {
-          errorMessage = "Accès non autorisé. Vérifiez vos permissions.";
+        } else if (errorMessage.toLowerCase().includes("non autorisé") || errorMessage.toLowerCase().includes("unauthorized")) {
+          errorMessage = "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
         }
 
         toast.error(errorMessage);
-        setPinError("Code PIN incorrect");
+        setPinError("Identifiants incorrects");
       } else if (newSession) {
         // Afficher le nom de l'utilisateur (gestionnaire/RH/responsable)
         const userName = newSession.user?.email || 

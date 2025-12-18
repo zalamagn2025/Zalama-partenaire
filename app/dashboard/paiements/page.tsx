@@ -131,32 +131,50 @@ export default function PaymentSalaryPage() {
 
   const loadPayments = async () => {
     try {
-      const response = await fetch("/api/proxy/payments?action=list&page=1&limit=100", {
-          headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-          },
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des paiements");
-      }
-
-      const data = await response.json();
+      // TODO: Migrer vers le nouveau backend
+      // Pour l'instant, utiliser des données mock
+      console.log("🔄 Chargement des paiements (mock)...");
       
-      if (data.success) {
-        // Mapper les données pour ajouter mois_paye et montant
-        // ✅ Utiliser salaire_disponible_total (inclut les ajustements)
-        const mappedPayments = (Array.isArray(data.data) ? data.data : []).map((payment: any) => ({
-          ...payment,
-          mois_paye: payment.periode_debut ? payment.periode_debut.substring(0, 7) : null,
-          montant: payment.salaire_disponible_total || payment.salaire_disponible || 0
-        }));
-        
-        setPayments(mappedPayments);
-      } else {
-        throw new Error(data.message || "Erreur lors du chargement des paiements");
-      }
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Données mock
+      const mockPayments: Payment[] = [
+        {
+          id: "1",
+          employe_id: "1",
+          salaire_net: 2500000,
+          salaire_disponible: 2500000,
+          avances_deduites: 0,
+          montant_total_remboursement: 0,
+          montant: 2500000,
+          mois_paye: "2024-12",
+          statut: "completed",
+          date_paiement: new Date().toISOString(),
+          periode_debut: "2024-12-01",
+          periode_fin: "2024-12-31",
+          reference_paiement: "REF001",
+          created_at: new Date().toISOString(),
+        },
+        {
+          id: "2",
+          employe_id: "2",
+          salaire_net: 2200000,
+          salaire_disponible: 2200000,
+          avances_deduites: 0,
+          montant_total_remboursement: 0,
+          montant: 2200000,
+          mois_paye: "2024-12",
+          statut: "completed",
+          date_paiement: new Date().toISOString(),
+          periode_debut: "2024-12-01",
+          periode_fin: "2024-12-31",
+          reference_paiement: "REF002",
+          created_at: new Date().toISOString(),
+        },
+      ];
+      
+      setPayments(mockPayments);
+      console.log("✅ Paiements chargés (mock):", mockPayments);
     } catch (error) {
       console.error("Erreur lors du chargement des paiements:", error);
       toast.error("Erreur lors du chargement des paiements");
@@ -166,24 +184,21 @@ export default function PaymentSalaryPage() {
 
   const loadStatistics = async () => {
     try {
-      const response = await fetch("/api/proxy/payments?action=statistics", {
-        headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des statistiques");
-      }
-
-      const data = await response.json();
+      // TODO: Migrer vers le nouveau backend
+      // Pour l'instant, utiliser des données mock
+      console.log("🔄 Chargement des statistiques (mock)...");
       
-      if (data.success) {
-        setStatistics(data.data);
-      } else {
-        throw new Error(data.message || "Erreur lors du chargement des statistiques");
-      }
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      const mockStatistics = {
+        total_paiements: 2,
+        montant_total: 4700000,
+        paiements_effectues: 2,
+        paiements_en_attente: 0,
+      };
+      
+      setStatistics(mockStatistics);
+      console.log("✅ Statistiques chargées (mock):", mockStatistics);
     } catch (error) {
       console.error("Erreur lors du chargement des statistiques:", error);
       toast.error("Erreur lors du chargement des statistiques");
@@ -193,31 +208,38 @@ export default function PaymentSalaryPage() {
 
   const loadEmployees = async () => {
     try {
-      const response = await fetch("/api/proxy/employees", {
-          headers: {
-          Authorization: `Bearer ${session?.access_token}`,
-            "Content-Type": "application/json",
-          },
-      });
-
-      if (!response.ok) {
-        throw new Error("Erreur lors du chargement des employés");
-      }
-
-      const data = await response.json();
-      if (data.success) {
-        // Mapper les données pour ajouter salaire_mensuel à partir de salaire_net
-        const employeesData = data.data?.employees || data.data || [];
-        const mappedEmployees = (Array.isArray(employeesData) ? employeesData : []).map((emp: any) => ({
-          ...emp,
-          salaire_mensuel: emp.salaire_net || 0
-        }));
-        
-        setEmployees(mappedEmployees);
-        console.log('✅ Employés chargés:', mappedEmployees.length, 'employés');
-      } else {
-        throw new Error(data.message || "Erreur lors du chargement des employés");
-      }
+      // TODO: Migrer vers le nouveau backend
+      // Pour l'instant, utiliser des données mock
+      console.log("🔄 Chargement des employés (mock)...");
+      
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Données mock
+      const mockEmployees: Employee[] = [
+        {
+          id: "1",
+          nom: "Diallo",
+          prenom: "Amadou",
+          poste: "Développeur",
+          email: "amadou.diallo@example.com",
+          telephone: "+224 612 345 678",
+          salaire_net: 2500000,
+          salaire_mensuel: 2500000,
+        },
+        {
+          id: "2",
+          nom: "Bah",
+          prenom: "Fatoumata",
+          poste: "Designer",
+          email: "fatoumata.bah@example.com",
+          telephone: "+224 623 456 789",
+          salaire_net: 2200000,
+          salaire_mensuel: 2200000,
+        },
+      ];
+      
+      setEmployees(mockEmployees);
+      console.log("✅ Employés chargés (mock):", mockEmployees.length, "employés");
     } catch (error) {
       console.error("Erreur lors du chargement des employés:", error);
       toast.error("Erreur lors du chargement des employés");

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import { useEdgeAuth, type AuthSession, type LoginRequest } from "@/hooks/useEdgeAuth";
+import { useAuth, type AuthSession, type LoginRequest } from "@/hooks/useAuth";
 
 interface EdgeAuthContextType {
   session: AuthSession | null;
@@ -13,6 +13,7 @@ interface EdgeAuthContextType {
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   clearError: () => void;
+  isSessionValid: () => boolean;
 }
 
 const EdgeAuthContext = createContext<EdgeAuthContextType | undefined>(
@@ -20,7 +21,7 @@ const EdgeAuthContext = createContext<EdgeAuthContextType | undefined>(
 );
 
 export function EdgeAuthProvider({ children }: { children: React.ReactNode }) {
-  const auth = useEdgeAuth();
+  const auth = useAuth();
 
   return (
     <EdgeAuthContext.Provider value={auth}>{children}</EdgeAuthContext.Provider>

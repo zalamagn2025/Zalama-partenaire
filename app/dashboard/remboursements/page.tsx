@@ -7,11 +7,9 @@ import { Separator } from "@/components/ui/separator";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import PaymentListTable from "@/components/PaymentListTable";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
+import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
-// TODO: Migrer vers le nouveau backend
-// import { apiClient } from "@/lib/api-client";
-// import { API_ROUTES } from "@/config/api";
+import { usePartnerFinancesRemboursements } from "@/hooks/usePartnerFinances";
 import { toast } from "sonner";
 
 import {
@@ -134,7 +132,7 @@ const getStatusBadge = (statut: string) => {
 };
 
 export default function RemboursementsPage() {
-  const { session, loading } = useEdgeAuth();
+  const { session, loading } = useEdgeAuthContext();
   
   // ✅ Utilisation du hook pour les paiements de salaire
   const {
@@ -144,8 +142,6 @@ export default function RemboursementsPage() {
     loadPayments: loadPaymentHistoryData
   } = usePaymentHistory(session?.access_token);
 
-  const [remboursements, setRemboursements] = useState<Remboursement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [totalAttente, setTotalAttente] = useState(0);
   const [paying, setPaying] = useState(false);
   const [selectedRemboursement, setSelectedRemboursement] =
@@ -157,27 +153,35 @@ export default function RemboursementsPage() {
   const [showEmployeeDetailsModal, setShowEmployeeDetailsModal] =
     useState(false);
 
-  // États pour les données Edge Function
-  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
-  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
+  // États pour les données
   const [employees, setEmployees] = useState<any[]>([]);
   const [statistics, setStatistics] = useState<any>(null);
 
   // ✅ État pour le type de données affichées
   const [dataType, setDataType] = useState<'tous' | 'avances' | 'paiements'>('tous');
 
-  // États pour les filtres de l'edge function partner-reimbursements
-  const [filters, setFilters] = useState({
-    mois: null as number | null,
-    annee: null as number | null,
-    status: null as string | null,
-    employee_id: null as string | null,
-    categorie: null as string | null,
-    date_debut: null as string | null,
-    date_fin: null as string | null,
-    limit: 50,
-    offset: 0,
+  // États pour les filtres
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Utiliser les hooks pour récupérer les données
+  const { data: remboursementsResponse, isLoading: isLoadingRemboursements, refetch: refetchRemboursements } = usePartnerFinancesRemboursements({
+    mois: selectedMonth || undefined,
+    annee: selectedYear || undefined,
+    status: selectedStatus as any,
+    limit: itemsPerPage,
+    offset: (currentPage - 1) * itemsPerPage,
   });
+
+  // Extraire les données
+  const remboursementsData = (remboursementsResponse?.data || []) as Remboursement[];
+  const isLoading = isLoadingRemboursements;
+
+  // Calculer currentMonthData depuis les données du hook (après la déclaration de remboursementsData)
+  const currentMonthData = { data: remboursementsData };
 
   // État pour le toggle des filtres
   const [showFilters, setShowFilters] = useState(false);
@@ -188,9 +192,7 @@ export default function RemboursementsPage() {
   const [activeEmployees, setActiveEmployees] = useState<any[]>([]);
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
 
-  // ✅ Pagination pour les données regroupées par employé avec filtrage par type
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  // Pagination côté serveur - les données sont déjà paginées
   
   // Filtrer les données selon le type sélectionné
   const getFilteredData = () => {
@@ -288,60 +290,23 @@ export default function RemboursementsPage() {
 
   // Fonction pour charger les données du mois en cours depuis l'Edge Function
   const loadCurrentMonthData = async () => {
-    if (!session?.access_token) {
-      console.log("Pas de token d'accès disponible");
-      return;
-    }
-
-    setEdgeFunctionLoading(true);
-    setIsLoading(true);
     try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
-      const remboursementsData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursements();
-
-      if (!remboursementsData.success) {
-        console.error("Erreur Edge Function:", remboursementsData.message);
-        toast.error("Erreur lors du chargement des données du mois en cours");
-        return;
-      }
-
-      // Garder les données originales de l'Edge Function (regroupées par employé)
-      const data = remboursementsData.data || [];
-
-      setCurrentMonthData({ data: data });
-
-      // Mettre à jour les données locales avec les données du mois en cours
-      if (data && Array.isArray(data)) {
-        setRemboursements(data);
-
-        // Calcul du total en attente (seulement les remboursements en attente)
-        const total = data
-          .filter((r: any) => r.statut_global === "EN_ATTENTE")
-          .reduce(
-            (sum: number, r: any) =>
-              sum + Number(r.montant_total_remboursement),
-            0
-          );
-        setTotalAttente(total);
-      }
-
+      await refetchRemboursements();
+      // Calculer le total en attente
+      const total = remboursementsData
+        .filter((r: any) => r.statut === "EN_ATTENTE")
+        .reduce(
+          (sum: number, r: any) =>
+            sum + Number(r.montant_total_remboursement || 0),
+          0
+        );
+      setTotalAttente(total);
       toast.success(
         "Données des remboursements du mois en cours mises à jour avec succès"
       );
     } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données Edge Functions:",
-        error
-      );
+      console.error("Erreur lors du chargement des données:", error);
       toast.error("Erreur lors du chargement des données du mois en cours");
-    } finally {
-      setEdgeFunctionLoading(false);
-      setIsLoading(false);
     }
   };
 
@@ -383,52 +348,13 @@ export default function RemboursementsPage() {
     return transformedRemboursements;
   };
 
-  // Fonction pour charger les remboursements avec l'Edge Function
+  // Les données sont maintenant chargées automatiquement via les hooks
   const loadRemboursementsData = async (customFilters: any = {}) => {
-    if (!session?.access_token) return;
-
-    setEdgeFunctionLoading(true);
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // Combiner les filtres par défaut avec les filtres personnalisés
-      const activeFilters = { ...filters, ...customFilters };
-
-      // Nettoyer les filtres (enlever les valeurs null/undefined)
-      const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(
-          ([_, value]) => value !== null && value !== undefined && value !== ""
-        )
-      );
-
-      console.log(
-        "🔄 Chargement des remboursements avec filtres:",
-        cleanFilters
-      );
-
-      // Charger les remboursements
-      const remboursementsData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursements(cleanFilters);
-
-      if (!remboursementsData.success) {
-        console.error("Erreur Edge Function:", remboursementsData.message);
-        toast.error("Erreur lors du chargement des remboursements");
-        return;
-      }
-
-      const data = remboursementsData.data || [];
-      console.log("Remboursements chargés:", data);
-
-      // Garder les données originales de l'Edge Function (regroupées par employé)
-      setCurrentMonthData({ data: data });
-    } catch (error) {
-      console.error("Erreur lors du chargement des remboursements:", error);
-      toast.error("Erreur lors du chargement des remboursements");
-    } finally {
-      setEdgeFunctionLoading(false);
-    }
+    // Mettre à jour les filtres - les hooks rechargeront automatiquement
+    if (customFilters.mois !== undefined) setSelectedMonth(customFilters.mois);
+    if (customFilters.annee !== undefined) setSelectedYear(customFilters.annee);
+    if (customFilters.status !== undefined) setSelectedStatus(customFilters.status);
+    if (customFilters.offset !== undefined) setCurrentPage(Math.floor(customFilters.offset / itemsPerPage) + 1);
   };
 
   // Fonction pour charger les données de filtres dynamiques
@@ -440,17 +366,17 @@ export default function RemboursementsPage() {
       // edgeFunctionService.setAccessToken(session.access_token);
 
       // Charger les employés actifs
-      const employeesData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursementsEmployees();
-      if (employeesData.success && employeesData.data) {
+      // TODO: Migrer vers le nouveau backend
+      // const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
+      const employeesData: any = null; // Temporaire - utiliser des données mock
+      if (employeesData?.success && employeesData?.data) {
         setActiveEmployees(employeesData.data);
       }
 
       // Charger les périodes d'activité
-      const periodsData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursementsActivityPeriods();
+      // TODO: Migrer vers le nouveau backend
+      // const periodsData = await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
+      const periodsData: any = null; // Temporaire - utiliser des données mock
       if (periodsData.success && periodsData.data) {
         setActivityPeriods(periodsData.data);
         setActiveYears(periodsData.data.years || []);
@@ -510,10 +436,10 @@ export default function RemboursementsPage() {
 
   // Charger les données de fallback si pas de données Edge Function
   useEffect(() => {
-    if (!currentMonthData && !edgeFunctionLoading) {
+    if (!currentMonthData && !isLoading) {
       loadRemboursementsData();
     }
-  }, [currentMonthData, edgeFunctionLoading]);
+  }, [currentMonthData, isLoading]);
 
   // Action "Payer tous" via l'API Djomy
   const handlePayerTous = async () => {
@@ -672,13 +598,11 @@ export default function RemboursementsPage() {
         )
       );
 
-      const statisticsData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursementsStatistics(
-          cleanFilters
-        );
+      // TODO: Migrer vers le nouveau backend
+      // const statisticsData = await edgeFunctionService.getPartnerRemboursementsStatistics(cleanFilters);
+      const statisticsData: any = null; // Temporaire - utiliser des données mock
 
-      if (statisticsData.success && statisticsData.data) {
+      if (statisticsData?.success && statisticsData?.data) {
         setStatistics(statisticsData.data);
         console.log("📊 Statistiques chargées:", statisticsData.data);
       }
@@ -714,11 +638,11 @@ export default function RemboursementsPage() {
     if (!session?.partner) return;
     try {
       // TODO: Migrer vers le nouveau backend
+      // TODO: Migrer vers le nouveau backend
       // edgeFunctionService.setAccessToken(session.access_token);
-      const employeesData =
-        await // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.getPartnerRemboursementsEmployees();
-      if (employeesData.success && employeesData.data) {
+      // const employeesData = await edgeFunctionService.getPartnerRemboursementsEmployees();
+      const employeesData: any = null; // Temporaire - utiliser des données mock
+      if (employeesData?.success && employeesData?.data) {
         setEmployees(employeesData.data);
       }
     } catch (error) {
@@ -1196,13 +1120,13 @@ export default function RemboursementsPage() {
               )}
               <button
                 onClick={loadCurrentMonthData}
-                disabled={edgeFunctionLoading}
+                disabled={isLoading}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md transition-colors"
                 title="Actualiser les données du mois en cours"
               >
                 <RefreshCw
                   className={`h-4 w-4 text-gray-500 ${
-                    edgeFunctionLoading ? "animate-spin" : ""
+                    isLoading ? "animate-spin" : ""
                   }`}
                 />
               </button>
@@ -1285,10 +1209,10 @@ export default function RemboursementsPage() {
               </button>
               <button
                 onClick={() => loadRemboursementsData(filters)}
-                disabled={edgeFunctionLoading}
+                disabled={isLoading}
                 className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
               >
-                {edgeFunctionLoading ? (
+                {isLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : null}
                 Actualiser
@@ -1434,7 +1358,7 @@ export default function RemboursementsPage() {
         )}
 
         {/* Indicateur de filtres actifs supprimé */}
-        {edgeFunctionLoading && (
+        {isLoading && (
           <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
             Mise à jour des données...
