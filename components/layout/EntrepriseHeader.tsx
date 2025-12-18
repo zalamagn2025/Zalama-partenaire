@@ -11,7 +11,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 // Utilisation du composant NotificationDrawer (sans 's') du dossier dashboard/notifications
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { supabase } from "@/lib/supabase";
 import NotificationDrawer from "../../components/dashboard/notifications/NotificationDrawer";
 
 export default function EntrepriseHeader() {
@@ -42,22 +41,22 @@ export default function EntrepriseHeader() {
   const loadUnreadCount = async () => {
     if (!session?.admin?.id) return;
     try {
-      // Utiliser le proxy pour compter les notifications non lues
-      const response = await fetch(
-        `/api/proxy/notifications?user_id=${session.admin.id}&lu=false&count=true`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count || 0);
-      }
+      // TODO: Implémenter avec le nouveau backend
+      // const response = await fetch(
+      //   `${API_CONFIG.baseURL}${API_ROUTES.notifications.list}?user_id=${session.admin.id}&lu=false&count=true`,
+      //   {
+      //     method: "GET",
+      //     headers: {
+      //       Authorization: `Bearer ${session.access_token}`,
+      //       "Content-Type": "application/json",
+      //     },
+      //   }
+      // );
+      // if (response.ok) {
+      //   const data = await response.json();
+      //   setUnreadCount(data.count || 0);
+      // }
+      setUnreadCount(0);
     } catch (error) {
       console.error(
         "Erreur lors du chargement du nombre de notifications:",

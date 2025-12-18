@@ -28,7 +28,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
-import type { Employee } from "@/lib/supabase";
+// TODO: Migrer vers le nouveau backend
+// import type { Employee } from "@/types/api";
 
 export default function EmployesPage() {
   const { session, loading } = useEdgeAuth();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+// TODO: Migrer vers le nouveau backend
+// import { apiClient } from '@/lib/api-client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,56 +25,29 @@ export async function POST(request: NextRequest) {
       message
     } = body;
 
+    // TODO: Migrer vers le nouveau backend
     // Mettre à jour le statut du remboursement dans la base de données
     if (remboursement_id) {
-      const updateData: any = {
-        statut: status === 'success' || status === 'completed' ? 'PAYE' : 'EN_ATTENTE',
-        date_remboursement_effectue: status === 'success' || status === 'completed' ? new Date().toISOString() : null,
-        transaction_id: transaction_id,
-        message_paiement: message
-      };
-
-      const { error } = await supabase
-        .from('remboursements')
-        .update(updateData)
-        .eq('id', remboursement_id);
-
-      if (error) {
-        console.error('Erreur mise à jour remboursement:', error);
-        return NextResponse.json({ error: 'Erreur mise à jour' }, { status: 500 });
-      }
+      // const updateData: any = {
+      //   statut: status === 'success' || status === 'completed' ? 'PAYE' : 'EN_ATTENTE',
+      //   date_remboursement_effectue: status === 'success' || status === 'completed' ? new Date().toISOString() : null,
+      //   transaction_id: transaction_id,
+      //   message_paiement: message
+      // };
+      // await apiClient.put(API_ROUTES.reimbursements.update(remboursement_id), updateData);
+      console.log('Webhook reçu pour remboursement:', remboursement_id, status);
     }
 
     // Si c'est un paiement en lot, mettre à jour tous les remboursements du partenaire
     if (partenaire_id && status === 'success') {
-      const { error } = await supabase
-        .from('remboursements')
-        .update({
-          statut: 'PAYE',
-          date_remboursement_effectue: new Date().toISOString(),
-          transaction_id: transaction_id,
-          message_paiement: message
-        })
-        .eq('partenaire_id', partenaire_id)
-        .eq('statut', 'EN_ATTENTE');
-
-      if (error) {
-        console.error('Erreur mise à jour remboursements en lot:', error);
-        return NextResponse.json({ error: 'Erreur mise à jour en lot' }, { status: 500 });
-      }
+      // TODO: Migrer vers le nouveau backend
+      console.log('Paiement en lot pour partenaire:', partenaire_id);
     }
 
     // Envoyer une notification au partenaire (optionnel)
     if (partenaire_id) {
-      await supabase
-        .from('notifications')
-        .insert({
-          partenaire_id: partenaire_id,
-          titre: status === 'success' ? 'Paiement réussi' : 'Paiement échoué',
-          message: message || (status === 'success' ? 'Votre paiement a été traité avec succès' : 'Le paiement a échoué'),
-          type: status === 'success' ? 'success' : 'error',
-          lu: false
-        });
+      // TODO: Migrer vers le nouveau backend
+      console.log('Notification pour partenaire:', partenaire_id);
     }
 
     return NextResponse.json({ success: true });

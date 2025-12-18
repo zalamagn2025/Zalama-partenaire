@@ -2,11 +2,54 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
-import {
-  edgeFunctionService,
-  AuthSession,
-  LoginRequest,
-} from "@/lib/edgeFunctionService";
+import { useLogin, useLogout, useUserProfile, useRefreshToken } from "./useAuth";
+import type { LoginResponse, UserProfileResponse } from "@/types/api";
+
+// Types pour la session
+export interface AuthSession {
+  user: {
+    id: string;
+    email: string;
+  };
+  admin: any;
+  partner: {
+    id: string;
+    companyName: string;
+    legalStatus?: string;
+    activityDomain?: string;
+    email: string;
+    phone?: string;
+    headquartersAddress?: string;
+    employeesCountMin?: number;
+    employeesCountMax?: number;
+    status: string;
+    logoUrl?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  employee?: {
+    id: string;
+    nom: string;
+    prenom: string;
+    email: string;
+    telephone?: string;
+    partenaireId: string;
+    poste?: string;
+    matricule?: string;
+    photoUrl?: string | null;
+    typeContrat?: string;
+    salaireNet?: number;
+    dateEmbauche?: string;
+    actif?: boolean;
+  } | null;
+  access_token: string;
+  refresh_token: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
 
 interface UseEdgeAuthReturn {
   session: AuthSession | null;
@@ -23,7 +66,6 @@ interface UseEdgeAuthReturn {
 
 // Configuration du refresh automatique
 const TOKEN_REFRESH_INTERVAL = 8 * 60 * 1000; // 8 minutes (avant l'expiration de 10 minutes)
-const TOKEN_EXPIRY_BUFFER = 2 * 60 * 1000; // 2 minutes de marge
 
 export function useEdgeAuth(): UseEdgeAuthReturn {
   const [session, setSession] = useState<AuthSession | null>(null);
@@ -31,15 +73,100 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Hooks react-query
+  const loginMutation = useLogin();
+  const logoutMutation = useLogout();
+  const refreshTokenMutation = useRefreshToken();
+  
+  // Récupérer le token depuis localStorage
+  const getAccessToken = () => localStorage.getItem('accessToken') || undefined;
+  const getRefreshToken = () => localStorage.getItem('refreshToken') || undefined;
+
+  // Query pour le profil utilisateur
+  const { data: profileData, isLoading: profileLoading, refetch: refetchProfile } = useUserProfile(getAccessToken());
+
   // Références pour le refresh automatique
   const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastRefreshRef = useRef<number>(0);
   const isRefreshingRef = useRef<boolean>(false);
   const isLoggingOutRef = useRef<boolean>(false);
 
+  // Convertir LoginResponse en AuthSession
+  const convertToAuthSession = useCallback((data: LoginResponse | UserProfileResponse): AuthSession | null => {
+    if ('user' in data && data.user) {
+      return {
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+        },
+        admin: data.user,
+        partner: 'partner_info' in data ? data.partner_info || null : null,
+        employee: 'employee_info' in data ? data.employee_info || null : null,
+        access_token: 'accessToken' in data ? data.accessToken : getAccessToken() || '',
+        refresh_token: 'refreshToken' in data ? data.refreshToken : getRefreshToken() || '',
+      };
+    }
+    return null;
+  }, []);
+
+  // Récupérer la session depuis le localStorage au démarrage
+  useEffect(() => {
+    const initializeSession = () => {
+      try {
+        const storedSession = localStorage.getItem("partner_session");
+        const accessToken = getAccessToken();
+        
+        if (storedSession && accessToken) {
+          const parsedSession = JSON.parse(storedSession);
+          if (parsedSession.access_token) {
+            setSession(parsedSession);
+          } else {
+            localStorage.removeItem("partner_session");
+          }
+        }
+      } catch (error) {
+        console.error("Erreur lors de la récupération de la session:", error);
+        localStorage.removeItem("partner_session");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initializeSession();
+  }, []);
+
+  // Mettre à jour la session quand le profil est chargé
+  useEffect(() => {
+    if (profileData && !profileLoading) {
+      const newSession = convertToAuthSession(profileData);
+      if (newSession) {
+        setSession(newSession);
+        localStorage.setItem("partner_session", JSON.stringify(newSession));
+      }
+    }
+  }, [profileData, profileLoading, convertToAuthSession]);
+
+  // Sauvegarder la session dans le localStorage
+  const saveSession = useCallback((sessionData: AuthSession) => {
+    try {
+      localStorage.setItem("partner_session", JSON.stringify(sessionData));
+    } catch (error) {
+      console.error("Erreur lors de la sauvegarde de la session:", error);
+    }
+  }, []);
+
+  // Supprimer la session du localStorage
+  const clearSession = useCallback(() => {
+    try {
+      localStorage.removeItem("partner_session");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+    } catch (error) {
+      console.error("Erreur lors de la suppression de la session:", error);
+    }
+  }, []);
+
   // Fonction de déconnexion avec redirection
   const logoutWithRedirect = useCallback(async () => {
-    // Éviter les déconnexions multiples
     if (isLoggingOutRef.current) {
       console.log("🚪 Déconnexion déjà en cours, ignorée");
       return;
@@ -57,7 +184,7 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
 
       // Nettoyer la session
       setSession(null);
-      localStorage.removeItem("partner_session");
+      clearSession();
       setError(null);
 
       console.log("✅ Déconnexion terminée, redirection vers /login");
@@ -68,59 +195,13 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       }
     } catch (error) {
       console.error("❌ Erreur lors de la déconnexion:", error);
-      // Forcer la redirection même en cas d'erreur, seulement si nécessaire
       if (window.location.pathname !== "/login") {
         router.push("/login");
       }
     } finally {
       isLoggingOutRef.current = false;
     }
-  }, [router]);
-
-  // Récupérer la session depuis le localStorage au démarrage
-  useEffect(() => {
-    const initializeSession = () => {
-      try {
-        const storedSession = localStorage.getItem("partner_session");
-        if (storedSession) {
-          const parsedSession = JSON.parse(storedSession);
-          // Vérifier si la session n'est pas expirée (tokens valides)
-          if (parsedSession.access_token) {
-            setSession(parsedSession);
-            // Démarrer le refresh automatique si on a une session valide
-            // On le fera dans un useEffect séparé après la définition de startAutoRefresh
-          } else {
-            localStorage.removeItem("partner_session");
-          }
-        }
-      } catch (error) {
-        console.error("Erreur lors de la récupération de la session:", error);
-        localStorage.removeItem("partner_session");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initializeSession();
-  }, []);
-
-  // Sauvegarder la session dans le localStorage
-  const saveSession = useCallback((sessionData: AuthSession) => {
-    try {
-      localStorage.setItem("partner_session", JSON.stringify(sessionData));
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de la session:", error);
-    }
-  }, []);
-
-  // Supprimer la session du localStorage
-  const clearSession = useCallback(() => {
-    try {
-      localStorage.removeItem("partner_session");
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la session:", error);
-    }
-  }, []);
+  }, [router, clearSession]);
 
   // Fonction de connexion
   const login = useCallback(
@@ -129,72 +210,60 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
         setLoading(true);
         setError(null);
 
-        const response = await edgeFunctionService.login(credentials);
+        const response = await loginMutation.mutateAsync(credentials);
 
-        if (
-          response.success &&
-          response.user &&
-          response.partner_info &&
-          response.access_token
-        ) {
+        if (response && response.accessToken) {
           const sessionData: AuthSession = {
             user: {
               id: response.user.id,
               email: response.user.email,
             },
             admin: response.user,
-            partner: response.partner_info,
-            access_token: response.access_token,
-            refresh_token: response.refresh_token || "",
+            partner: response.partner_info || null,
+            employee: response.employee_info || null,
+            access_token: response.accessToken,
+            refresh_token: response.refreshToken || "",
           };
 
           setSession(sessionData);
           saveSession(sessionData);
 
-          // Le refresh automatique sera démarré par le useEffect
-          lastRefreshRef.current = Date.now();
-
           return { error: null, session: sessionData };
         } else {
-          // Analyser le message d'erreur pour le rendre plus précis
-          let errorMessage = response.message || "Erreur de connexion";
-
-          // Personnaliser les messages d'erreur selon le type
-          if (
-            errorMessage.toLowerCase().includes("invalid credentials") ||
-            errorMessage.toLowerCase().includes("email") ||
-            errorMessage.toLowerCase().includes("password")
-          ) {
-            errorMessage =
-              "Email ou mot de passe incorrect. Veuillez vérifier vos identifiants.";
-          } else if (errorMessage.toLowerCase().includes("user not found")) {
-            errorMessage = "Aucun compte trouvé avec cette adresse email.";
-          } else if (
-            errorMessage.toLowerCase().includes("inactive") ||
-            errorMessage.toLowerCase().includes("disabled")
-          ) {
-            errorMessage =
-              "Ce compte a été désactivé. Contactez l'administrateur.";
-          }
-
+          const errorMessage = response?.message || "Erreur de connexion";
           setError(errorMessage);
           return { error: { message: errorMessage } };
         }
       } catch (error: any) {
-        const errorMessage = error.message || "Erreur de connexion";
+        // Gérer les erreurs ApiError correctement
+        let errorMessage = "Erreur de connexion";
+        if (error?.message) {
+          errorMessage = error.message;
+        } else if (error?.data?.message) {
+          errorMessage = error.data.message;
+        } else if (typeof error === 'string') {
+          errorMessage = error;
+        }
+        
         setError(errorMessage);
         return { error: { message: errorMessage } };
       } finally {
         setLoading(false);
       }
     },
-    [saveSession]
+    [loginMutation, saveSession]
   );
 
   // Fonction de déconnexion
   const logout = useCallback(async () => {
     try {
       setLoading(true);
+      const accessToken = getAccessToken();
+      
+      if (accessToken) {
+        await logoutMutation.mutateAsync(accessToken);
+      }
+
       setSession(null);
       clearSession();
       setError(null);
@@ -210,49 +279,9 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
     } finally {
       setLoading(false);
     }
-  }, [clearSession]);
+  }, [logoutMutation, clearSession]);
 
-  // Fonction pour détecter les erreurs de token expiré
-  const isTokenExpiredError = useCallback((error: any): boolean => {
-    if (!error) return false;
-
-    const errorMessage = error.message || error.toString() || "";
-    const errorStatus = error.status || error.code;
-
-    // Erreurs liées aux tokens expirés et erreurs serveur
-    const tokenExpiredPatterns = [
-      "token",
-      "unauthorized",
-      "Session expirée",
-      "401",
-      "403",
-      "404",
-      "500",
-      "503",
-      "refresh token expired",
-      "access token expired",
-      "invalid token",
-      "expired",
-      "authentication failed",
-      "not found",
-      "service unavailable",
-      "internal server error",
-      "erreur serveur",
-      "server error",
-    ];
-
-    // Vérifier les patterns dans le message d'erreur
-    const hasTokenError = tokenExpiredPatterns.some((pattern) =>
-      errorMessage.toLowerCase().includes(pattern.toLowerCase())
-    );
-
-    // Vérifier les codes d'erreur HTTP
-    const hasTokenStatus = errorStatus === 401 || errorStatus === 403 || errorStatus === 404 || errorStatus === 500 || errorStatus === 503;
-
-    return hasTokenError || hasTokenStatus;
-  }, []);
-
-  // Fonction de refresh automatique (définie après logout)
+  // Fonction de refresh automatique
   const startAutoRefresh = useCallback(() => {
     // Nettoyer l'interval précédent
     if (refreshIntervalRef.current) {
@@ -270,45 +299,25 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
         isRefreshingRef.current = true;
         console.log("🔄 Refresh automatique du token en cours...");
 
-        // Appeler le refresh de session directement
-        if (session?.access_token) {
-          const response = await edgeFunctionService.getMe(
-            session.access_token
-          );
+        const refreshToken = getRefreshToken();
+        if (refreshToken) {
+          const response = await refreshTokenMutation.mutateAsync(refreshToken);
 
-          if (
-            response.success &&
-            response.data?.user &&
-            response.data?.partner_info
-          ) {
-            const sessionData: AuthSession = {
-              user: {
-                id: response.data.user.id,
-                email: response.data.user.email,
-              },
-              admin: response.data.user,
-              partner: response.data.partner_info,
-              access_token: session.access_token,
-              refresh_token: session.refresh_token,
-            };
-
-            setSession(sessionData);
-            saveSession(sessionData);
-            lastRefreshRef.current = Date.now();
+          if (response && response.accessToken) {
+            // Refetch le profil avec le nouveau token
+            await refetchProfile();
             console.log("✅ Refresh automatique du token terminé avec succès");
           } else {
             console.log("❌ Session invalide lors du refresh automatique");
             await logoutWithRedirect();
           }
+        } else {
+          console.log("❌ Pas de refresh token disponible");
+          await logoutWithRedirect();
         }
       } catch (error) {
         console.error("❌ Erreur lors du refresh automatique:", error);
-
-        // Vérifier si c'est une erreur de token expiré
-        if (isTokenExpiredError(error)) {
-          console.log("🔑 Token expiré détecté, déconnexion automatique");
-          await logoutWithRedirect();
-        }
+        await logoutWithRedirect();
       } finally {
         isRefreshingRef.current = false;
       }
@@ -319,18 +328,25 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
         TOKEN_REFRESH_INTERVAL / 60000
       } minutes`
     );
-  }, [session, saveSession, logoutWithRedirect, isTokenExpiredError]);
+  }, [refreshTokenMutation, refetchProfile, logoutWithRedirect]);
 
-  // Démarrer le refresh automatique quand la session est disponible (après la définition de startAutoRefresh)
+  // Démarrer le refresh automatique quand la session est disponible
   useEffect(() => {
-    if (session?.access_token) {
+    if (session?.access_token && getRefreshToken()) {
       startAutoRefresh();
     }
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
   }, [session?.access_token, startAutoRefresh]);
 
   // Fonction de rafraîchissement de session
   const refreshSession = useCallback(async () => {
-    if (!session?.access_token) {
+    const accessToken = getAccessToken();
+    if (!accessToken) {
       return;
     }
 
@@ -338,50 +354,31 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
       setLoading(true);
       setError(null);
 
-      const response = await edgeFunctionService.getMe(session.access_token);
-
-      if (
-        response.success &&
-        response.data?.user &&
-        response.data?.partner_info
-      ) {
-        const sessionData: AuthSession = {
-          user: {
-            id: response.data.user.id,
-            email: response.data.user.email,
-          },
-          admin: response.data.user,
-          partner: response.data.partner_info,
-          access_token: session.access_token, // Garder le même token
-          refresh_token: session.refresh_token,
-        };
-
-        setSession(sessionData);
-        saveSession(sessionData);
-        console.log("✅ Session rafraîchie avec succès");
-      } else {
-        // Si la session n'est plus valide, déconnecter
-        console.log("❌ Session invalide, déconnexion automatique");
-        await logoutWithRedirect();
-      }
+      await refetchProfile();
+      console.log("✅ Session rafraîchie avec succès");
     } catch (error: any) {
       console.error("Erreur lors du rafraîchissement de session:", error);
-
-      // Vérifier si c'est une erreur de token expiré
-      if (isTokenExpiredError(error)) {
-        console.log("🔑 Token expiré détecté, déconnexion automatique");
-        await logoutWithRedirect();
+      const refreshToken = getRefreshToken();
+      
+      if (refreshToken) {
+        try {
+          await refreshTokenMutation.mutateAsync(refreshToken);
+          await refetchProfile();
+        } catch (refreshError) {
+          console.log("🔑 Token expiré détecté, déconnexion automatique");
+          await logoutWithRedirect();
+        }
       } else {
-        setError(error.message);
+        await logoutWithRedirect();
       }
     } finally {
       setLoading(false);
     }
-  }, [session, saveSession, logoutWithRedirect, isTokenExpiredError]);
+  }, [refetchProfile, refreshTokenMutation, logoutWithRedirect]);
 
   // Fonction pour vérifier si la session est valide
   const isSessionValid = useCallback(() => {
-    return !!(session?.access_token && session?.admin && session?.partner);
+    return !!(session?.access_token && session?.admin && (session?.partner || session?.employee));
   }, [session]);
 
   // Fonction pour effacer les erreurs
@@ -400,7 +397,7 @@ export function useEdgeAuth(): UseEdgeAuthReturn {
 
   return {
     session,
-    loading,
+    loading: loading || profileLoading,
     error,
     login,
     logout,

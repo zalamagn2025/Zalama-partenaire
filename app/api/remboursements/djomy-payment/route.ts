@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+// TODO: Migrer vers le nouveau backend
+// import { apiClient } from "@/lib/api-client";
 import { djomyService } from "@/lib/djomyService";
 
 export async function POST(request: NextRequest) {
@@ -14,23 +15,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // TODO: Migrer vers le nouveau backend
     // Récupérer les informations du remboursement
-    const { data: remboursement, error: remboursementError } = await supabase
-      .from("remboursements")
-      .select(
-        `
-        id,
-        montant_total_remboursement,
-        employee:employe_id (
-          nom,
-          prenom,
-          telephone
-        )
-      `
-      )
-      .eq("id", remboursementId)
-      .single();
-
+    // const remboursement = await apiClient.get(API_ROUTES.reimbursements.get(remboursementId));
+    
+    // Pour l'instant, retourner une erreur car non migré
+    return NextResponse.json(
+      { error: "Cette fonctionnalité est en cours de migration vers le nouveau backend" },
+      { status: 501 }
+    );
+    
+    /* Code original commenté
     if (remboursementError || !remboursement) {
       console.error("Erreur récupération remboursement:", remboursementError);
       return NextResponse.json(
@@ -38,6 +33,7 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+    */
 
     const employee = Array.isArray(remboursement.employee)
       ? remboursement.employee[0]

@@ -10,8 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/lib/supabase";
+// TODO: Migrer vers le nouveau backend
+// import { useUserProfile } from "@/hooks/useAuth";
 import { useTheme } from "@/contexts/ThemeContext";
 import {
   CheckCircle2,

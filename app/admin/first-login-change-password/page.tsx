@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PinInput } from "@/components/ui/PinInput";
 import { toast } from "sonner";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { Lock, Eye, EyeOff, Loader2, Shield, CheckCircle, KeyRound } from "lucide-react";
 
@@ -100,7 +99,8 @@ function FirstLoginChangePasswordContent() {
       // Pour l'instant, nous utilisons le code PIN comme mot de passe
       // TODO: Modifier l'API Edge Function pour accepter les codes PIN de 6 chiffres
       
-      const changeResponse = await edgeFunctionService.changePassword(
+      const changeResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.changePassword(
         session.access_token,
         {
           current_password: formData.currentPin,
@@ -125,7 +125,8 @@ function FirstLoginChangePasswordContent() {
           );
           // Essayer de rafraîchir manuellement
           try {
-            const refreshResponse = await edgeFunctionService.getMe(
+            const refreshResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getMe(
               session.access_token
             );
             if (refreshResponse.success && refreshResponse.data) {
@@ -176,14 +177,16 @@ function FirstLoginChangePasswordContent() {
       ) {
         try {
           console.log("Tentative de reconnexion...");
-          const loginResponse = await edgeFunctionService.login({
+          const loginResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.login({
             email: session.admin.email,
             password: formData.currentPin,
           });
 
           if (loginResponse.success && loginResponse.access_token) {
             // Réessayer avec le nouveau token
-            const retryResponse = await edgeFunctionService.changePassword(
+            const retryResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.changePassword(
               loginResponse.access_token,
               {
                 current_password: formData.currentPin,

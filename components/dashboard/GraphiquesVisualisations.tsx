@@ -12,7 +12,6 @@ import {
   Bar,
 } from "recharts";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { PartnerDataService } from "@/lib/services";
 
 interface ChartData {
   monthlyData: Array<{
@@ -46,7 +45,6 @@ export default function GraphiquesVisualisations() {
 
     setIsLoading(true);
     try {
-      const partnerService = new PartnerDataService(session.partner.id);
 
       // Récupérer les données financières pour les graphiques
       const financialData = await partnerService.getRemboursements();

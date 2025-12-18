@@ -1,19 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import "../styles/toast.css";
+import { QueryProvider } from "@/contexts/QueryProvider";
 import { EdgeAuthProvider } from "@/contexts/EdgeAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import SessionErrorHandler from "@/components/auth/SessionErrorHandler";
 import { Toaster } from "@/components/ui/custom-toaster";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import NetworkStatus from "@/components/pwa/NetworkStatus";
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "ZaLaMa Partner Dashboard",
@@ -52,17 +46,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr">
-      <body className={`${inter.variable} antialiased font-sans`}>
-        <ThemeProvider>
-          <EdgeAuthProvider>
-            <SessionErrorHandler>
-              <NetworkStatus />
-              <Toaster />
-              <InstallPrompt />
-              {children}
-            </SessionErrorHandler>
-          </EdgeAuthProvider>
-        </ThemeProvider>
+      <body className="antialiased font-sans">
+        <QueryProvider>
+          <ThemeProvider>
+            <EdgeAuthProvider>
+              <SessionErrorHandler>
+                <NetworkStatus />
+                <Toaster />
+                <InstallPrompt />
+                {children}
+              </SessionErrorHandler>
+            </EdgeAuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
       </body>
     </html>
   );

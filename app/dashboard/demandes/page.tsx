@@ -28,9 +28,8 @@ import {
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
-import { PartnerDataService } from "@/lib/services";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
-import type { SalaryAdvanceRequest, Employee } from "@/lib/supabase";
+// TODO: Migrer vers le nouveau backend
+// import type { SalaryAdvanceRequest, Employee } from "@/types/api";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -134,9 +133,9 @@ export default function DemandesPage() {
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
-      // Utiliser le service pour récupérer les vraies données
-      const partnerService = new PartnerDataService(session.partner.id);
-      const demandes = await partnerService.getSalaryAdvanceRequests();
+      // TODO: Migrer vers le nouveau backend
+      // const demandes = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list);
+      const demandes: any[] = []; // Temporaire - en attente de migration
 
       // ✅ Log pour vérifier si les remboursements sont bien récupérés
       if (demandes.length > 0) {
@@ -196,7 +195,9 @@ export default function DemandesPage() {
     setEdgeFunctionLoading(true);
     setLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
@@ -211,7 +212,9 @@ export default function DemandesPage() {
       console.log("🔄 Chargement des demandes avec filtres:", cleanFilters);
 
       // Utiliser l'endpoint des demandes avec filtres
-      const demandesData = await edgeFunctionService.getSalaryDemands(
+      // TODO: Migrer vers le nouveau backend
+      // const demandesData = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list, {
+      const demandesData: any = null; // Temporaire
         cleanFilters
       );
 
@@ -304,9 +307,9 @@ export default function DemandesPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
-      const employeesData =
-        await edgeFunctionService.getSalaryDemandsEmployees();
+      // TODO: Migrer vers le nouveau backend
+      // const employeesData = await apiClient.get(API_ROUTES.employees.list);
+      const employeesData: any = { success: false, data: [] }; // Temporaire
 
       if (employeesData.success && employeesData.data) {
         // Créer une Map pour un accès rapide par ID
@@ -337,9 +340,9 @@ export default function DemandesPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
-      const periodsData =
-        await edgeFunctionService.getSalaryDemandsActivityPeriods();
+      // TODO: Migrer vers le nouveau backend
+      // const periodsData = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list + '/activity-periods');
+      const periodsData: any = { success: false, data: [] }; // Temporaire
 
       console.log("🔍 Périodes d'activité reçues:", periodsData);
 

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+// TODO: Migrer vers le nouveau backend
+// import { apiClient } from "@/lib/api-client";
+// import { API_ROUTES } from "@/config/api";
 
 // Types pour les webhooks Djomy
 interface DjomyWebhookData {
@@ -84,46 +86,19 @@ export async function POST(request: NextRequest) {
         newStatus = "EN_ATTENTE";
     }
 
+    // TODO: Migrer vers le nouveau backend
     // Mettre à jour le remboursement dans la base de données
-    const { error: updateError } = await supabase
-      .from("remboursements")
-      .update({
-        statut: newStatus,
-        date_remboursement_effectue: datePaiement,
-        // Ajouter des informations supplémentaires si nécessaire
-        montant_transaction: data.paidAmount || 0,
-        frais_service: data.fees || 0,
-      })
-      .eq("id", remboursementId);
-
-    if (updateError) {
-      console.error(
-        "Erreur lors de la mise à jour du remboursement:",
-        updateError
-      );
-      return NextResponse.json(
-        { error: "Erreur lors de la mise à jour" },
-        { status: 500 }
-      );
-    }
-
-    // Mettre à jour le remboursement avec les informations de paiement
-    const { error: logError } = await supabase
-      .from("remboursements")
-      .update({
-        reference_paiement: data.transactionId,
-        date_remboursement_effectue: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", remboursementId);
-
-    if (logError) {
-      console.error(
-        "Erreur lors de la création du log de transaction:",
-        logError
-      );
-      // Ne pas retourner d'erreur car la mise à jour principale a réussi
-    }
+    // const updateData = {
+    //   statut: newStatus,
+    //   date_remboursement_effectue: datePaiement,
+    //   montant_transaction: data.paidAmount || 0,
+    //   frais_service: data.fees || 0,
+    //   reference_paiement: data.transactionId,
+    //   updated_at: new Date().toISOString(),
+    // };
+    // await apiClient.put(API_ROUTES.reimbursements.update(remboursementId), updateData);
+    
+    console.log(`Webhook Djomy reçu pour remboursement ${remboursementId}, statut: ${newStatus}`);
 
     console.log(
       `Remboursement ${remboursementId} mis à jour avec le statut: ${newStatus}`

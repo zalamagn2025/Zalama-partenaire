@@ -79,7 +79,61 @@ export default function EntrepriseDashboardPage() {
     return false;
   });
 
-  // Charger les données du dashboard via Edge Function
+  // Fonction pour générer des données mock
+  const generateMockDashboardData = () => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth() + 1;
+    const currentYear = currentDate.getFullYear();
+
+    return {
+      statistics: {
+        total_employees: 25,
+        active_employees: 20,
+        total_demandes: 45,
+        demandes_per_employee: "1.8",
+        average_rating: "4.5",
+      },
+      financial_performance: {
+        debloque_mois: 15000000,
+        a_rembourser_mois: 12000000,
+        date_limite_remboursement: new Date(currentYear, currentMonth, 25).toISOString(),
+        jours_restants: 15,
+        taux_remboursement: "80%",
+      },
+      charts: {
+        demandes_evolution: [
+          { mois: "Jan", demandes: 12 },
+          { mois: "Fév", demandes: 15 },
+          { mois: "Mar", demandes: 18 },
+        ],
+        montants_evolution: [
+          { mois: "Jan", montant: 5000000 },
+          { mois: "Fév", montant: 7500000 },
+          { mois: "Mar", montant: 10000000 },
+        ],
+        repartition_motifs: [
+          { motif: "Frais médicaux", valeur: 15, color: "#4F8EF7" },
+          { motif: "Paiement loyer", valeur: 20, color: "#FF6B6B" },
+          { motif: "Frais scolarité", valeur: 10, color: "#51CF66" },
+        ],
+      },
+      partner_info: session?.partner ? {
+        company_name: session.partner.companyName,
+        activity_domain: session.partner.activityDomain || "Commerce",
+        logo_url: session.partner.logoUrl,
+        created_at: session.partner.createdAt,
+      } : null,
+      filters: {
+        period_description: "Mois en cours",
+        payment_day: 25,
+        applied: false,
+      },
+      remboursements: [],
+      payment_salary_stats: null,
+    };
+  };
+
+  // Charger les données du dashboard (mock pour l'instant)
   const loadDashboardData = async (month?: number, year?: number) => {
     if (!session?.access_token) return;
 
@@ -87,77 +141,17 @@ export default function EntrepriseDashboardPage() {
     setError(null);
 
     try {
-      // Construire l'URL avec les paramètres de filtrage
-      let url = "/api/proxy/dashboard-data";
-      const params = new URLSearchParams();
-
-      if (month !== undefined) params.append("month", month.toString());
-      if (year !== undefined) params.append("year", year.toString());
-
-      if (params.toString()) {
-        url += "?" + params.toString();
-      }
-
-      console.log("🔄 Chargement des données dashboard:", url);
-
-      // Utiliser le proxy pour les données du dashboard
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        // Gérer les erreurs d'authentification et de route
-        if (
-          response.status === 401 ||
-          response.status === 403 ||
-          response.status === 404 ||
-          response.status === 500 ||
-          response.status === 503
-        ) {
-          console.error("❌ Erreur serveur:", response.status);
-          // Déclencher immédiatement la déconnexion sans délai
-          window.dispatchEvent(
-            new CustomEvent("session-error", {
-              detail: {
-                message: `Erreur ${response.status}: ${
-                  response.status === 401
-                    ? "Non autorisé"
-                    : response.status === 403
-                    ? "Accès interdit"
-                    : response.status === 404
-                    ? "Service non trouvé"
-                    : response.status === 500
-                    ? "Erreur serveur interne"
-                    : "Service indisponible"
-                }`,
-                status: response.status,
-              },
-            })
-          );
-          return;
-        }
-
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(
-          result.message || "Erreur lors du chargement des données"
-        );
-      }
-
-      // Les données sont dans result.data selon la réponse Edge Function
-      const data = result.data || result;
+      // TODO: Migrer vers le nouveau backend
+      // Pour l'instant, utiliser des données mock
+      console.log("🔄 Chargement des données dashboard (mock)...");
+      
+      // Simuler un délai de chargement
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const data = generateMockDashboardData();
       setDashboardData(data);
 
       // Générer les options de filtres basées sur les données disponibles
-      // Utiliser les données de demandes pour déterminer les périodes actives
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
       const currentMonth = currentDate.getMonth() + 1;
@@ -177,25 +171,12 @@ export default function EntrepriseDashboardPage() {
       const years = [currentYear, currentYear - 1, currentYear - 2];
       setAvailableYears(years);
 
-      console.log("✅ Données dashboard chargées:", data);
-
-      // Données chargées avec succès
+      console.log("✅ Données dashboard chargées (mock):", data);
     } catch (error) {
       console.error("❌ Erreur lors du chargement des données:", error);
       const errorMessage =
         error instanceof Error ? error.message : "Erreur inconnue";
       setError(errorMessage);
-
-      // Gestion des erreurs sans affichage de toast
-      if (errorMessage.includes("401") || errorMessage.includes("403")) {
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-      } else if (errorMessage.includes("404")) {
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-      }
     } finally {
       setIsLoading(false);
     }

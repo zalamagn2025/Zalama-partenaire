@@ -7,7 +7,6 @@ import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   LineChart,
   Line,
@@ -166,11 +165,13 @@ export default function FinancesPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Récupérer l'évolution mensuelle pour déterminer les mois actifs
       const evolutionResponse =
-        await edgeFunctionService.getFinancesEvolutionMensuelle();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesEvolutionMensuelle();
       if (evolutionResponse.success && evolutionResponse.data) {
         const evolutionData = evolutionResponse.data;
 
@@ -221,8 +222,10 @@ export default function FinancesPage() {
       if (!session?.partner || !session?.access_token) return;
 
       try {
-        edgeFunctionService.setAccessToken(session.access_token);
-        const response = await edgeFunctionService.getDashboardData();
+        // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
+        const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getDashboardData();
         if (response.success && response.data?.partner_info?.payment_day) {
           setPaymentDay(response.data.partner_info.payment_day);
         }
@@ -271,10 +274,12 @@ export default function FinancesPage() {
 
     setIsLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // 1. Récupérer les statistiques financières via Edge Function
-      const statsResponse = await edgeFunctionService.getFinancesStats();
+      const statsResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesStats();
       if (!statsResponse.success) {
         console.error(
           "Erreur lors de la récupération des statistiques:",
@@ -286,7 +291,8 @@ export default function FinancesPage() {
       const statsData = statsResponse.data || {};
 
       // 2. Récupérer les demandes via Edge Function
-      const demandesResponse = await edgeFunctionService.getFinancesDemandes();
+      const demandesResponse = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesDemandes();
       if (!demandesResponse.success) {
         console.error(
           "Erreur lors de la récupération des demandes:",
@@ -300,7 +306,8 @@ export default function FinancesPage() {
 
       // 3. Récupérer les remboursements via Edge Function
       const remboursementsResponse =
-        await edgeFunctionService.getFinancesRemboursements();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesRemboursements();
       if (!remboursementsResponse.success) {
         console.error(
           "Erreur lors de la récupération des remboursements:",
@@ -578,7 +585,8 @@ export default function FinancesPage() {
 
     setEdgeFunctionLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
@@ -605,7 +613,8 @@ export default function FinancesPage() {
       );
 
       // Charger les statistiques financières
-      const statsData = await edgeFunctionService.getFinancesStats(
+      const statsData = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesStats(
         cleanFilters
       );
 
@@ -717,9 +726,11 @@ export default function FinancesPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
-      const response = await edgeFunctionService.getFinancesRemboursements();
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesRemboursements();
       if (!response.success) {
         console.error(
           "Erreur lors du chargement des remboursements:",
@@ -771,7 +782,8 @@ export default function FinancesPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
@@ -794,7 +806,8 @@ export default function FinancesPage() {
         ).toString()}`
       );
 
-      const response = await edgeFunctionService.getFinancesRemboursements(
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getFinancesRemboursements(
         cleanFilters
       );
       if (!response.success) {

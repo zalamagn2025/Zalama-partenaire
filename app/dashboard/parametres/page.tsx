@@ -2,7 +2,6 @@
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import {
   Building,
   Calendar,
@@ -117,7 +116,8 @@ export default function ParametresPage() {
     const loadApiKey = async () => {
       if (session?.access_token) {
         try {
-          const response = await edgeFunctionService.getApiKey(
+          const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getApiKey(
             session.access_token
           );
           if (response.success && response.data) {
@@ -182,7 +182,8 @@ export default function ParametresPage() {
 
     setIsRegeneratingApiKey(true);
     try {
-      const response = await edgeFunctionService.regenerateApiKey(
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.regenerateApiKey(
         session.access_token
       );
 

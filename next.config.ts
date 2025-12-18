@@ -13,10 +13,10 @@ const withPWAConfigured = withPWA({
   },
   runtimeCaching: [
     {
-      urlPattern: /^https:\/\/mspmrzlqhwpdkkburjiw\.supabase\.co\/.*$/i,
+      urlPattern: /^https:\/\/sandbox\.zalamagn\.com\/.*$/i,
       handler: "NetworkFirst",
       options: {
-        cacheName: "supabase-cache",
+        cacheName: "zalama-api-cache",
         expiration: {
           maxEntries: 64,
           maxAgeSeconds: 24 * 60 * 60,
@@ -125,9 +125,9 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "mspmrzlqhwpdkkburjiw.supabase.co",
+        hostname: "sandbox.zalamagn.com",
         port: "",
-        pathname: "/storage/v1/object/public/**",
+        pathname: "/**",
       },
     ],
     // Redimensionnement automatique
@@ -140,7 +140,9 @@ const nextConfig: NextConfig = {
   },
   // Support des navigateurs plus anciens
   transpilePackages: ["@radix-ui/react-icons"],
-  // Configuration webpack pour la compatibilité
+  // Configuration Turbopack (pour le développement)
+  turbopack: {},
+  // Configuration webpack pour la compatibilité (utilisée en production/build)
   webpack: (config, { isServer, dev }) => {
     // Supprimer console.log en production
     if (!dev && !isServer) {

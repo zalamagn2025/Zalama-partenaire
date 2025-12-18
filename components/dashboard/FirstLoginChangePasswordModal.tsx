@@ -12,7 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
+import { useChangePassword } from "@/hooks/useAuth";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import {
   Eye,
@@ -34,6 +34,7 @@ export function FirstLoginChangePasswordModal({
 }: FirstLoginChangePasswordModalProps) {
   const router = useRouter();
   const { session, refreshSession } = useEdgeAuthContext();
+  const changePasswordMutation = useChangePassword();
 
   const [isLoading, setIsLoading] = useState(false);
   const [showCurrentPin, setShowCurrentPin] = useState(false);
@@ -108,14 +109,10 @@ export function FirstLoginChangePasswordModal({
         throw new Error("Session non valide");
       }
 
-      const changeResponse = await edgeFunctionService.changePassword(
-        session.access_token,
-        {
-          current_password: formData.currentPin,
-          new_password: formData.newPin,
-          confirm_password: formData.confirmPin,
-        }
-      );
+      const changeResponse = await changePasswordMutation.mutateAsync({
+        currentPassword: formData.currentPin,
+        newPassword: formData.newPin,
+      });
 
       if (changeResponse.success) {
         toast.success(
@@ -131,38 +128,6 @@ export function FirstLoginChangePasswordModal({
             "Erreur lors du rafraîchissement de session:",
             refreshError
           );
-          // Essayer de rafraîchir manuellement
-          try {
-            const refreshResponse = await edgeFunctionService.getMe(
-              session.access_token
-            );
-            if (refreshResponse.success && refreshResponse.data) {
-              const newSessionData = {
-                user: {
-                  id: refreshResponse.data.user.id,
-                  email: refreshResponse.data.user.email,
-                },
-                admin: refreshResponse.data.user,
-                partner: refreshResponse.data.partner_info,
-                access_token: session.access_token,
-                refresh_token: session.refresh_token,
-              };
-
-              // Sauvegarder la session mise à jour
-              localStorage.setItem(
-                "partner_session",
-                JSON.stringify(newSessionData)
-              );
-
-              // Forcer la mise à jour du contexte
-              window.location.reload();
-            }
-          } catch (manualRefreshError) {
-            console.log(
-              "Erreur lors du rafraîchissement manuel:",
-              manualRefreshError
-            );
-          }
         }
 
         // Fermer la modal et recharger la page après un délai
@@ -177,69 +142,22 @@ export function FirstLoginChangePasswordModal({
     } catch (error: any) {
       console.error("Erreur lors du changement de code PIN:", error);
 
-      // Si l'erreur indique un problème de token, essayer de se reconnecter
+      // Si l'erreur indique un problème de token, afficher un message d'erreur
       if (
         error.message?.includes("Session expirée") ||
-        error.message?.includes("401")
+        error.message?.includes("401") ||
+        error.message?.includes("Unauthorized")
       ) {
-        try {
-          console.log("Tentative de reconnexion...");
-          const loginResponse = await edgeFunctionService.login({
-            email: session.admin.email,
-            password: formData.currentPin,
-          });
-
-          if (loginResponse.success && loginResponse.access_token) {
-            // Réessayer avec le nouveau token
-            const retryResponse = await edgeFunctionService.changePassword(
-              loginResponse.access_token,
-              {
-                current_password: formData.currentPin,
-                new_password: formData.newPin,
-                confirm_password: formData.confirmPin,
-              }
-            );
-
-            if (retryResponse.success) {
-              toast.success(
-                "Code PIN changé avec succès. Vous allez être redirigé vers le dashboard."
-              );
-
-              // Mettre à jour la session
-              if (loginResponse.user && loginResponse.partner_info) {
-                const newSessionData = {
-                  user: {
-                    id: loginResponse.user.id,
-                    email: loginResponse.user.email,
-                  },
-                  admin: loginResponse.user,
-                  partner: loginResponse.partner_info,
-                  access_token: loginResponse.access_token,
-                  refresh_token: loginResponse.refresh_token || "",
-                };
-
-                localStorage.setItem(
-                  "partner_session",
-                  JSON.stringify(newSessionData)
-                );
-
-                // Forcer la mise à jour du contexte
-                window.location.reload();
-              }
-              return;
-            }
-          }
-        } catch (retryError: any) {
-          console.error(
-            "Erreur lors de la tentative de reconnexion:",
-            retryError
-          );
-          toast.error("Code PIN actuel incorrect ou erreur de connexion");
-          return;
-        }
+        toast.error("Votre session a expiré. Veuillez vous reconnecter.");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+        return;
       }
 
-      toast.error(error.message || "Erreur lors du changement de code PIN");
+      // Afficher l'erreur générique
+      const errorMessage = error?.message || error?.data?.message || "Erreur lors du changement de code PIN";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

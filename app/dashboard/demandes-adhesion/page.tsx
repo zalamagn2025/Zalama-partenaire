@@ -1,7 +1,6 @@
 "use client";
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -87,7 +86,8 @@ export default function DemandesAdhesionPage() {
 
       setIsLoading(true);
       try {
-        const response = await edgeFunctionService.getEmployeesWithoutAccount(
+        const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getEmployeesWithoutAccount(
           session.access_token
         );
 
@@ -167,7 +167,8 @@ export default function DemandesAdhesionPage() {
 
     setCreatingAccount(employeeId);
     try {
-      const response = await edgeFunctionService.createEmployeeAccount(
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.createEmployeeAccount(
         session.access_token,
         { employee_id: employeeId }
       );
@@ -206,7 +207,8 @@ export default function DemandesAdhesionPage() {
 
     setRejectingEmployee(selectedEmployee.id);
     try {
-      const response = await edgeFunctionService.rejectEmployeeRegistration(
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.rejectEmployeeRegistration(
         session.access_token,
         {
           employee_id: selectedEmployee.id,

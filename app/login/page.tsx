@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
+import { useForgotPassword } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 export default function LoginPage() {
@@ -40,11 +40,13 @@ export default function LoginPage() {
   const [pinError, setPinError] = useState("");
   const [showPin, setShowPin] = useState(false);
   const { login, session, loading } = useEdgeAuthContext();
+  const forgotPasswordMutation = useForgotPassword();
   const router = useRouter();
 
   // Redirection automatique si déjà connecté (une seule fois)
+  // Pour les gestionnaires/RH/responsables, on vérifie qu'ils ont un partner_info
   React.useEffect(() => {
-    if (!loading && session?.admin && session?.partner && !hasRedirected) {
+    if (!loading && session?.user && session?.partner && !hasRedirected) {
       console.log("User already authenticated, redirecting to dashboard");
       setHasRedirected(true);
       toast.success("Redirection vers le dashboard...");
@@ -102,7 +104,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      // Connexion directe avec les Edge Functions
+      // Connexion via l'API ZaLaMa pour gestionnaires/RH/responsables
       const { error, session: newSession } = await login({ email, password: pinCode });
 
       if (error) {
@@ -126,9 +128,13 @@ export default function LoginPage() {
         toast.error(errorMessage);
         setPinError("Code PIN incorrect");
       } else if (newSession) {
-        toast.success(
-          `Connexion réussie ! Bienvenue ${newSession.admin.display_name}`
-        );
+        // Afficher le nom de l'utilisateur (gestionnaire/RH/responsable)
+        const userName = newSession.user?.email || 
+                        (newSession.admin?.display_name) || 
+                        (newSession.admin?.firstName && newSession.admin?.lastName 
+                          ? `${newSession.admin.firstName} ${newSession.admin.lastName}` 
+                          : 'Utilisateur');
+        toast.success(`Connexion réussie ! Bienvenue ${userName}`);
         // La redirection se fera automatiquement via le useEffect
         setHasRedirected(true);
         router.push("/dashboard");
@@ -153,9 +159,7 @@ export default function LoginPage() {
     setIsResettingPin(true);
 
     try {
-      const response = await edgeFunctionService.resetPassword({
-        email: resetEmail,
-      });
+      const response = await forgotPasswordMutation.mutateAsync(resetEmail);
 
       if (response.success) {
         toast.success("Email de réinitialisation du code PIN envoyé avec succès");
@@ -176,32 +180,7 @@ export default function LoginPage() {
     }
   };
 
-  const createTestUsers = async () => {
-    try {
-      setIsLoading(true);
-      toast.info("Création des utilisateurs de test en cours...");
-
-      // Appeler l'API pour créer les utilisateurs
-      const response = await fetch("/api/create-test-users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        toast.success("Utilisateurs de test créés avec succès !");
-      } else {
-        const error = await response.text();
-        toast.error(`Erreur : ${error}`);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la création des utilisateurs:", error);
-      toast.error("Erreur lors de la création des utilisateurs de test");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Fonction supprimée - l'API create-test-users a été supprimée
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">

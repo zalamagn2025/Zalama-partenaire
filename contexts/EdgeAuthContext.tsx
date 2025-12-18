@@ -1,8 +1,7 @@
 "use client";
 
 import React, { createContext, useContext } from "react";
-import { useEdgeAuth } from "@/hooks/useEdgeAuth";
-import { AuthSession, LoginRequest } from "@/lib/edgeFunctionService";
+import { useEdgeAuth, type AuthSession, type LoginRequest } from "@/hooks/useEdgeAuth";
 
 interface EdgeAuthContextType {
   session: AuthSession | null;

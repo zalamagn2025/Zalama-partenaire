@@ -9,7 +9,9 @@ import Pagination from "@/components/ui/Pagination";
 import PaymentListTable from "@/components/PaymentListTable";
 import { useEdgeAuth } from "@/hooks/useEdgeAuth";
 import { usePaymentHistory } from "@/hooks/usePaymentHistory";
-import { edgeFunctionService } from "@/lib/edgeFunctionService";
+// TODO: Migrer vers le nouveau backend
+// import { apiClient } from "@/lib/api-client";
+// import { API_ROUTES } from "@/config/api";
 import { toast } from "sonner";
 
 import {
@@ -294,11 +296,13 @@ export default function RemboursementsPage() {
     setEdgeFunctionLoading(true);
     setIsLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Utiliser directement l'endpoint des remboursements pour récupérer les données du mois en cours
       const remboursementsData =
-        await edgeFunctionService.getPartnerRemboursements();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursements();
 
       if (!remboursementsData.success) {
         console.error("Erreur Edge Function:", remboursementsData.message);
@@ -385,7 +389,8 @@ export default function RemboursementsPage() {
 
     setEdgeFunctionLoading(true);
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
@@ -404,7 +409,8 @@ export default function RemboursementsPage() {
 
       // Charger les remboursements
       const remboursementsData =
-        await edgeFunctionService.getPartnerRemboursements(cleanFilters);
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursements(cleanFilters);
 
       if (!remboursementsData.success) {
         console.error("Erreur Edge Function:", remboursementsData.message);
@@ -430,18 +436,21 @@ export default function RemboursementsPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Charger les employés actifs
       const employeesData =
-        await edgeFunctionService.getPartnerRemboursementsEmployees();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursementsEmployees();
       if (employeesData.success && employeesData.data) {
         setActiveEmployees(employeesData.data);
       }
 
       // Charger les périodes d'activité
       const periodsData =
-        await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursementsActivityPeriods();
       if (periodsData.success && periodsData.data) {
         setActivityPeriods(periodsData.data);
         setActiveYears(periodsData.data.years || []);
@@ -650,7 +659,8 @@ export default function RemboursementsPage() {
     if (!session?.access_token) return;
 
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       // Combiner les filtres par défaut avec les filtres personnalisés
       const activeFilters = { ...filters, ...customFilters };
@@ -663,7 +673,8 @@ export default function RemboursementsPage() {
       );
 
       const statisticsData =
-        await edgeFunctionService.getPartnerRemboursementsStatistics(
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursementsStatistics(
           cleanFilters
         );
 
@@ -702,9 +713,11 @@ export default function RemboursementsPage() {
   const fetchEmployees = async () => {
     if (!session?.partner) return;
     try {
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
       const employeesData =
-        await edgeFunctionService.getPartnerRemboursementsEmployees();
+        await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPartnerRemboursementsEmployees();
       if (employeesData.success && employeesData.data) {
         setEmployees(employeesData.data);
       }

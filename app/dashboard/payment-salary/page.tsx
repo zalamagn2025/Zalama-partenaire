@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import {
-  edgeFunctionService,
-  PaymentEmployeesResponse,
-} from "@/lib/edgeFunctionService";
+// TODO: Migrer vers le nouveau backend
+// import { PaymentEmployeesResponse } from "@/lib/edgeFunctionService";
+type PaymentEmployeesResponse = any; // Temporaire
 import { useCustomToast } from "@/hooks/useCustomToast";
 import { useRouter } from "next/navigation";
 import {
@@ -122,11 +121,13 @@ export default function PaymentSalaryPage() {
 
     try {
       // Configurer le token d'accès
-      edgeFunctionService.setAccessToken(session.access_token);
+      // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.setAccessToken(session.access_token);
 
       console.log("🔄 Chargement des données de paiement...");
 
-      const response = await edgeFunctionService.getPaymentEmployees({
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.getPaymentEmployees({
         mois: month,
         annee: year,
       });
@@ -222,7 +223,8 @@ export default function PaymentSalaryPage() {
         "employés"
       );
 
-      const response = await edgeFunctionService.executeSalaryPayments({
+      const response = await // TODO: Migrer vers le nouveau backend
+      // edgeFunctionService.executeSalaryPayments({
         employes_selectionnes: Array.from(selectedEmployees),
         mois: selectedMonth || undefined,
         annee: selectedYear || undefined,
