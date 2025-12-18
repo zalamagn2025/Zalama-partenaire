@@ -295,12 +295,12 @@ export default function RemboursementsPage() {
       // Calculer le total en attente
       const total = remboursementsData
         .filter((r: any) => r.statut === "EN_ATTENTE")
-        .reduce(
-          (sum: number, r: any) =>
+          .reduce(
+            (sum: number, r: any) =>
             sum + Number(r.montant_total_remboursement || 0),
-          0
-        );
-      setTotalAttente(total);
+            0
+          );
+        setTotalAttente(total);
       toast.success(
         "Données des remboursements du mois en cours mises à jour avec succès"
       );

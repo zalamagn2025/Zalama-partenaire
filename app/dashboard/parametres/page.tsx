@@ -170,7 +170,7 @@ export default function ParametresPage() {
 
     try {
       const response = await regenerateApiKeyMutation.mutateAsync();
-      
+
       if (response.success && response.apiKey) {
         toast.success("Clé API régénérée avec succès");
         await refetchApiKey(); // Recharger la clé API

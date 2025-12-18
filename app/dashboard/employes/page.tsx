@@ -6,7 +6,6 @@ import {
   Users,
   Search,
   Filter,
-  ChevronDown,
   Eye,
   RefreshCw,
   Calendar,
@@ -42,8 +41,10 @@ export default function EmployesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
-  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const [selectedPoste, setSelectedPoste] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  const [showFilters, setShowFilters] = useState(false);
 
   // États pour la pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -58,6 +59,9 @@ export default function EmployesPage() {
     search: searchTerm || undefined,
     typeContrat: selectedContractType || undefined,
     actif: selectedStatus === 'actif' ? true : selectedStatus === 'inactif' ? false : undefined,
+    poste: selectedPoste || undefined,
+    sortBy: sortBy || undefined,
+    sortOrder: sortOrder || undefined,
     limit: employeesPerPage,
     page: currentPage,
   });
@@ -89,9 +93,12 @@ export default function EmployesPage() {
     }
   }, [loading, session, router]);
 
-  // Les filtres sont gérés côté serveur via les hooks, mais on peut aussi faire un filtrage client supplémentaire si nécessaire
-  // Pour l'instant, on utilise directement les données du serveur
+  // Réinitialiser la pagination quand les filtres changent
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedContractType, selectedStatus, selectedPoste, sortBy, sortOrder]);
 
+  // Les filtres sont gérés côté serveur via les hooks
   // Les statistiques sont globales et ne changent pas avec les filtres
 
   // Calculer les statistiques depuis la réponse API
@@ -322,130 +329,156 @@ export default function EmployesPage() {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
-      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          {/* Recherche */}
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
-              <Input
-                placeholder="Rechercher un employé..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
-              />
+      {/* Recherche simple */}
+      <div className="bg-white dark:bg-[var(--zalama-card)] border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow p-4 mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[var(--zalama-text-secondary)]" />
+          <Input
+            placeholder="Rechercher un employé..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
+          />
+        </div>
+      </div>
+
+      {/* Filtres avancés - Style identique à la page demandes */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
+              >
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedContractType(null);
+                  setSelectedStatus(null);
+                  setSelectedPoste(null);
+                  setSortBy("createdAt");
+                  setSortOrder("DESC");
+                  setCurrentPage(1);
+                }}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
+                onClick={() => refetchEmployees()}
+                disabled={isLoading}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {isLoading ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
             </div>
           </div>
-
-          {/* Filtre par type de contrat */}
-          <div className="relative">
-            <button
-              onClick={() => setIsContractDropdownOpen(!isContractDropdownOpen)}
-              className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {selectedContractType || "Type de contrat"}
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </button>
-            {isContractDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                <button
-                  onClick={() => {
-                    setSelectedContractType(null);
-                    setIsContractDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
-                >
-                  Tous les contrats
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedContractType("CDI");
-                    setIsContractDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
-                >
-                  CDI
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedContractType("CDD");
-                    setIsContractDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
-                >
-                  CDD
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedContractType("Consultant");
-                    setIsContractDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-[var(--zalama-card)] dark:text-white"
-                >
-                  Consultant
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedContractType("Stage");
-                    setIsContractDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Stage
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Filtre par statut */}
-          <div className="relative">
-            <button
-              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
-              className="flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              {selectedStatus === "actif"
-                ? "Actifs"
-                : selectedStatus === "inactif"
-                ? "Inactifs"
-                : "Statut"}
-              <ChevronDown className="w-4 h-4 ml-2" />
-            </button>
-            {isStatusDropdownOpen && (
-              <div className="absolute top-full left-0 mt-1 w-48 bg-white dark:bg-[var(--zalama-card)] border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                <button
-                  onClick={() => {
-                    setSelectedStatus(null);
-                    setIsStatusDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Tous les statuts
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedStatus("actif");
-                    setIsStatusDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Actifs
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedStatus("inactif");
-                    setIsStatusDropdownOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-white"
-                >
-                  Inactifs
-                </button>
-              </div>
-            )}
-          </div>
         </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            {/* Filtre par type de contrat */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Type de contrat
+              </label>
+              <select
+                value={selectedContractType || ""}
+                onChange={(e) => setSelectedContractType(e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les contrats</option>
+                <option value="CDI">CDI</option>
+                <option value="CDD">CDD</option>
+                <option value="Consultant">Consultant</option>
+                <option value="Stage">Stage</option>
+                <option value="Autre">Autre</option>
+              </select>
+            </div>
+
+            {/* Filtre par statut */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut
+              </label>
+              <select
+                value={selectedStatus || ""}
+                onChange={(e) => setSelectedStatus(e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="actif">Actifs</option>
+                <option value="inactif">Inactifs</option>
+              </select>
+            </div>
+
+            {/* Filtre par poste */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Poste
+              </label>
+              <select
+                value={selectedPoste || ""}
+                onChange={(e) => setSelectedPoste(e.target.value || null)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="">Tous les postes</option>
+                {employees.length > 0 ? (
+                  Array.from(new Set(employees.map(emp => emp.poste).filter(Boolean))).map((poste) => (
+                    <option key={poste} value={poste || ""}>
+                      {poste}
+                    </option>
+                  ))
+                ) : null}
+              </select>
+            </div>
+
+            {/* Tri par champ */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Trier par
+              </label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="createdAt">Date de création</option>
+                <option value="updatedAt">Date de modification</option>
+                <option value="nom">Nom</option>
+                <option value="prenom">Prénom</option>
+                <option value="dateEmbauche">Date d'embauche</option>
+                <option value="salaireNet">Salaire net</option>
+                <option value="poste">Poste</option>
+              </select>
+            </div>
+
+            {/* Ordre de tri */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Ordre
+              </label>
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as "ASC" | "DESC")}
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              >
+                <option value="ASC">Croissant (ASC)</option>
+                <option value="DESC">Décroissant (DESC)</option>
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tableau des employés */}

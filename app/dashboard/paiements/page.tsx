@@ -172,7 +172,7 @@ export default function PaymentSalaryPage() {
           created_at: new Date().toISOString(),
         },
       ];
-      
+        
       setPayments(mockPayments);
       console.log("✅ Paiements chargés (mock):", mockPayments);
     } catch (error) {
@@ -237,7 +237,7 @@ export default function PaymentSalaryPage() {
           salaire_mensuel: 2200000,
         },
       ];
-      
+        
       setEmployees(mockEmployees);
       console.log("✅ Employés chargés (mock):", mockEmployees.length, "employés");
     } catch (error) {

@@ -100,26 +100,26 @@ export default function EntrepriseDashboardPage() {
     await refetchDashboard();
   };
 
-  // Générer les options de filtres basées sur les données disponibles
+      // Générer les options de filtres basées sur les données disponibles
   useEffect(() => {
-    const currentDate = new Date();
-    const currentYear = currentDate.getFullYear();
-    const currentMonth = currentDate.getMonth() + 1;
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
 
-    // Générer les mois disponibles (6 derniers mois + mois actuel)
-    const monthsWithData = [];
-    for (let i = 5; i >= 0; i--) {
-      const date = new Date(currentYear, currentMonth - i - 1, 1);
-      const monthValue = date.getMonth() + 1;
-      const monthLabel = date.toLocaleDateString("fr-FR", { month: "long" });
-      monthsWithData.push({ value: monthValue, label: monthLabel });
-    }
+      // Générer les mois disponibles (6 derniers mois + mois actuel)
+      const monthsWithData = [];
+      for (let i = 5; i >= 0; i--) {
+        const date = new Date(currentYear, currentMonth - i - 1, 1);
+        const monthValue = date.getMonth() + 1;
+        const monthLabel = date.toLocaleDateString("fr-FR", { month: "long" });
+        monthsWithData.push({ value: monthValue, label: monthLabel });
+      }
 
-    setAvailableMonths(monthsWithData);
+      setAvailableMonths(monthsWithData);
 
-    // Générer les années disponibles (année actuelle et 2 précédentes)
-    const years = [currentYear, currentYear - 1, currentYear - 2];
-    setAvailableYears(years);
+      // Générer les années disponibles (année actuelle et 2 précédentes)
+      const years = [currentYear, currentYear - 1, currentYear - 2];
+      setAvailableYears(years);
   }, []);
 
   // Fonction pour appliquer les filtres

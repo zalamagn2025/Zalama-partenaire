@@ -152,7 +152,7 @@ export function FirstLoginChangePasswordModal({
         setTimeout(() => {
           router.push("/login");
         }, 2000);
-        return;
+          return;
       }
 
       // Afficher l'erreur générique

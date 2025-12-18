@@ -76,7 +76,7 @@ export default function AvisPage() {
     typeRetour: selectedCategory !== 'all' ? selectedCategory : undefined,
     limit: itemsPerPage,
     page: currentPage,
-  });
+      });
 
   const { data: employeesResponse } = usePartnerEmployees({
     limit: 1000, // Récupérer tous les employés pour le filtre

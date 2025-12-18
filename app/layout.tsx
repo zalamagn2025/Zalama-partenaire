@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  width: "device-width",
-  initialScale: 1,
+    width: "device-width",
+    initialScale: 1,
   viewportFit: "cover" as const,
   themeColor: "#0d6efd",
 };
@@ -49,16 +49,16 @@ export default function RootLayout({
     <html lang="fr">
       <body className="antialiased font-sans">
         <QueryProvider>
-          <ThemeProvider>
-            <EdgeAuthProvider>
-              <SessionErrorHandler>
-                <NetworkStatus />
-                <Toaster />
-                <InstallPrompt />
-                {children}
-              </SessionErrorHandler>
-            </EdgeAuthProvider>
-          </ThemeProvider>
+        <ThemeProvider>
+          <EdgeAuthProvider>
+            <SessionErrorHandler>
+              <NetworkStatus />
+              <Toaster />
+              <InstallPrompt />
+              {children}
+            </SessionErrorHandler>
+          </EdgeAuthProvider>
+        </ThemeProvider>
         </QueryProvider>
       </body>
     </html>
