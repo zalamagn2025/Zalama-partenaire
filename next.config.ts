@@ -147,7 +147,27 @@ const nextConfig: NextConfig = {
   // Support des navigateurs plus anciens
   transpilePackages: ["@radix-ui/react-icons"],
   // Configuration Turbopack (pour le développement)
-  turbopack: {},
+  turbopack: {
+    // Réduire la surveillance de fichiers en excluant certains dossiers
+    resolveAlias: {
+      // Exclure node_modules de la surveillance (déjà géré par Next.js)
+    },
+  },
+  // Configuration pour réduire la surveillance de fichiers
+  watchOptions: {
+    ignored: [
+      '**/node_modules/**',
+      '**/.next/**',
+      '**/out/**',
+      '**/.git/**',
+      '**/coverage/**',
+      '**/.DS_Store',
+      '**/*.log',
+      '**/.env*',
+      '**/build/**',
+      '**/dist/**',
+    ],
+  },
   // Configuration webpack pour la compatibilité (utilisée en production/build)
   webpack: (config, { isServer, dev }) => {
     // Supprimer console.log en production

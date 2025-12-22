@@ -38,6 +38,7 @@ import {
   Save
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
+import { usePartnerFinancesEmployeeStats } from "@/hooks/usePartnerFinances";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -91,8 +92,11 @@ export default function PaymentSalaryPage() {
   const router = useRouter();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [statistics, setStatistics] = useState<any>(null); // ✅ Nouvelles stats depuis l'API
-  const [loadingData, setLoadingData] = useState(true);
+  
+  // Utiliser le hook pour récupérer les statistiques
+  const { data: statsResponse, isLoading: loadingStats } = usePartnerFinancesEmployeeStats();
+  const statistics = statsResponse?.data || null;
+  const loadingData = loadingStats;
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -119,19 +123,16 @@ export default function PaymentSalaryPage() {
   }, [session?.access_token]);
 
   const loadAllData = async () => {
-    setLoadingData(true);
     try {
-      await Promise.all([loadPayments(), loadEmployees(), loadStatistics()]);
+      await Promise.all([loadPayments(), loadEmployees()]);
     } catch (error) {
       console.error("Erreur lors du chargement des données:", error);
-    } finally {
-      setLoadingData(false);
     }
   };
 
   const loadPayments = async () => {
     try {
-      // TODO: Migrer vers le nouveau backend
+      // TODO: Migrer vers le nouveau backend pour les paiements individuels
       // Pour l'instant, utiliser des données mock
       console.log("🔄 Chargement des paiements (mock)...");
       
@@ -179,30 +180,6 @@ export default function PaymentSalaryPage() {
       console.error("Erreur lors du chargement des paiements:", error);
       toast.error("Erreur lors du chargement des paiements");
       setPayments([]);
-    }
-  };
-
-  const loadStatistics = async () => {
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // Pour l'instant, utiliser des données mock
-      console.log("🔄 Chargement des statistiques (mock)...");
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      const mockStatistics = {
-        total_paiements: 2,
-        montant_total: 4700000,
-        paiements_effectues: 2,
-        paiements_en_attente: 0,
-      };
-      
-      setStatistics(mockStatistics);
-      console.log("✅ Statistiques chargées (mock):", mockStatistics);
-    } catch (error) {
-      console.error("Erreur lors du chargement des statistiques:", error);
-      toast.error("Erreur lors du chargement des statistiques");
-      setStatistics(null);
     }
   };
 

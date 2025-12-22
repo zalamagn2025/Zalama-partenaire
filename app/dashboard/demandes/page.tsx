@@ -28,8 +28,7 @@ import {
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
-// TODO: Migrer vers le nouveau backend
-// import type { SalaryAdvanceRequest, Employee } from "@/types/api";
+import { usePartnerFinancesDemandes } from "@/hooks/usePartnerFinances";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,11 +73,6 @@ const getStatusBadge = (statut: string) => {
 export default function DemandesPage() {
   const { session } = useEdgeAuthContext();
   const router = useRouter();
-  const [demandesAvance, setDemandesAvance] = useState<
-    SalaryAdvanceRequestWithEmployee[]
-  >([]);
-  const [loading, setLoading] = useState(true);
-  const [tableLoading, setTableLoading] = useState(false); // Nouvel état pour le loading du tableau
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
@@ -91,17 +85,26 @@ export default function DemandesPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDemande, setSelectedDemande] = useState<any>(null);
 
-  // États pour les filtres de l'edge function
+  // États pour les filtres
   const [filters, setFilters] = useState({
     mois: null as number | null,
     annee: null as number | null,
     status: null as string | null,
-    type_motif: null as string | null,
-    categorie: null as string | null,
-    statut_remboursement: null as string | null,
-    limit: 50,
-    offset: 0,
   });
+
+  // Utiliser le hook pour récupérer les demandes
+  const { data: demandesResponse, isLoading, refetch } = usePartnerFinancesDemandes({
+    offset: (currentPage - 1) * itemsPerPage,
+    limit: itemsPerPage,
+    status: filters.status as 'EN_ATTENTE' | 'APPROUVE' | 'REJETE' | undefined,
+    annee: filters.annee || undefined,
+    mois: filters.mois || undefined,
+  });
+
+  // Extraire les données de la réponse
+  const demandesAvance = (demandesResponse?.data || []) as SalaryAdvanceRequestWithEmployee[];
+  const loading = isLoading;
+  const tableLoading = isLoading;
 
   // États pour les données de filtres
   const [activityPeriods, setActivityPeriods] = useState<any>(null);
@@ -113,199 +116,9 @@ export default function DemandesPage() {
     new Map()
   );
 
-  // États pour les données Edge Functions (mois en cours)
-  const [currentMonthData, setCurrentMonthData] = useState<any>(null);
-  const [edgeFunctionLoading, setEdgeFunctionLoading] = useState(false);
-
-  // Fonction pour charger les demandes
-  const loadDemandes = async (showTableLoader = false, delay = 0) => {
-    if (!session?.partner) return;
-
-    if (showTableLoader) {
-      setTableLoading(true);
-    } else {
-      setLoading(true);
-    }
-
-    try {
-      // Ajouter un délai si spécifié
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-
-      // TODO: Migrer vers le nouveau backend
-      // const demandes = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list);
-      const demandes: any[] = []; // Temporaire - en attente de migration
-
-      // ✅ Log pour vérifier si les remboursements sont bien récupérés
-      if (demandes.length > 0) {
-        console.log('📋 Exemple demande avec remboursement:', {
-          id: demandes[0].id,
-          statut: demandes[0].statut,
-          remboursement: (demandes[0] as any).remboursement,
-          hasRemboursement: !!(demandes[0] as any).remboursement,
-          isArray: Array.isArray((demandes[0] as any).remboursement),
-          length: Array.isArray((demandes[0] as any).remboursement) ? (demandes[0] as any).remboursement.length : 0
-        });
-      }
-
-      setDemandesAvance(demandes);
-    } catch (error: any) {
-      console.error("Erreur lors du chargement des demandes:", error);
-
-      // Gérer les erreurs d'authentification et serveur
-      if (
-        error.message &&
-        (error.message.includes("Erreur serveur") ||
-          error.message.includes("500") ||
-          error.message.includes("401") ||
-          error.message.includes("403") ||
-          error.message.includes("404") ||
-          error.message.includes("503"))
-      ) {
-        console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(
-          new CustomEvent("session-error", {
-            detail: {
-              message: error.message,
-              status: error.status || 500,
-            },
-          })
-        );
-        return;
-      }
-
-      toast.error("Erreur lors du chargement des demandes");
-    } finally {
-      if (showTableLoader) {
-        setTableLoading(false);
-      } else {
-        setLoading(false);
-      }
-    }
-  };
-
-  // Charger les données du mois en cours via Edge Functions
-  const loadSalaryDemandsData = async (customFilters = {}) => {
-    if (!session?.access_token) {
-      console.log("Pas de token d'accès disponible");
-      return;
-    }
-
-    setEdgeFunctionLoading(true);
-    setLoading(true);
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // // TODO: Migrer vers le nouveau backend
-      // edgeFunctionService.setAccessToken(session.access_token);
-
-      // Combiner les filtres par défaut avec les filtres personnalisés
-      const activeFilters = { ...filters, ...customFilters };
-
-      // Nettoyer les filtres (enlever les valeurs null/undefined)
-      const cleanFilters = Object.fromEntries(
-        Object.entries(activeFilters).filter(
-          ([_, value]) => value !== null && value !== undefined && value !== ""
-        )
-      );
-
-      console.log("🔄 Chargement des demandes avec filtres:", cleanFilters);
-
-      // Utiliser l'endpoint des demandes avec filtres
-      // TODO: Migrer vers le nouveau backend
-      // const demandesData = await apiClient.get(API_ROUTES.salaryAdvanceRequests.list, {
-      //   cleanFilters
-      // });
-      
-      // Générer des données mock temporaires
-      const demandesData: any = {
-        success: true,
-        message: "Données mock - en attente de migration backend",
-        data: [], // Tableau vide pour le moment
-      };
-
-      if (!demandesData || !demandesData.success) {
-        console.error("Erreur Edge Function:", demandesData?.message);
-        toast.error("Erreur lors du chargement des données");
-        return;
-      }
-
-      // Stocker les données pour les statistiques
-      setCurrentMonthData(demandesData);
-
-      // Mettre à jour les données locales
-      if (demandesData.data && Array.isArray(demandesData.data)) {
-        // ✅ APLATIR LES DONNÉES : transformer les données groupées en demandes individuelles
-        const demandesAplaties: any[] = [];
-        
-        demandesData.data.forEach((groupe: any) => {
-          // Pour chaque groupe (employé), extraire les demandes_detailes
-          if (groupe.demandes_detailes && Array.isArray(groupe.demandes_detailes)) {
-            groupe.demandes_detailes.forEach((demande: any) => {
-              demandesAplaties.push({
-                ...demande,
-                // Ajouter les infos de l'employé
-                employe: groupe.employe,
-                employees: groupe.employe, // Compatibilité avec l'ancien format
-                partenaire: groupe.partenaire,
-                // Ajouter le remboursement_info comme remboursement (format attendu par le tableau)
-                remboursement: demande.remboursement_info ? [demande.remboursement_info] : [],
-                remboursements: demande.remboursement_info ? [demande.remboursement_info] : [],
-                // Formater la date pour l'affichage
-                date: demande.date_creation ? new Date(demande.date_creation).toLocaleDateString('fr-FR') : 'N/A'
-              });
-            });
-          }
-        });
-
-        console.log(`✅ ${demandesAplaties.length} demandes individuelles extraites de ${demandesData.data.length} groupes`);
-        console.log('📋 Exemple demande aplatie:', demandesAplaties[0]);
-
-        setDemandesAvance(demandesAplaties);
-      }
-
-      console.log(
-        "✅ Données chargées avec succès:",
-        demandesData.data?.length,
-        "demandes"
-      );
-    } catch (error: any) {
-      console.error(
-        "Erreur lors du chargement des données Edge Functions:",
-        error
-      );
-
-      // Gérer les erreurs d'authentification et serveur
-      if (
-        error.message &&
-        (error.message.includes("Erreur serveur") ||
-          error.message.includes("500") ||
-          error.message.includes("401") ||
-          error.message.includes("403") ||
-          error.message.includes("404") ||
-          error.message.includes("503"))
-      ) {
-        console.error("❌ Erreur serveur détectée, déconnexion...");
-        window.dispatchEvent(
-          new CustomEvent("session-error", {
-            detail: {
-              message: error.message,
-              status: error.status || 500,
-            },
-          })
-        );
-        return;
-      }
-
-      toast.error("Erreur lors du chargement des données");
-    } finally {
-      setEdgeFunctionLoading(false);
-      setLoading(false);
-    }
-  };
-
-  const loadCurrentMonthData = async () => {
-    await loadSalaryDemandsData();
+  // Fonction pour recharger les données avec les filtres
+  const reloadDemandes = () => {
+    refetch();
   };
 
   // Fonction pour charger les informations des employés
@@ -414,7 +227,7 @@ export default function DemandesPage() {
     setCurrentPage(1);
 
     // Recharger les données avec les nouveaux filtres
-    loadSalaryDemandsData(newFilters);
+    reloadDemandes();
   };
 
   // Fonction pour réinitialiser tous les filtres
@@ -423,21 +236,14 @@ export default function DemandesPage() {
       mois: null,
       annee: null,
       status: null,
-      type_motif: null,
-      categorie: null,
-      statut_remboursement: null,
-      limit: 50,
-      offset: 0,
     };
     setFilters(defaultFilters);
     setCurrentPage(1);
-    loadSalaryDemandsData(defaultFilters);
+    reloadDemandes();
   };
 
-  // Charger les demandes au montage
+  // Charger les données au montage
   useEffect(() => {
-    // Charger d'abord les données Edge Function
-    loadCurrentMonthData();
     // Charger les données pour les filtres
     loadActivityPeriods();
     // Charger les données des employés
@@ -456,19 +262,10 @@ export default function DemandesPage() {
     }
   }, [session?.partner, activityPeriods]);
 
-  // Charger les données de fallback si pas de données Edge Function
+  // Recharger les données quand les filtres ou la page changent
   useEffect(() => {
-    if (!currentMonthData && !edgeFunctionLoading) {
-      loadDemandes();
-    }
-  }, [currentMonthData, edgeFunctionLoading]);
-
-  // Charger les données de fallback au démarrage si pas de données
-  useEffect(() => {
-    if (demandesAvance.length === 0 && !edgeFunctionLoading && !loading) {
-      loadDemandes();
-    }
-  }, [demandesAvance.length, edgeFunctionLoading, loading]);
+    reloadDemandes();
+  }, [filters.mois, filters.annee, filters.status, currentPage]);
 
   // Formater les demandes
   const allDemandes = demandesAvance.map((d) => {
@@ -585,33 +382,24 @@ export default function DemandesPage() {
     startIndex + itemsPerPage
   );
 
-  // Calculer les statistiques - utiliser les données Edge Function en priorité
-  const totalDemandes =
-    currentMonthData?.statistics?.total ||
-    currentMonthData?.count ||
-    allDemandes.length;
+  // Calculer les statistiques à partir des données de l'API
+  const totalDemandes = demandesResponse?.total || allDemandes.length;
 
-  const approvedDemandes =
-    currentMonthData?.statistics?.status_breakdown?.Validé ||
-    currentMonthData?.statistics?.by_status?.approved ||
-    allDemandes.filter((d) => d.statut === "Validé").length;
+  const approvedDemandes = allDemandes.filter((d) => 
+    d.statut === "Validé" || d.statut === "APPROUVE" || d.statut === "APPROUVÉ"
+  ).length;
 
-  const pendingDemandes =
-    currentMonthData?.statistics?.status_breakdown?.["En attente"] ||
-    currentMonthData?.statistics?.by_status?.pending ||
-    allDemandes.filter((d) => d.statut === "En attente").length;
+  const pendingDemandes = allDemandes.filter((d) => 
+    d.statut === "En attente" || d.statut === "EN_ATTENTE" || d.statut === "PENDING"
+  ).length;
 
-  const pendingRHResponsable =
-    currentMonthData?.statistics?.status_breakdown?.[
-      "En attente RH/Responsable"
-    ] ||
-    currentMonthData?.statistics?.by_status?.pending_rh_responsable ||
-    allDemandes.filter((d) => d.statut === "En attente RH/Responsable").length;
+  const pendingRHResponsable = allDemandes.filter((d) => 
+    d.statut === "En attente RH/Responsable" || d.statut === "PENDING_RH"
+  ).length;
 
-  const rejectedDemandes =
-    currentMonthData?.statistics?.status_breakdown?.Rejeté ||
-    currentMonthData?.statistics?.by_status?.rejected ||
-    allDemandes.filter((d) => d.statut === "Rejeté").length;
+  const rejectedDemandes = allDemandes.filter((d) => 
+    d.statut === "Rejeté" || d.statut === "REJETE" || d.statut === "REJECTED"
+  ).length;
 
   // ✅ Statistiques des remboursements (montants)
   const remboursementsPaye = allDemandes.reduce((total, d) => {
@@ -816,7 +604,7 @@ export default function DemandesPage() {
     };
   }, []);
 
-  if (loading && demandesAvance.length === 0) {
+  if (loading && (!demandesAvance || demandesAvance.length === 0)) {
     return (
       <div className="p-6 space-y-6 animate-pulse">
         {/* Skeleton pour les filtres avancés */}
@@ -883,10 +671,10 @@ export default function DemandesPage() {
             </button>
             <button
               onClick={() => loadSalaryDemandsData(filters)}
-              disabled={edgeFunctionLoading}
+              disabled={loading}
               className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
             >
-                {edgeFunctionLoading ? (
+                {loading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
                 ) : null}
                 Actualiser
