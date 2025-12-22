@@ -83,7 +83,7 @@ export default function DemandesAdhesionPage() {
   const totalPages = Math.ceil(totalEmployees / itemsPerPage);
 
   // Les filtres sont gérés côté serveur via les hooks
-  // Réinitialiser la pagination quand les filtres changent
+    // Réinitialiser la pagination quand les filtres changent
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, filterStatus]);
@@ -167,9 +167,9 @@ export default function DemandesAdhesionPage() {
       });
 
       toast.success("Demande d'adhésion rejetée avec succès");
-      setIsRejectModalOpen(false);
-      setSelectedEmployee(null);
-      setRejectReason("");
+        setIsRejectModalOpen(false);
+        setSelectedEmployee(null);
+        setRejectReason("");
       await refetch(); // Recharger la liste
     } catch (error: any) {
       console.error("Erreur lors du rejet de l'inscription:", error);
@@ -442,56 +442,56 @@ export default function DemandesAdhesionPage() {
 
                       {/* Bouton Rejeter - uniquement si status === 'pending' */}
                       {employee.status === 'pending' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRejectEmployee(employee);
-                          }}
-                          disabled={rejectingEmployee === employee.id}
-                          className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                          title="Rejeter l'inscription"
-                        >
-                          {rejectingEmployee === employee.id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
-                          ) : (
-                            <X className="h-4 w-4" />
-                          )}
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                            Rejeter
-                          </div>
-                        </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRejectEmployee(employee);
+                        }}
+                        disabled={rejectingEmployee === employee.id}
+                        className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        title="Rejeter l'inscription"
+                      >
+                        {rejectingEmployee === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                        ) : (
+                          <X className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          Rejeter
+                        </div>
+                      </button>
                       )}
 
                       {/* Bouton Créer - uniquement si status === 'pending' */}
                       {employee.status === 'pending' && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCreateAccount(employee.id);
-                          }}
-                          disabled={
-                            creatingAccount === employee.id || !employee.email
-                          }
-                          className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
-                            !employee.email
-                              ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
-                              : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
-                          }`}
-                          title={
-                            !employee.email
-                              ? "Email requis pour créer un compte"
-                              : "Créer le compte"
-                          }
-                        >
-                          {creatingAccount === employee.id ? (
-                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                          ) : (
-                            <UserPlus className="h-4 w-4" />
-                          )}
-                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                            {!employee.email ? "Email requis" : "Créer"}
-                          </div>
-                        </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCreateAccount(employee.id);
+                        }}
+                        disabled={
+                          creatingAccount === employee.id || !employee.email
+                        }
+                        className={`group relative p-2 rounded-full transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 ${
+                          !employee.email
+                            ? "bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed"
+                            : "bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                        }`}
+                        title={
+                          !employee.email
+                            ? "Email requis pour créer un compte"
+                            : "Créer le compte"
+                        }
+                      >
+                        {creatingAccount === employee.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                        ) : (
+                          <UserPlus className="h-4 w-4" />
+                        )}
+                        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                          {!employee.email ? "Email requis" : "Créer"}
+                        </div>
+                      </button>
                       )}
                     </div>
                   </td>

@@ -42,7 +42,7 @@ import {
   BarChart3,
   TrendingUp,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { PinInput } from "@/components/ui/PinInput";
 import { Badge } from "@/components/ui/badge";
@@ -171,7 +171,7 @@ export default function ParametresPage() {
     try {
       const response = await regenerateApiKeyMutation.mutateAsync();
 
-      if (response.success && response.apiKey) {
+      if (response.success && response.api_key) {
         toast.success("Clé API régénérée avec succès");
         await refetchApiKey(); // Recharger la clé API
       } else {
@@ -286,6 +286,17 @@ export default function ParametresPage() {
     { id: "apparence", label: "Apparence", icon: Palette },
     { id: "integrations", label: "Intégrations", icon: Zap, disabled: true },
   ];
+
+  // Vérifier que la session existe
+  if (!session) {
+    return (
+      <div className="p-6">
+        <div className="text-center py-12">
+          <p className="text-gray-600 dark:text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">

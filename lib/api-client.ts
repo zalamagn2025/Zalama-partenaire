@@ -91,22 +91,54 @@ export class ApiClient {
         if (isJson) {
           try {
             errorData = await response.json();
+            // Si errorData est vide ou n'a pas de message, créer un message par défaut
+            const isEmptyError = !errorData || (typeof errorData === 'object' && Object.keys(errorData).length === 0);
+            if (isEmptyError) {
+              const defaultMessage = response.status === 404 
+                ? `Route non trouvée: ${route}`
+                : response.status === 401
+                ? 'Non autorisé - Vérifiez votre token d\'accès'
+                : response.status === 403
+                ? 'Accès refusé'
+                : response.status === 500
+                ? 'Erreur serveur interne'
+                : `Erreur HTTP ${response.status}: ${response.statusText}`;
+              
+              errorData = {
+                statusCode: response.status,
+                message: defaultMessage,
+                error: 'Request Failed',
+                originalResponse: 'Empty JSON response',
+              };
+            }
             // Log pour le débogage
             if (process.env.NODE_ENV === 'development') {
               console.error('❌ Erreur API (JSON):', {
                 status: response.status,
                 statusText: response.statusText,
-                errorData,
+                route,
                 url,
+                method,
+                isEmptyResponse: isEmptyError,
+                errorData: isEmptyError ? errorData : errorData,
+                errorMessage: errorData.message || 'Aucun message d\'erreur',
                 fullError: JSON.stringify(errorData, null, 2),
               });
             }
-          } catch {
+          } catch (parseError) {
             errorData = {
               statusCode: response.status,
-              message: response.statusText,
+              message: response.statusText || 'Erreur lors du parsing de la réponse',
               error: 'Request Failed',
             };
+            if (process.env.NODE_ENV === 'development') {
+              console.error('❌ Erreur lors du parsing JSON de l\'erreur:', {
+                status: response.status,
+                route,
+                url,
+                parseError,
+              });
+            }
           }
         } else {
           // Si ce n'est pas du JSON, c'est probablement une page HTML d'erreur

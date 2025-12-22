@@ -39,64 +39,87 @@ import {
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { usePartnerFinancesEmployeeStats } from "@/hooks/usePartnerFinances";
+import { usePartnerPayments, usePartnerPaymentsEmployees, usePartnerPaymentsStatistics } from "@/hooks/usePartnerPayments";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 
-// Types pour les données
+// Types pour les données (selon l'API /partner-payments - camelCase)
 type Payment = {
   id: string;
-  employe_id: string;
-  salaire_net: number;
-  salaire_disponible: number;
-  avances_deduites: number;
-  montant_total_remboursement: number;
-  frais_intervention?: number;
-  montant?: number; // Alias pour compatibilité
+  employeId: string;
+  montant?: number; // Peut être calculé depuis salaireNet - avancesDeduites - frais
   statut: string;
-  date_paiement: string;
-  periode_debut: string;
-  periode_fin: string;
-  mois_paye?: string; // Calculé à partir de periode_debut
-  reference_paiement: string;
-  methode_paiement?: string;
-  intervention_zalama?: boolean;
-  created_at: string;
+  datePaiement: string;
+  action?: string;
+  // Propriétés de l'API
+  salaireNet: number;
+  salaireDisponible: number;
+  avancesDeduites: number;
+  periodeDebut: string;
+  periodeFin: string;
+  referencePaiement?: string | null;
+  methodePaiement?: string;
+  createdAt?: string;
+  fraisIntervention?: number;
+  fraisWallet?: number;
   employe?: {
     id: string;
-    nom: string;
-    prenom: string;
-    poste: string;
+    firstName: string;
+    lastName: string;
     email: string;
-    telephone: string;
-    photo_url?: string;
-    salaire_net?: number;
+    phone: string;
+    poste?: string; // Peut ne pas être dans l'API
+    photoUrl?: string;
   };
+  // Propriétés optionnelles pour compatibilité (snake_case)
+  employe_id?: string;
+  date_paiement?: string;
+  salaire_net?: number;
+  salaire_disponible?: number;
+  avances_deduites?: number;
+  periode_debut?: string;
+  periode_fin?: string;
+  mois_paye?: string;
+  reference_paiement?: string;
+  methode_paiement?: string;
+  created_at?: string;
 };
 
+// Type selon l'API /partner-payments/employees
 type Employee = {
   id: string;
+  userId: string;
   nom: string;
   prenom: string;
-  poste: string;
   email: string;
   telephone: string;
+  poste: string;
+  salaireNet: number;
+  salaireRestant: number;
+  avancesActives: {
+    nombre: number;
+    montantTotal: number;
+    details: Array<{
+      id: string;
+      montantTotalRemboursement: number;
+      dateLimiteRemboursement: string;
+    }>;
+  };
+  dejaPaye: boolean;
+  paiementEnAttente: boolean;
+  // Propriétés optionnelles pour compatibilité
   photo_url?: string;
   salaire_net?: number;
-  salaire_mensuel?: number; // Alias pour compatibilité
+  salaire_mensuel?: number;
 };
 
 export default function PaymentSalaryPage() {
   const { session } = useEdgeAuthContext();
   const router = useRouter();
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
   
-  // Utiliser le hook pour récupérer les statistiques
-  const { data: statsResponse, isLoading: loadingStats } = usePartnerFinancesEmployeeStats();
-  const statistics = statsResponse?.data || null;
-  const loadingData = loadingStats;
+  // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState<string>("all");
@@ -115,150 +138,130 @@ export default function PaymentSalaryPage() {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Charger les données
-  useEffect(() => {
-    if (session?.access_token) {
-      loadAllData();
-    }
-  }, [session?.access_token]);
-
-  const loadAllData = async () => {
-    try {
-      await Promise.all([loadPayments(), loadEmployees()]);
-    } catch (error) {
-      console.error("Erreur lors du chargement des données:", error);
-    }
-  };
-
-  const loadPayments = async () => {
-    try {
-      // TODO: Migrer vers le nouveau backend pour les paiements individuels
-      // Pour l'instant, utiliser des données mock
-      console.log("🔄 Chargement des paiements (mock)...");
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Données mock
-      const mockPayments: Payment[] = [
-        {
-          id: "1",
-          employe_id: "1",
-          salaire_net: 2500000,
-          salaire_disponible: 2500000,
-          avances_deduites: 0,
-          montant_total_remboursement: 0,
-          montant: 2500000,
-          mois_paye: "2024-12",
-          statut: "completed",
-          date_paiement: new Date().toISOString(),
-          periode_debut: "2024-12-01",
-          periode_fin: "2024-12-31",
-          reference_paiement: "REF001",
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: "2",
-          employe_id: "2",
-          salaire_net: 2200000,
-          salaire_disponible: 2200000,
-          avances_deduites: 0,
-          montant_total_remboursement: 0,
-          montant: 2200000,
-          mois_paye: "2024-12",
-          statut: "completed",
-          date_paiement: new Date().toISOString(),
-          periode_debut: "2024-12-01",
-          periode_fin: "2024-12-31",
-          reference_paiement: "REF002",
-          created_at: new Date().toISOString(),
-        },
-      ];
-        
-      setPayments(mockPayments);
-      console.log("✅ Paiements chargés (mock):", mockPayments);
-    } catch (error) {
-      console.error("Erreur lors du chargement des paiements:", error);
-      toast.error("Erreur lors du chargement des paiements");
-      setPayments([]);
-    }
-  };
-
-  const loadEmployees = async () => {
-    try {
-      // TODO: Migrer vers le nouveau backend
-      // Pour l'instant, utiliser des données mock
-      console.log("🔄 Chargement des employés (mock)...");
-      
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Données mock
-      const mockEmployees: Employee[] = [
-        {
-          id: "1",
-          nom: "Diallo",
-          prenom: "Amadou",
-          poste: "Développeur",
-          email: "amadou.diallo@example.com",
-          telephone: "+224 612 345 678",
-          salaire_net: 2500000,
-          salaire_mensuel: 2500000,
-        },
-        {
-          id: "2",
-          nom: "Bah",
-          prenom: "Fatoumata",
-          poste: "Designer",
-          email: "fatoumata.bah@example.com",
-          telephone: "+224 623 456 789",
-          salaire_net: 2200000,
-          salaire_mensuel: 2200000,
-        },
-      ];
-        
-      setEmployees(mockEmployees);
-      console.log("✅ Employés chargés (mock):", mockEmployees.length, "employés");
-    } catch (error) {
-      console.error("Erreur lors du chargement des employés:", error);
-      toast.error("Erreur lors du chargement des employés");
-      setEmployees([]);
-    }
-  };
-
-  // Filtrage des paiements
-  const filteredPayments = payments.filter((payment) => {
-    const matchesSearch = 
-      payment.employe?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.employe?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.employe?.poste?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      payment.mois_paye?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = selectedStatus === "all" || payment.statut === selectedStatus;
-    const matchesMonth = selectedMonth === "all" || payment.mois_paye === selectedMonth;
-    const matchesEmployee = selectedEmployee === "all" || payment.employe_id === selectedEmployee;
-
-    return matchesSearch && matchesStatus && matchesMonth && matchesEmployee;
+  // Utiliser les hooks pour récupérer les données
+  const { data: paymentsResponse, isLoading: loadingPayments, refetch: refetchPayments } = usePartnerPayments({
+    employee_id: selectedEmployee !== 'all' ? selectedEmployee : undefined,
+    search: searchTerm || undefined,
+    statut: selectedStatus !== 'all' ? selectedStatus : undefined,
+    limit: itemsPerPage,
+    page: currentPage,
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredPayments.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const currentPayments = filteredPayments.slice(startIndex, startIndex + itemsPerPage);
+  const { data: employeesResponse, isLoading: loadingEmployees, refetch: refetchEmployees } = usePartnerPaymentsEmployees({
+    mois: selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[1]) : undefined,
+    annee: selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[0]) : undefined,
+  });
 
-  // ✅ NOUVELLES STATISTIQUES depuis l'API (pas de calculs locaux)
-  const totalPayments = statistics?.total_paiements || 0;
-  const totalSalaires = statistics?.montant_total_salaires || 0;
-  const totalAvancesDeduites = statistics?.montant_total_avances_deduites || 0;
-  const totalRemboursements = statistics?.montant_total_remboursements || 0;
-  const completedPayments = statistics?.paiements_effectues || 0;
-  const pendingPayments = statistics?.paiements_en_attente || 0;
+  const { data: statisticsResponse, isLoading: loadingStats, refetch: refetchStatistics } = usePartnerPaymentsStatistics();
   
-  // ✅ PÉNALITÉS DE RETARD
-  const semainesRetard = statistics?.semaines_retard || 0;
-  const penaliteRetardPourcentage = statistics?.penalite_retard_pourcentage || 0;
-  const montantPenaliteRetard = statistics?.montant_penalite_retard || 0;
-  const montantTotalAvecPenalite = statistics?.montant_total_avec_penalite || totalRemboursements;
-  const joursRestants = statistics?.jours_restants_remboursement || 0;
+  // Utiliser aussi usePartnerFinancesEmployeeStats pour les pénalités de retard
+  const { data: financesStatsResponse, isLoading: loadingFinancesStats, refetch: refetchFinancesStats } = usePartnerFinancesEmployeeStats();
+
+  // Fonction pour recharger toutes les données
+  const loadAllData = async () => {
+    await Promise.all([
+      refetchPayments(),
+      refetchEmployees(),
+      refetchStatistics(),
+      refetchFinancesStats(),
+    ]);
+  };
+
+  // Extraire les données
+  const paymentsData = paymentsResponse?.data || [];
+  const employeesList = (employeesResponse || []) as Employee[];
+  const statistics = statisticsResponse || null;
+  const financesStats = financesStatsResponse?.data || financesStatsResponse || null;
+  const loadingData = loadingPayments || loadingEmployees || loadingStats || loadingFinancesStats;
+  
+  // Créer un map des employés par ID pour enrichir les paiements
+  const employeesMap = new Map(employeesList.map(emp => [emp.id, emp]));
+  
+  // Enrichir les paiements avec les informations des employés
+  const payments = (paymentsData as Payment[]).map(payment => {
+    // L'API retourne employeId (camelCase) ou employe_id (snake_case)
+    const employeeId = payment.employeId || payment.employe_id;
+    const employee = employeeId ? employeesMap.get(employeeId) : null;
+    
+    // L'API peut retourner directement l'objet employe
+    const employeFromApi = payment.employe;
+    
+    // Calculer le montant si non fourni
+    const montant = payment.montant || 
+                    (payment.salaireNet || payment.salaire_net || 0) - 
+                    (payment.avancesDeduites || payment.avances_deduites || 0) - 
+                    (payment.fraisIntervention || 0) - 
+                    (payment.fraisWallet || 0);
+    
+    return {
+      ...payment,
+      // Normaliser les propriétés (camelCase et snake_case)
+      employeId: employeeId || payment.employeId,
+      employe_id: employeeId || payment.employe_id,
+      datePaiement: payment.datePaiement || payment.date_paiement || '',
+      date_paiement: payment.datePaiement || payment.date_paiement || '',
+      salaireNet: payment.salaireNet || payment.salaire_net || 0,
+      salaire_net: payment.salaireNet || payment.salaire_net || 0,
+      salaireDisponible: payment.salaireDisponible || payment.salaire_disponible || 0,
+      salaire_disponible: payment.salaireDisponible || payment.salaire_disponible || 0,
+      avancesDeduites: payment.avancesDeduites || payment.avances_deduites || 0,
+      avances_deduites: payment.avancesDeduites || payment.avances_deduites || 0,
+      periodeDebut: payment.periodeDebut || payment.periode_debut || '',
+      periode_debut: payment.periodeDebut || payment.periode_debut || '',
+      periodeFin: payment.periodeFin || payment.periode_fin || '',
+      periode_fin: payment.periodeFin || payment.periode_fin || '',
+      montant: montant,
+      // Enrichir avec les informations de l'employé (l'API retourne employe directement)
+      employe: employeFromApi ? {
+        id: employeFromApi.id,
+        nom: employeFromApi.lastName || '',
+        prenom: employeFromApi.firstName || '',
+        poste: employeFromApi.poste || employee?.poste || 'N/A',
+        email: employeFromApi.email || '',
+        telephone: employeFromApi.phone || '',
+        photo_url: employeFromApi.photoUrl,
+        salaire_net: payment.salaireNet || payment.salaire_net || 0,
+      } : employee ? {
+        id: employee.id,
+        nom: employee.nom || employee.lastName || '',
+        prenom: employee.prenom || employee.firstName || '',
+        poste: employee.poste || 'N/A',
+        email: employee.email || '',
+        telephone: employee.telephone || employee.phone || '',
+        photo_url: employee.photo_url || employee.photoUrl,
+        salaire_net: employee.salaireNet || employee.salaire_net || 0,
+      } : undefined,
+    };
+  });
+  
+  const employees = employeesList;
+  
+  // Pagination
+  const totalPaymentsCount = paymentsResponse?.total || 0;
+  const totalPages = Math.ceil(totalPaymentsCount / itemsPerPage);
+
+  // Les paiements sont déjà filtrés côté serveur, pas besoin de filtrer côté client
+  const currentPayments = payments;
+
+  // ✅ STATISTIQUES depuis l'API
+  const totalPayments = statistics?.totalPayments || 0;
+  const totalAmount = statistics?.totalAmount || 0;
+  const byStatus = statistics?.byStatus || {};
+  const completedPayments = byStatus.PAYE || byStatus.SUCCES || 0;
+  const pendingPayments = byStatus.EN_ATTENTE || 0;
+  
+  // Variables pour les pénalités de retard (depuis usePartnerFinancesEmployeeStats)
+  const joursRestants = financesStats?.jours_restants_remboursement || 0;
+  const semainesRetard = financesStats?.semaines_retard || 0;
+  const penaliteRetardPourcentage = financesStats?.penalite_retard_pourcentage || 0;
+  const montantPenaliteRetard = financesStats?.montant_penalite_retard || 0;
+  const montantTotalAvecPenalite = financesStats?.montant_total_avec_penalite || totalAmount;
   const enRetard = joursRestants < 0;
+  
+  // Variables supplémentaires depuis financesStats
+  const totalSalaires = financesStats?.montant_total_salaires || financesStats?.montant_total_salaires_payes || totalAmount;
+  const totalAvancesDeduites = financesStats?.montant_total_avances_deduites || 0;
+  const totalRemboursements = financesStats?.montant_total_remboursements || 0;
 
   // Fonction pour obtenir la couleur du badge selon le statut
   const getStatusBadgeVariant = (status: string) => {
@@ -1184,16 +1187,18 @@ export default function PaymentSalaryPage() {
                   </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {getMonthName(payment.mois_paye || '')}
+                      {payment.periodeDebut || payment.periode_debut 
+                        ? new Date(payment.periodeDebut || payment.periode_debut).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+                        : 'N/A'}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                      {formatAmount(payment.employe?.salaire_net || payment.salaire_net || 0)} GNF
+                      {formatAmount(payment.salaireNet || payment.salaire_net || 0)}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-orange-600 dark:text-orange-400">
-                      {formatAmount(payment.avances_deduites || 0)} GNF
+                      {formatAmount(payment.avancesDeduites || payment.avances_deduites || 0)}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                      {formatAmount(payment.montant)} GNF
+                      {formatAmount(payment.montant || payment.salaireDisponible || payment.salaire_disponible || 0)}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
@@ -1201,7 +1206,7 @@ export default function PaymentSalaryPage() {
                       </Badge>
                     </td>
                     <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                        {formatDate(payment.date_paiement)}
+                        {formatDate(payment.datePaiement || payment.date_paiement || '')}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <button
@@ -1225,11 +1230,11 @@ export default function PaymentSalaryPage() {
               </div>
 
             {/* Pagination */}
-          {filteredPayments.length > 0 && (
+          {currentPayments.length > 0 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredPayments.length}
+              totalItems={totalPaymentsCount}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
             />

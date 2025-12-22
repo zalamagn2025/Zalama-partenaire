@@ -103,6 +103,15 @@ export const API_ROUTES = {
     status: (id: string) => `/payments/${id}/status`,
   },
   
+  // Paiements partenaire
+  partnerPayments: {
+    list: '/partner-payments',
+    employees: '/partner-payments/employees',
+    statistics: '/partner-payments/statistics',
+    batchProcessWallet: '/partner-payments/batch/process-wallet',
+    bulletinPaie: '/partner-payments/bulletin-paie',
+  },
+  
   // Remboursements
   reimbursements: {
     list: '/reimbursements',

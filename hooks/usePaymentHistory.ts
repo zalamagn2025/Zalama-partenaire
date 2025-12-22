@@ -87,12 +87,20 @@ export function usePaymentHistory(accessToken?: string): UsePaymentHistoryResult
 
       console.log('🔄 usePaymentHistory - Chargement paiements avec filtres:', filters);
 
-      const response = await fetch(`/api/proxy/payments?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      // Route API désactivée - utiliser les routes /partner-payments à la place
+      // const response = await fetch(`/api/proxy/payments?${params.toString()}`, {
+      //   headers: {
+      //     Authorization: `Bearer ${accessToken}`,
+      //     "Content-Type": "application/json",
+      //   },
+      // });
+
+      // Pour l'instant, retourner un tableau vide
+      // TODO: Migrer vers usePartnerPayments
+      const response = {
+        ok: true,
+        json: async () => ({ success: true, data: [] })
+      } as Response;
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);
@@ -131,12 +139,20 @@ export function usePaymentHistory(accessToken?: string): UsePaymentHistoryResult
     }
 
     try {
-      const response = await fetch('/api/proxy/payments?action=statistics', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      });
+      // Route API désactivée - utiliser les routes /partner-payments/statistics à la place
+      // const response = await fetch('/api/proxy/payments?action=statistics', {
+      //   headers: {
+      //     Authorization: `Bearer ${accessToken}`,
+      //     "Content-Type": "application/json",
+      //   },
+      // });
+
+      // Pour l'instant, retourner null
+      // TODO: Migrer vers usePartnerPaymentsStatistics
+      const response = {
+        ok: true,
+        json: async () => ({ success: true, data: null })
+      } as Response;
 
       if (!response.ok) {
         throw new Error(`Erreur HTTP: ${response.status}`);

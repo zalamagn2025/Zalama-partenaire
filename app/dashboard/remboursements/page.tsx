@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import PaymentListTable from "@/components/PaymentListTable";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { usePaymentHistory } from "@/hooks/usePaymentHistory";
+// import { usePaymentHistory } from "@/hooks/usePaymentHistory"; // Hook désactivé - route API n'existe pas
 import { usePartnerFinancesRemboursements } from "@/hooks/usePartnerFinances";
 import { toast } from "sonner";
 
@@ -135,12 +135,19 @@ export default function RemboursementsPage() {
   const { session, loading } = useEdgeAuthContext();
   
   // ✅ Utilisation du hook pour les paiements de salaire
-  const {
-    payments: paymentHistory,
-    statistics: paymentStatistics,
-    loading: paymentLoading,
-    loadPayments: loadPaymentHistoryData
-  } = usePaymentHistory(session?.access_token);
+  // Hook désactivé - la route /api/proxy/payments n'existe pas
+  // const {
+  //   payments: paymentHistory,
+  //   statistics: paymentStatistics,
+  //   loading: paymentLoading,
+  //   loadPayments: loadPaymentHistoryData
+  // } = usePaymentHistory(session?.access_token);
+  
+  // États temporaires pour compatibilité
+  const paymentHistory: any[] = [];
+  const paymentStatistics: any = null;
+  const paymentLoading = false;
+  const loadPaymentHistoryData = async () => {};
 
   const [totalAttente, setTotalAttente] = useState(0);
   const [paying, setPaying] = useState(false);
@@ -377,12 +384,23 @@ export default function RemboursementsPage() {
       // TODO: Migrer vers le nouveau backend
       // const periodsData = await edgeFunctionService.getPartnerRemboursementsActivityPeriods();
       const periodsData: any = null; // Temporaire - utiliser des données mock
-      if (periodsData.success && periodsData.data) {
+      if (periodsData && periodsData.success && periodsData.data) {
         setActivityPeriods(periodsData.data);
         setActiveYears(periodsData.data.years || []);
         setActiveMonths(
           periodsData.data.months?.map((m: any) => m.numero) || []
         );
+      } else {
+        // Générer des périodes de fallback
+        const currentDate = new Date();
+        const currentYear = currentDate.getFullYear();
+        const months = [];
+        for (let i = 0; i < 6; i++) {
+          const date = new Date(currentYear, currentDate.getMonth() - i, 1);
+          months.push(date.getMonth() + 1);
+        }
+        setActiveYears([currentYear - 1, currentYear]);
+        setActiveMonths(months);
       }
     } catch (error) {
       console.error("Erreur lors du chargement des données de filtres:", error);
@@ -588,8 +606,13 @@ export default function RemboursementsPage() {
       // TODO: Migrer vers le nouveau backend
       // edgeFunctionService.setAccessToken(session.access_token);
 
-      // Combiner les filtres par défaut avec les filtres personnalisés
-      const activeFilters = { ...filters, ...customFilters };
+      // Utiliser les filtres actuels (selectedMonth, selectedYear, selectedStatus)
+      const activeFilters = {
+        mois: selectedMonth,
+        annee: selectedYear,
+        status: selectedStatus,
+        ...customFilters,
+      };
 
       // Nettoyer les filtres (enlever les valeurs null/undefined)
       const cleanFilters = Object.fromEntries(
