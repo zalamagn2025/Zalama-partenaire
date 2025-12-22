@@ -97,6 +97,29 @@ type Employee = {
   telephone: string;
   poste: string;
   salaireNet: number;
+  salaireRestant?: number;
+  avancesActives?: {
+    nombre: number;
+    montantTotal: number;
+    details: Array<{
+      id: string;
+      montantTotalRemboursement: number;
+      dateLimiteRemboursement: string;
+    }>;
+  };
+  dejaPaye?: boolean;
+  paiementEnAttente?: boolean;
+  // Propriétés optionnelles pour compatibilité (snake_case)
+  salaire_net?: number;
+  salaire_restant?: number;
+  salaire_mensuel?: number;
+  photo_url?: string;
+  photoUrl?: string;
+  lastName?: string;
+  firstName?: string;
+  phone?: string;
+  poste: string;
+  salaireNet: number;
   salaireRestant: number;
   avancesActives: {
     nombre: number;
@@ -137,6 +160,10 @@ export default function PaymentSalaryPage() {
   const [paymentDate, setPaymentDate] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
+  
+  // États pour le mois et l'année de paiement (utilisés pour récupérer les employés)
+  const [paymentMonthNumber, setPaymentMonthNumber] = useState<number | undefined>(undefined);
+  const [paymentYear, setPaymentYear] = useState<number | undefined>(undefined);
 
   // Utiliser les hooks pour récupérer les données
   const { data: paymentsResponse, isLoading: loadingPayments, refetch: refetchPayments } = usePartnerPayments({
@@ -147,9 +174,12 @@ export default function PaymentSalaryPage() {
     page: currentPage,
   });
 
+  // Utiliser le mois et l'année de paiement pour récupérer les employés avec leurs infos de paiement
+  // Si on est sur la page de paiement, utiliser paymentMonthNumber et paymentYear
+  // Sinon, utiliser selectedMonth des filtres
   const { data: employeesResponse, isLoading: loadingEmployees, refetch: refetchEmployees } = usePartnerPaymentsEmployees({
-    mois: selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[1]) : undefined,
-    annee: selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[0]) : undefined,
+    mois: showPaymentPage && paymentMonthNumber ? paymentMonthNumber : (selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[1]) : undefined),
+    annee: showPaymentPage && paymentYear ? paymentYear : (selectedMonth !== 'all' ? parseInt(selectedMonth.split('-')[0]) : undefined),
   });
 
   const { data: statisticsResponse, isLoading: loadingStats, refetch: refetchStatistics } = usePartnerPaymentsStatistics();
@@ -186,12 +216,9 @@ export default function PaymentSalaryPage() {
     // L'API peut retourner directement l'objet employe
     const employeFromApi = payment.employe;
     
-    // Calculer le montant si non fourni
-    const montant = payment.montant || 
-                    (payment.salaireNet || payment.salaire_net || 0) - 
-                    (payment.avancesDeduites || payment.avances_deduites || 0) - 
-                    (payment.fraisIntervention || 0) - 
-                    (payment.fraisWallet || 0);
+    // Utiliser directement salaireDisponible de l'API (c'est le montant réellement reçu)
+    // L'API calcule déjà : salaireNet - avancesDeduites - fraisWallet = salaireDisponible
+    const montant = payment.salaireDisponible || payment.salaire_disponible || payment.montant || 0;
     
     return {
       ...payment,
@@ -533,67 +560,113 @@ export default function PaymentSalaryPage() {
                     <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                       <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                       Employés disponibles ({employees.length})
+                      {loadingEmployees && (
+                        <RefreshCw className="w-4 h-4 animate-spin text-gray-400" />
+                      )}
                     </h4>
+                    {!paymentMonthNumber || !paymentYear ? (
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                        Veuillez sélectionner un mois de paiement pour voir les employés
+                      </p>
+                    ) : null}
                   </div>
                   <div className="max-h-96 overflow-y-auto">
-                    {employees.map((employee) => (
-                      <div 
-                        key={employee.id} 
-                        className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
-                          selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
-                        }`}
-                        onClick={() => toggleEmployeeSelection(employee.id)}
-                      >
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {employee.photo_url ? (
-                            <Image
-                              src={employee.photo_url}
-                              alt={`${employee.prenom} ${employee.nom}`}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                          ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                              {employee.prenom?.charAt(0)}
-                              {employee.nom?.charAt(0)}
-            </span>
-                          )}
-          </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white truncate">
-                            {employee.prenom} {employee.nom}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                            {employee.poste}
-                          </p>
-                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
-                            {employee.email}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">
-                              {formatAmount(employee.salaire_mensuel || 0)} GNF
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
-                              Salaire mensuel
-                            </p>
+                    {loadingEmployees ? (
+                      <div className="flex items-center justify-center py-12">
+                        <LoadingSpinner />
+                      </div>
+                    ) : employees.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-500 dark:text-gray-400">
+                          {!paymentMonthNumber || !paymentYear 
+                            ? "Sélectionnez un mois de paiement pour voir les employés"
+                            : "Aucun employé disponible pour ce mois"}
+                        </p>
+                      </div>
+                    ) : (
+                      employees.map((employee) => {
+                        // Normaliser les propriétés (camelCase et snake_case)
+                        const nom = employee.nom || employee.lastName || '';
+                        const prenom = employee.prenom || employee.firstName || '';
+                        const poste = employee.poste || 'N/A';
+                        const email = employee.email || '';
+                        const photoUrl = employee.photo_url || employee.photoUrl;
+                        const salaireNet = employee.salaireNet || employee.salaire_net || employee.salaire_mensuel || 0;
+                        const salaireRestant = employee.salaireRestant;
+                        const avancesActives = employee.avancesActives;
+                        
+                        return (
+                          <div 
+                            key={employee.id} 
+                            className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
+                              selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+                            }`}
+                            onClick={() => toggleEmployeeSelection(employee.id)}
+                          >
+                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                              {photoUrl ? (
+                                <Image
+                                  src={photoUrl}
+                                  alt={`${prenom} ${nom}`}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover rounded-full"
+                                />
+                              ) : (
+                                <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                                  {prenom?.charAt(0) || ''}
+                                  {nom?.charAt(0) || ''}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-gray-900 dark:text-white truncate">
+                                {prenom} {nom}
+                              </p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                                {poste}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                                {email}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {formatAmount(salaireNet)}
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                  Salaire net
+                                </p>
+                                {salaireRestant !== undefined && salaireRestant !== null && (
+                                  <>
+                                    <p className="text-xs font-medium text-green-600 dark:text-green-400 mt-1">
+                                      Restant: {formatAmount(salaireRestant)}
+                                    </p>
+                                    {avancesActives && avancesActives.montantTotal > 0 && (
+                                      <p className="text-xs text-orange-600 dark:text-orange-400">
+                                        Avances: {formatAmount(avancesActives.montantTotal)}
+                                      </p>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                              <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
+                                selectedEmployees.includes(employee.id) 
+                                  ? 'border-orange-500 bg-orange-500' 
+                                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
+                              }`}>
+                                {selectedEmployees.includes(employee.id) && (
+                                  <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
-                            selectedEmployees.includes(employee.id) 
-                              ? 'border-orange-500 bg-orange-500' 
-                              : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
-                          }`}>
-                            {selectedEmployees.includes(employee.id) && (
-                              <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
-                            )}
-                          </div>
-                        </div>
-              </div>
-            ))}
-          </div>
-        </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -612,22 +685,42 @@ export default function PaymentSalaryPage() {
                       </label>
                       <select 
                         value={paymentMonth}
-                        onChange={(e) => setPaymentMonth(e.target.value)}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPaymentMonth(value);
+                          if (value) {
+                            const [year, month] = value.split('-');
+                            setPaymentYear(parseInt(year));
+                            setPaymentMonthNumber(parseInt(month));
+                            // Recharger les employés avec le nouveau mois/année
+                            setTimeout(() => refetchEmployees(), 100);
+                          } else {
+                            setPaymentYear(undefined);
+                            setPaymentMonthNumber(undefined);
+                          }
+                        }}
                         className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                       >
                         <option value="">Sélectionner le mois</option>
-                        <option value="2024-01">Janvier 2024</option>
-                        <option value="2024-02">Février 2024</option>
-                        <option value="2024-03">Mars 2024</option>
-                        <option value="2024-04">Avril 2024</option>
-                        <option value="2024-05">Mai 2024</option>
-                        <option value="2024-06">Juin 2024</option>
-                        <option value="2024-07">Juillet 2024</option>
-                        <option value="2024-08">Août 2024</option>
-                        <option value="2024-09">Septembre 2024</option>
-                        <option value="2024-10">Octobre 2024</option>
-                        <option value="2024-11">Novembre 2024</option>
-                        <option value="2024-12">Décembre 2024</option>
+                        {(() => {
+                          const currentDate = new Date();
+                          const currentYear = currentDate.getFullYear();
+                          const currentMonth = currentDate.getMonth() + 1;
+                          const options = [];
+                          // Générer les 12 derniers mois
+                          for (let i = 0; i < 12; i++) {
+                            const date = new Date(currentYear, currentMonth - i - 1, 1);
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1;
+                            const monthName = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                            options.push(
+                              <option key={`${year}-${month}`} value={`${year}-${month}`}>
+                                {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
+                              </option>
+                            );
+                          }
+                          return options;
+                        })()}
                       </select>
         </div>
                     <div>
@@ -1198,7 +1291,7 @@ export default function PaymentSalaryPage() {
                       {formatAmount(payment.avancesDeduites || payment.avances_deduites || 0)}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
-                      {formatAmount(payment.montant || payment.salaireDisponible || payment.salaire_disponible || 0)}
+                      {formatAmount(payment.salaireDisponible || payment.salaire_disponible || payment.montant || 0)}
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge variant={getStatusBadgeVariant(payment.statut)} className="text-xs">
