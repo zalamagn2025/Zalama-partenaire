@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   Users,
@@ -29,6 +29,7 @@ import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import { usePartnerEmployees, usePartnerEmployeeStats } from "@/hooks/usePartnerEmployee";
 import type { PartnerEmployee } from "@/types/api";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 
 // Type pour les employés - utilise directement PartnerEmployee qui contient déjà typeContrat, salaireNet, dateEmbauche
 type Employee = PartnerEmployee;
@@ -36,19 +37,87 @@ type Employee = PartnerEmployee;
 export default function EmployesPage() {
   const { session, loading } = useEdgeAuthContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // États pour les filtres
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedContractType, setSelectedContractType] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [selectedPoste, setSelectedPoste] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<string>("createdAt");
-  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">("DESC");
+  // Initialiser les filtres depuis l'URL
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') || "");
+  const [selectedContractType, setSelectedContractType] = useState<string | null>(() => searchParams.get('typeContrat') || null);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(() => searchParams.get('status') || null);
+  const [selectedPoste, setSelectedPoste] = useState<string | null>(() => searchParams.get('poste') || null);
+  const [sortBy, setSortBy] = useState<string>(() => searchParams.get('sortBy') || "createdAt");
+  const [sortOrder, setSortOrder] = useState<"ASC" | "DESC">(() => (searchParams.get('sortOrder') as "ASC" | "DESC") || "DESC");
   const [showFilters, setShowFilters] = useState(false);
 
   // États pour la pagination
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page');
+    return page ? parseInt(page, 10) : 1;
+  });
   const employeesPerPage = 10;
+
+  // Hook pour synchroniser les filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    search: searchTerm,
+    typeContrat: selectedContractType,
+    status: selectedStatus,
+    poste: selectedPoste,
+    sortBy: sortBy,
+    sortOrder: sortOrder,
+    page: currentPage,
+  }, {
+    exclude: ['showFilters', 'isViewModalOpen', 'selectedEmployee'],
+  });
+
+  // Fonctions wrapper pour mettre à jour les filtres et l'URL
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    updateFilter('search', value);
+  };
+
+  const handleContractTypeChange = (value: string | null) => {
+    setSelectedContractType(value);
+    updateFilter('typeContrat', value);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handleStatusChange = (value: string | null) => {
+    setSelectedStatus(value);
+    updateFilter('status', value);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handlePosteChange = (value: string | null) => {
+    setSelectedPoste(value);
+    updateFilter('poste', value);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handleSortByChange = (value: string) => {
+    setSortBy(value);
+    updateFilter('sortBy', value);
+  };
+
+  const handleSortOrderChange = (value: "ASC" | "DESC") => {
+    setSortOrder(value);
+    updateFilter('sortOrder', value);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateFilter('page', page);
+  };
+
+  // Fonction pour réinitialiser tous les filtres et l'URL
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedContractType(null);
+    setSelectedStatus(null);
+    setSelectedPoste(null);
+    setSortBy("createdAt");
+    setSortOrder("DESC");
+    setCurrentPage(1);
+    resetUrlFilters(); // Réinitialiser l'URL
+  };
 
   // États pour les modales
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -93,10 +162,7 @@ export default function EmployesPage() {
     }
   }, [loading, session, router]);
 
-  // Réinitialiser la pagination quand les filtres changent
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedContractType, selectedStatus, selectedPoste, sortBy, sortOrder]);
+  // Plus besoin de useEffect - les fonctions wrapper gèrent la synchronisation
 
   // Les filtres sont gérés côté serveur via les hooks
   // Les statistiques sont globales et ne changent pas avec les filtres
@@ -109,10 +175,6 @@ export default function EmployesPage() {
 
   // Pagination côté serveur - les données sont déjà paginées
   const currentEmployees = filteredEmployees;
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
 
   // Fonctions utilitaires
   const formatSalary = (salary: number) => {
@@ -343,7 +405,7 @@ export default function EmployesPage() {
           <Input
             placeholder="Rechercher un employé..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
           />
         </div>
@@ -365,15 +427,7 @@ export default function EmployesPage() {
                 {showFilters ? "Masquer" : "Afficher"}
               </button>
               <button
-                onClick={() => {
-                  setSearchTerm("");
-                  setSelectedContractType(null);
-                  setSelectedStatus(null);
-                  setSelectedPoste(null);
-                  setSortBy("createdAt");
-                  setSortOrder("DESC");
-                  setCurrentPage(1);
-                }}
+                onClick={resetFilters}
                 className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Réinitialiser
@@ -401,7 +455,7 @@ export default function EmployesPage() {
               </label>
               <select
                 value={selectedContractType || ""}
-                onChange={(e) => setSelectedContractType(e.target.value || null)}
+                onChange={(e) => handleContractTypeChange(e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="">Tous les contrats</option>
@@ -420,7 +474,7 @@ export default function EmployesPage() {
               </label>
               <select
                 value={selectedStatus || ""}
-                onChange={(e) => setSelectedStatus(e.target.value || null)}
+                onChange={(e) => handleStatusChange(e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="">Tous les statuts</option>
@@ -436,7 +490,7 @@ export default function EmployesPage() {
               </label>
               <select
                 value={selectedPoste || ""}
-                onChange={(e) => setSelectedPoste(e.target.value || null)}
+                onChange={(e) => handlePosteChange(e.target.value || null)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="">Tous les postes</option>
@@ -457,7 +511,7 @@ export default function EmployesPage() {
               </label>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) => handleSortByChange(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="createdAt">Date de création</option>
@@ -477,7 +531,7 @@ export default function EmployesPage() {
               </label>
               <select
                 value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value as "ASC" | "DESC")}
+                onChange={(e) => handleSortOrderChange(e.target.value as "ASC" | "DESC")}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
                 <option value="ASC">Croissant (ASC)</option>

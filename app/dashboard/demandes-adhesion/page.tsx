@@ -23,6 +23,8 @@ import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 import {
   Users,
   UserPlus,
@@ -48,11 +50,18 @@ type EmployeeWithoutAccount = PartnerDemandeAdhesion;
 
 export default function DemandesAdhesionPage() {
   const { session } = useEdgeAuthContext();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [creatingAccount, setCreatingAccount] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  // Initialiser les filtres depuis l'URL
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') || "");
   const [filterStatus, setFilterStatus] = useState<
     "all" | "pending" | "approved" | "rejected"
-  >("all");
+  >(() => {
+    const status = searchParams.get('status');
+    return (status as "all" | "pending" | "approved" | "rejected") || "all";
+  });
   const [selectedEmployee, setSelectedEmployee] =
     useState<EmployeeWithoutAccount | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,9 +69,47 @@ export default function DemandesAdhesionPage() {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
-  // États pour la pagination
-  const [currentPage, setCurrentPage] = useState(1);
+  // États pour la pagination - initialiser depuis l'URL
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page');
+    return page ? parseInt(page, 10) : 1;
+  });
   const itemsPerPage = 10;
+
+  // Hook pour synchroniser les filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    search: searchTerm,
+    status: filterStatus,
+    page: currentPage,
+  }, {
+    exclude: ['isModalOpen', 'isRejectModalOpen', 'selectedEmployee', 'creatingAccount', 'rejectingEmployee'],
+  });
+
+  // Fonctions wrapper pour mettre à jour les filtres et l'URL
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    updateFilter('search', value);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handleStatusChange = (value: "all" | "pending" | "approved" | "rejected") => {
+    setFilterStatus(value);
+    updateFilter('status', value === 'all' ? null : value);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateFilter('page', page);
+  };
+
+  // Fonction pour réinitialiser tous les filtres et l'URL
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("all");
+    setCurrentPage(1);
+    resetUrlFilters(); // Réinitialiser l'URL
+  };
 
   // Utiliser les hooks pour récupérer les données
   const { data: demandesResponse, isLoading, refetch } = usePartnerDemandeAdhesion({
@@ -83,17 +130,10 @@ export default function DemandesAdhesionPage() {
   const totalPages = Math.ceil(totalEmployees / itemsPerPage);
 
   // Les filtres sont gérés côté serveur via les hooks
-    // Réinitialiser la pagination quand les filtres changent
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, filterStatus]);
+  // La pagination est réinitialisée dans les fonctions wrapper
 
   // Pagination côté serveur - les données sont déjà paginées
   const currentEmployees = filteredEmployees;
-
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
 
   const handleCreateAccount = async (employeeId: string) => {
     if (!session?.access_token) {
@@ -284,7 +324,7 @@ export default function DemandesAdhesionPage() {
             <Input
               placeholder="Rechercher un employé..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-10 bg-[var(--zalama-bg-light)] border-[var(--zalama-border)] text-[var(--zalama-text)] placeholder-[var(--zalama-text-secondary)] focus:border-[var(--zalama-blue)] focus:ring-[var(--zalama-blue)]"
             />
           </div>
@@ -294,7 +334,7 @@ export default function DemandesAdhesionPage() {
             <select
               id="status-filter"
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => handleStatusChange(e.target.value as "all" | "pending" | "approved" | "rejected")}
               className="w-full px-3 py-2 border border-[var(--zalama-border)] bg-[var(--zalama-bg-light)] text-[var(--zalama-text)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--zalama-blue)] focus:border-[var(--zalama-blue)]"
             >
               <option value="all">Tous les statuts</option>

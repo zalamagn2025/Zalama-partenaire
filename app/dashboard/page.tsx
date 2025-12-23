@@ -15,8 +15,9 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 import {
   Bar,
   BarChart,
@@ -57,10 +58,42 @@ export default function EntrepriseDashboardPage() {
   const { session, loading } = useEdgeAuthContext();
   const toast = useCustomToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // États pour les filtres
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  // États pour les filtres - initialiser depuis l'URL
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(() => {
+    const mois = searchParams.get('mois');
+    return mois ? parseInt(mois, 10) : null;
+  });
+  const [selectedYear, setSelectedYear] = useState<number | null>(() => {
+    const annee = searchParams.get('annee');
+    return annee ? parseInt(annee, 10) : null;
+  });
+
+  // Hook pour synchroniser les filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    mois: selectedMonth,
+    annee: selectedYear,
+  }, {
+    exclude: ['showFilters'],
+  });
+
+  // Fonctions wrapper pour mettre à jour les filtres et l'URL
+  const handleMonthChange = (month: number | null) => {
+    setSelectedMonth(month);
+    updateFilter('mois', month);
+    // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
+    if (month && !selectedYear) {
+      const currentYear = new Date().getFullYear();
+      setSelectedYear(currentYear);
+      updateFilter('annee', currentYear);
+    }
+  };
+
+  const handleYearChange = (year: number | null) => {
+    setSelectedYear(year);
+    updateFilter('annee', year);
+  };
   
   // Utiliser le hook pour récupérer les données du dashboard
   const currentDate = new Date();
@@ -128,10 +161,11 @@ export default function EntrepriseDashboardPage() {
     setShowFilters(false);
   };
 
-  // Fonction pour réinitialiser les filtres
+  // Fonction pour réinitialiser les filtres et l'URL
   const resetFilters = () => {
     setSelectedMonth(null);
     setSelectedYear(null);
+    resetUrlFilters(); // Réinitialiser l'URL
     loadDashboardData();
     setShowFilters(false);
   };
@@ -457,11 +491,7 @@ export default function EntrepriseDashboardPage() {
                   const month = e.target.value
                     ? parseInt(e.target.value)
                     : null;
-                  setSelectedMonth(month);
-                  // Si on sélectionne un mois et qu'aucune année n'est sélectionnée, prendre l'année en cours
-                  if (month && !selectedYear) {
-                    setSelectedYear(new Date().getFullYear());
-                  }
+                  handleMonthChange(month);
                 }}
                 className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
               >
@@ -482,7 +512,7 @@ export default function EntrepriseDashboardPage() {
               <select
                 value={selectedYear || ""}
                 onChange={(e) =>
-                  setSelectedYear(
+                  handleYearChange(
                     e.target.value ? parseInt(e.target.value) : null
                   )
                 }

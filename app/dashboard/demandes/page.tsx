@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import {
   FileText,
@@ -28,6 +28,7 @@ import {
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner, { LoadingButton } from "@/components/ui/LoadingSpinner";
 import { toast } from "sonner";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 import { usePartnerFinancesDemandes } from "@/hooks/usePartnerFinances";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { Badge } from "@/components/ui/badge";
@@ -73,11 +74,16 @@ const getStatusBadge = (statut: string) => {
 export default function DemandesPage() {
   const { session } = useEdgeAuthContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedService, setSelectedService] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showFilterMenu, setShowFilterMenu] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page');
+    return page ? parseInt(page, 10) : 1;
+  });
   const [itemsPerPage] = useState(10);
   const filterMenuRef = useRef<HTMLDivElement>(null);
   const [approvingRequest, setApprovingRequest] = useState<string | null>(null);
@@ -85,12 +91,42 @@ export default function DemandesPage() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [selectedDemande, setSelectedDemande] = useState<any>(null);
 
-  // États pour les filtres
-  const [filters, setFilters] = useState({
-    mois: null as number | null,
-    annee: null as number | null,
-    status: null as string | null,
+  // États pour les filtres - initialiser depuis l'URL
+  const [filters, setFilters] = useState(() => {
+    const mois = searchParams.get('mois');
+    const annee = searchParams.get('annee');
+    const status = searchParams.get('status');
+    return {
+      mois: mois ? parseInt(mois, 10) : null,
+      annee: annee ? parseInt(annee, 10) : null,
+      status: status || null,
+    };
   });
+
+  // Hook pour synchroniser les filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    mois: filters.mois,
+    annee: filters.annee,
+    status: filters.status,
+    page: currentPage,
+  }, {
+    exclude: ['showFilters', 'showFilterMenu', 'showDetailsModal', 'selectedDemande'],
+  });
+
+  // Fonctions wrapper pour mettre à jour les filtres et l'URL
+  const handleFilterChange = (updates: Partial<typeof filters>) => {
+    const newFilters = { ...filters, ...updates };
+    setFilters(newFilters);
+    if (updates.mois !== undefined) updateFilter('mois', updates.mois);
+    if (updates.annee !== undefined) updateFilter('annee', updates.annee);
+    if (updates.status !== undefined) updateFilter('status', updates.status);
+    setCurrentPage(1); // Réinitialiser la pagination
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateFilter('page', page);
+  };
 
   // Utiliser le hook pour récupérer les demandes
   const { data: demandesResponse, isLoading, refetch } = usePartnerFinancesDemandes({
@@ -101,8 +137,73 @@ export default function DemandesPage() {
     mois: filters.mois || undefined,
   });
 
-  // Extraire les données de la réponse
-  const demandesAvance = (demandesResponse?.data || []) as SalaryAdvanceRequestWithEmployee[];
+  // Extraire les données de la réponse et mapper les propriétés de l'API (camelCase) vers les propriétés utilisées dans le tableau
+  const allDemandesRaw = (demandesResponse?.data || []) as any[];
+  const allDemandes = allDemandesRaw.map((d) => {
+    // L'API retourne camelCase : montantDemande, montantNet, typeMotif, motif, numeroReception, typeCompte, fraisService, etc.
+    // Mapper vers les propriétés utilisées dans le tableau
+    const employe = d.employe || d.employee || d.employees || {};
+    const demandesDetailes = d.demandes_detailes || [];
+    const premiereDemande = demandesDetailes[0] || {};
+
+    // Construire le nom de l'employé de manière plus robuste
+    let demandeur = "Employé inconnu";
+    if (employe && typeof employe === "object" && Object.keys(employe).length > 0) {
+      const prenom = employe.prenom || employe.firstName || employe.first_name || "";
+      const nom = employe.nom || employe.lastName || employe.last_name || employe.name || "";
+      demandeur = `${prenom} ${nom}`.trim();
+      if (!demandeur) {
+        demandeur = employe.display_name || employe.email || `Employé ${d.employeId || d.employe_id}`;
+      }
+      } else {
+      // Fallback: chercher dans les données d'employés chargées
+      const employeeFromMap = employeesData.get(d.employeId || d.employe_id);
+      if (employeeFromMap) {
+        const prenom = employeeFromMap.prenom || employeeFromMap.firstName || employeeFromMap.first_name || "";
+        const nom = employeeFromMap.nom || employeeFromMap.lastName || employeeFromMap.last_name || employeeFromMap.name || "";
+        demandeur = `${prenom} ${nom}`.trim();
+        if (!demandeur) {
+          demandeur = employeeFromMap.display_name || employeeFromMap.email || `Employé ${d.employeId || d.employe_id}`;
+      }
+      } else {
+        demandeur = `Employé ${d.employeId || d.employe_id}`;
+      }
+    }
+    
+    return {
+      ...d,
+      id: premiereDemande.id || d.id,
+      type_demande: "Avance sur Salaire",
+      // Mapper les propriétés camelCase vers les noms utilisés dans le tableau
+      montant: d.montantDemande || d.montantTotal || d.montant || 0,
+      montant_net: d.montantNet || 0,
+      montant_souhaite: d.montantSouhaite || d.montantDemande || 0,
+      type_motif: d.typeMotif || premiereDemande.type_motif || d.type_motif || "Autre",
+      motif: d.motif || "",
+      numero_reception: d.numeroReception || "",
+      type_compte: d.typeCompte || "",
+      frais_service: d.fraisService || 0,
+      // Statut - mapper les valeurs de l'API
+      statut: d.statut === "APPROUVE" ? "Validé" 
+        : d.statut === "EN_ATTENTE" ? "En attente"
+        : d.statut === "REJETE" ? "Rejeté"
+        : d.statut || "Non défini",
+      // Date
+      date: d.dateCreation || d.createdAt 
+        ? new Date(d.dateCreation || d.createdAt).toLocaleDateString("fr-FR")
+        : new Date().toLocaleDateString("fr-FR"),
+      // Employé
+      demandeur: demandeur,
+      poste: employe?.poste || employe?.position || "Non spécifié",
+      employe_id: d.employeId || d.employe_id,
+      employe: employe,
+      // Catégorie
+      categorie: d.numInstallments === 1 || d.repaymentMode === "ONE_TIME" ? "mono-mois" : "multi-mois",
+      commentaires: 0,
+    };
+  });
+  
+  const demandesAvance = allDemandes as SalaryAdvanceRequestWithEmployee[];
   const loading = isLoading;
   const tableLoading = isLoading;
 
@@ -114,7 +215,7 @@ export default function DemandesPage() {
   // État pour stocker les informations des employés
   const [employeesData, setEmployeesData] = useState<Map<string, any>>(
     new Map()
-  );
+        );
 
   // Fonction pour recharger les données avec les filtres
   const reloadDemandes = () => {
@@ -220,17 +321,12 @@ export default function DemandesPage() {
 
   // Fonction pour appliquer un filtre
   const applyFilter = (filterKey: string, value: any) => {
-    const newFilters = { ...filters, [filterKey]: value };
-    setFilters(newFilters);
-
-    // Réinitialiser la pagination
-    setCurrentPage(1);
-
+    handleFilterChange({ [filterKey]: value });
     // Recharger les données avec les nouveaux filtres
     reloadDemandes();
   };
 
-  // Fonction pour réinitialiser tous les filtres
+  // Fonction pour réinitialiser tous les filtres et l'URL
   const resetFilters = () => {
     const defaultFilters = {
       mois: null,
@@ -239,6 +335,7 @@ export default function DemandesPage() {
     };
     setFilters(defaultFilters);
     setCurrentPage(1);
+    resetUrlFilters(); // Réinitialiser l'URL
     reloadDemandes();
   };
 
@@ -266,96 +363,6 @@ export default function DemandesPage() {
   useEffect(() => {
     reloadDemandes();
   }, [filters.mois, filters.annee, filters.status, currentPage]);
-
-  // Formater les demandes
-  const allDemandes = demandesAvance.map((d) => {
-    // Gérer la structure de données de l'edge function
-    const employe = (d as any).employe || (d as any).employee || d.employees;
-    const demandesDetailes = (d as any).demandes_detailes || [];
-    const premiereDemande = demandesDetailes[0] || {};
-
-    // Debug pour voir la structure des données
-    console.log("🔍 Formatage demande:", {
-      id: d.id,
-      employe_id: d.employe_id,
-      hasEmployeData: !!employe,
-      employeType: typeof employe,
-      employeKeys: employe ? Object.keys(employe) : [],
-      employePrenom: employe?.prenom,
-      employeNom: employe?.nom,
-      employeData: employe,
-    });
-
-    // Construire le nom de l'employé de manière plus robuste
-    let demandeur = "Employé inconnu";
-
-    // Vérifier si l'objet employé existe et a des propriétés
-    if (
-      employe &&
-      typeof employe === "object" &&
-      Object.keys(employe).length > 0
-    ) {
-      const prenom = employe.prenom || employe.first_name || "";
-      const nom = employe.nom || employe.last_name || employe.name || "";
-      demandeur = `${prenom} ${nom}`.trim();
-
-      // Si toujours vide, essayer d'autres champs
-      if (!demandeur) {
-        demandeur =
-          employe.display_name || employe.email || `Employé ${d.employe_id}`;
-      }
-    } else {
-      // Fallback: chercher dans les données d'employés chargées
-      const employeeFromMap = employeesData.get(d.employe_id);
-      if (employeeFromMap) {
-        const prenom =
-          employeeFromMap.prenom || employeeFromMap.first_name || "";
-        const nom =
-          employeeFromMap.nom ||
-          employeeFromMap.last_name ||
-          employeeFromMap.name ||
-          "";
-        demandeur = `${prenom} ${nom}`.trim();
-
-        if (!demandeur) {
-          demandeur =
-            employeeFromMap.display_name ||
-            employeeFromMap.email ||
-            `Employé ${d.employe_id}`;
-        }
-      } else {
-        // Dernier fallback
-        demandeur = `Employé ${d.employe_id}`;
-      }
-    }
-
-    return {
-      ...d,
-      id: premiereDemande.id || d.id, // ✅ Utiliser l'ID de la première demande détaillée
-      type_demande: "Avance sur Salaire",
-      demandeur: demandeur,
-      date: new Date(
-        (d as any).date_creation_premiere || d.date_creation || new Date()
-      ).toLocaleDateString("fr-FR"),
-      montant:
-        (d as any).montant_total_demande ||
-        premiereDemande.montant_demande ||
-        d.montant_demande ||
-        0,
-      commentaires: 0,
-      poste: employe?.poste || employe?.position || "Non spécifié",
-      categorie:
-        (d as any).categorie ||
-        (premiereDemande.num_installments === 1 ? "mono-mois" : "multi-mois"),
-      statut:
-        (d as any).statut_global ||
-        premiereDemande.statut ||
-        d.statut ||
-        "Non défini",
-      type_motif: premiereDemande.type_motif || d.type_motif || "Autre",
-      employe: employe, // ✅ Ajouter les données de l'employé pour accéder au salaire_net
-    };
-  });
 
   // Filtrer les demandes (filtrage local pour la recherche textuelle)
   const filteredDemandes = allDemandes.filter((demande) => {
@@ -1089,8 +1096,17 @@ export default function DemandesPage() {
                     <td className="px-3 py-4 text-center">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {(() => {
-                          const employeeData = employeesData.get(demande.employe_id);
-                          const salaireNet = employeeData?.salaire_net || (demande as any).employe?.salaire_net || 0;
+                          // L'API retourne l'employé avec salaireNet (camelCase) ou salaire_net (snake_case)
+                          const employe = (demande as any).employe || demande.employe || {};
+                          const employeeData = employeesData.get(demande.employe_id || (demande as any).employeId);
+                          // Chercher salaireNet dans plusieurs endroits possibles (camelCase et snake_case)
+                          const salaireNet = 
+                            employe.salaireNet || 
+                            employe.salaire_net || 
+                            employeeData?.salaireNet || 
+                            employeeData?.salaire_net ||
+                            employeeData?.salaire_mensuel ||
+                            0;
                           return salaireNet > 0 ? `${salaireNet.toLocaleString()} GNF` : 'N/A';
                         })()}
                       </div>
@@ -1115,12 +1131,19 @@ export default function DemandesPage() {
                     </td>
                     <td className="px-3 py-4 text-right">
                       <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {(demande.montant || 0).toLocaleString()} GNF
+                        {(() => {
+                          // L'API retourne montantDemande, montantTotal, ou montant
+                          const montant = (demande as any).montantDemande || (demande as any).montantTotal || demande.montant || 0;
+                          return montant > 0 ? `${montant.toLocaleString()} GNF` : 'N/A';
+                        })()}
                       </div>
                     </td>
                     <td className="px-3 py-4">
                       <div className="text-sm text-gray-900 dark:text-white truncate max-w-20">
-                        {demande.type_motif || "Autre"}
+                        {(() => {
+                          // L'API retourne typeMotif (camelCase)
+                          return (demande as any).typeMotif || demande.type_motif || "Autre";
+                        })()}
                       </div>
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -1132,17 +1155,30 @@ export default function DemandesPage() {
                       <Badge
                         variant={
                           demande.statut === "En attente" ||
+                          demande.statut === "EN_ATTENTE" ||
+                          (demande as any).statut === "EN_ATTENTE" ||
                           demande.statut === "En attente RH/Responsable"
                             ? "warning"
-                            : demande.statut === "Validé"
+                            : demande.statut === "Validé" ||
+                              demande.statut === "APPROUVE" ||
+                              (demande as any).statut === "APPROUVE"
                             ? "success"
-                            : demande.statut === "Rejeté"
+                            : demande.statut === "Rejeté" ||
+                              demande.statut === "REJETE" ||
+                              (demande as any).statut === "REJETE"
                             ? "error"
                             : "default"
                         }
                         className="text-xs"
                       >
-                        {demande.statut}
+                        {(() => {
+                          // Mapper les statuts de l'API vers les libellés affichés
+                          const statut = (demande as any).statut || demande.statut;
+                          if (statut === "APPROUVE") return "Validé";
+                          if (statut === "EN_ATTENTE") return "En attente";
+                          if (statut === "REJETE") return "Rejeté";
+                          return statut || "Non défini";
+                        })()}
                       </Badge>
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -1262,7 +1298,7 @@ export default function DemandesPage() {
             totalPages={totalPages}
             totalItems={filteredDemandes.length}
             itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         )}
       </div>
