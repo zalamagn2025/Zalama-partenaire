@@ -131,6 +131,19 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "morykoulibaly.me",
+        port: "",
+        pathname: "/**",
+      },
+      // e`, hostname "www.morykoulibaly.me" 
+      {
+        protocol: "https",
+        hostname: "www.morykoulibaly.me",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "example.com",
         port: "",
         pathname: "/**",
