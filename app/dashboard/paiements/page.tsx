@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { 
   Banknote, 
@@ -44,6 +44,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 
 // Types pour les données (selon l'API /partner-payments - camelCase)
 type Payment = {
@@ -141,6 +142,7 @@ type Employee = {
 export default function PaymentSalaryPage() {
   const { session } = useEdgeAuthContext();
   const router = useRouter();
+  const searchParams = useSearchParams();
   
   // États pour les filtres
   const [searchTerm, setSearchTerm] = useState("");
@@ -149,6 +151,75 @@ export default function PaymentSalaryPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<string>("all");
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Synchronisation des filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    search: searchTerm,
+    status: selectedStatus,
+    mois: selectedMonth,
+    employee: selectedEmployee,
+    page: currentPage,
+  }, {
+    exclude: ['showFilters', 'showPaymentPage', 'showDetailModal', 'selectedPayment', 'selectedEmployees', 'paymentMonth', 'paymentDate', 'paymentMethod', 'currentStep', 'paymentMonthNumber', 'paymentYear', 'showBulletinModal', 'bulletinMonth', 'bulletinYear'],
+  });
+  
+  // Initialiser les filtres depuis l'URL au chargement
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    const urlStatus = searchParams.get('status');
+    const urlMois = searchParams.get('mois');
+    const urlEmployee = searchParams.get('employee');
+    const urlPage = searchParams.get('page');
+    
+    if (urlSearch !== null) setSearchTerm(urlSearch);
+    if (urlStatus !== null) setSelectedStatus(urlStatus);
+    if (urlMois !== null) setSelectedMonth(urlMois);
+    if (urlEmployee !== null) setSelectedEmployee(urlEmployee);
+    if (urlPage !== null) {
+      const pageNum = parseInt(urlPage);
+      if (!isNaN(pageNum) && pageNum > 0) setCurrentPage(pageNum);
+    }
+  }, []); // Seulement au montage
+  
+  // Wrapper functions pour mettre à jour l'état ET l'URL
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    updateFilter('search', value);
+    setCurrentPage(1);
+  };
+  
+  const handleStatusChange = (value: string) => {
+    setSelectedStatus(value);
+    updateFilter('status', value);
+    setCurrentPage(1);
+  };
+  
+  const handleMonthChange = (value: string) => {
+    setSelectedMonth(value);
+    updateFilter('mois', value);
+    setCurrentPage(1);
+  };
+  
+  const handleEmployeeChange = (value: string) => {
+    setSelectedEmployee(value);
+    updateFilter('employee', value);
+    setCurrentPage(1);
+  };
+  
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateFilter('page', page);
+  };
+  
+  // Fonction de réinitialisation des filtres
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedStatus("all");
+    setSelectedMonth("all");
+    setSelectedEmployee("all");
+    setCurrentPage(1);
+    resetUrlFilters(); // Nettoyer l'URL
+  };
   const [itemsPerPage] = useState(10);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -216,11 +287,16 @@ export default function PaymentSalaryPage() {
   const employeesList = (Array.isArray(employeesListRaw) ? employeesListRaw : []) as Employee[];
   
   // Debug en développement pour vérifier la structure des données
-  if (process.env.NODE_ENV === 'development' && employeesList.length > 0) {
+  if (process.env.NODE_ENV === 'development') {
     console.log('📊 Données employés extraites:', {
-      total: employeesList.length,
-      premierEmploye: employeesList[0],
-      premierEmployeSalaire: employeesList[0]?.salaireNet || employeesList[0]?.salaire_net,
+      employeesResponse,
+      employeesListRaw,
+      employeesListLength: employeesList.length,
+      premierEmploye: employeesList.length > 0 ? employeesList[0] : null,
+      premierEmployeSalaire: employeesList.length > 0 ? (employeesList[0]?.salaireNet || employeesList[0]?.salaire_net) : null,
+      showPaymentPage,
+      paymentMonthNumber,
+      paymentYear,
     });
   }
   const statistics = statisticsResponse || null;
@@ -415,13 +491,24 @@ export default function PaymentSalaryPage() {
   };
 
   // Calcul du montant total - utiliser salaireNet (camelCase) de l'API
+  // Utiliser les employés de la liste chargée pour la page de paiement
   const selectedEmployeesData = employees.filter(emp => selectedEmployees.includes(emp.id));
-  const totalAmountSelected = selectedEmployeesData.reduce((sum, emp) => {
-    // L'API retourne salaireNet (camelCase) ou salaire_net (snake_case)
-    const salaireNet = emp.salaireNet || emp.salaire_net || emp.salaire_mensuel || 0;
-    // Debug en développement
-    if (process.env.NODE_ENV === 'development' && salaireNet === 0) {
-      console.log('⚠️ Employé sans salaire:', {
+  
+  // Debug en développement pour voir les données
+  if (process.env.NODE_ENV === 'development') {
+    console.log('💰 Calcul du montant total:', {
+      selectedEmployees,
+      employeesTotal: employees.length,
+      employeesList: employees.map(emp => ({
+        id: emp.id,
+        nom: emp.nom || emp.lastName,
+        prenom: emp.prenom || emp.firstName,
+        salaireNet: emp.salaireNet,
+        salaire_net: emp.salaire_net,
+        salaire_mensuel: emp.salaire_mensuel,
+      })),
+      selectedEmployeesDataCount: selectedEmployeesData.length,
+      selectedEmployeesData: selectedEmployeesData.map(emp => ({
         id: emp.id,
         nom: emp.nom || emp.lastName,
         prenom: emp.prenom || emp.firstName,
@@ -429,14 +516,61 @@ export default function PaymentSalaryPage() {
         salaire_net: emp.salaire_net,
         salaire_mensuel: emp.salaire_mensuel,
         allProps: Object.keys(emp),
-      });
+      })),
+    });
+  }
+  
+  const totalAmountSelected = selectedEmployeesData.reduce((sum, emp) => {
+    // L'API retourne salaireNet (camelCase) ou salaire_net (snake_case)
+    // Vérifier toutes les variantes possibles
+    const salaireNet = emp.salaireNet 
+      || emp.salaire_net 
+      || emp.salaire_mensuel 
+      || (emp as any).salaireNet
+      || (emp as any).salaire_net
+      || (emp as any).salaire_mensuel
+      || 0;
+    
+    // Debug en développement
+    if (process.env.NODE_ENV === 'development') {
+      if (salaireNet === 0) {
+        console.warn('⚠️ Employé sans salaire:', {
+          id: emp.id,
+          nom: emp.nom || emp.lastName,
+          prenom: emp.prenom || emp.firstName,
+          salaireNet: emp.salaireNet,
+          salaire_net: emp.salaire_net,
+          salaire_mensuel: emp.salaire_mensuel,
+          allProps: Object.keys(emp),
+          empObject: emp,
+        });
+      } else {
+        console.log('✅ Employé avec salaire:', {
+          id: emp.id,
+          nom: emp.nom || emp.lastName,
+          prenom: emp.prenom || emp.firstName,
+          salaireNet,
+        });
+      }
     }
-    return sum + salaireNet;
+    
+    return sum + (Number(salaireNet) || 0);
   }, 0);
   
   // Calcul des frais de transaction (1.7% selon la documentation API)
   const fraisTransaction = totalAmountSelected * 0.017;
   const totalAPayer = totalAmountSelected + fraisTransaction;
+  
+  // Debug final
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📊 Résumé du calcul:', {
+      totalAmountSelected,
+      fraisTransaction,
+      totalAPayer,
+      selectedEmployeesCount: selectedEmployees.length,
+      selectedEmployeesDataCount: selectedEmployeesData.length,
+    });
+  }
 
   // Navigation entre étapes
   const nextStep = () => {
@@ -1280,12 +1414,7 @@ export default function PaymentSalaryPage() {
                 {showFilters ? "Masquer" : "Afficher"}
               </button>
               <button
-                onClick={() => {
-                  setSelectedStatus("all");
-                  setSelectedMonth("all");
-                  setSelectedEmployee("all");
-                  setSearchTerm("");
-                }}
+                onClick={resetFilters}
                 className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Réinitialiser
@@ -1316,7 +1445,7 @@ export default function PaymentSalaryPage() {
                 type="text"
                 placeholder="Rechercher..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
@@ -1329,7 +1458,7 @@ export default function PaymentSalaryPage() {
             </label>
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
+              onChange={(e) => handleStatusChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tous les statuts</option>
@@ -1348,7 +1477,7 @@ export default function PaymentSalaryPage() {
             </label>
             <select
               value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
+              onChange={(e) => handleMonthChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tous les mois</option>
@@ -1367,7 +1496,7 @@ export default function PaymentSalaryPage() {
             </label>
             <select
               value={selectedEmployee}
-              onChange={(e) => setSelectedEmployee(e.target.value)}
+              onChange={(e) => handleEmployeeChange(e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Tous les employés</option>
@@ -1524,7 +1653,7 @@ export default function PaymentSalaryPage() {
               totalPages={totalPages}
               totalItems={totalPaymentsCount}
               itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
+              onPageChange={handlePageChange}
             />
           )}
               </div>

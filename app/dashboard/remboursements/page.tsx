@@ -456,15 +456,18 @@ export default function RemboursementsPage() {
     }
   };
 
-  // Fonction pour appliquer un filtre
+  // Fonction pour appliquer un filtre (dépréciée - utiliser les handlers individuels)
+  // Cette fonction n'est plus utilisée, mais conservée pour compatibilité
   const applyFilter = async (filterKey: string, value: any) => {
-    const newFilters = { ...filters, [filterKey]: value };
-    setFilters(newFilters);
-
-    // Recharger les données avec les nouveaux filtres
-    await loadRemboursementsData(newFilters);
-    // Recharger les statistiques avec les nouveaux filtres
-    await loadStatistics(newFilters);
+    // Utiliser les handlers individuels selon le type de filtre
+    if (filterKey === 'mois') {
+      handleMonthChange(value);
+    } else if (filterKey === 'annee') {
+      handleYearChange(value);
+    } else if (filterKey === 'status') {
+      handleStatusChange(value);
+    }
+    // Les autres filtres (employee_id, categorie, date_debut, date_fin) ne sont pas encore implémentés
   };
 
   // Fonction pour réinitialiser tous les filtres et l'URL
@@ -1294,10 +1297,9 @@ export default function RemboursementsPage() {
               Mois
             </label>
             <select
-              value={filters.mois || ""}
+              value={selectedMonth || ""}
               onChange={(e) =>
-                applyFilter(
-                  "mois",
+                handleMonthChange(
                   e.target.value ? parseInt(e.target.value) : null
                 )
               }
@@ -1320,10 +1322,9 @@ export default function RemboursementsPage() {
               Année
             </label>
             <select
-              value={filters.annee || ""}
+              value={selectedYear || ""}
               onChange={(e) =>
-                applyFilter(
-                  "annee",
+                handleYearChange(
                   e.target.value ? parseInt(e.target.value) : null
                 )
               }
@@ -1344,8 +1345,8 @@ export default function RemboursementsPage() {
               Statut
             </label>
             <select
-              value={filters.status || ""}
-              onChange={(e) => applyFilter("status", e.target.value || null)}
+              value={selectedStatus || ""}
+              onChange={(e) => handleStatusChange(e.target.value || null)}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Tous les statuts</option>
@@ -1356,17 +1357,16 @@ export default function RemboursementsPage() {
             </select>
           </div>
 
-          {/* Filtre par employé */}
-          <div>
+          {/* Filtre par employé - Désactivé temporairement (non implémenté) */}
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Employé
             </label>
             <select
-              value={filters.employee_id || ""}
-              onChange={(e) =>
-                applyFilter("employee_id", e.target.value || null)
-              }
+              value=""
+              onChange={() => {}}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled
             >
               <option value="">Tous les employés</option>
               {activeEmployees.map((employee, index) => (
@@ -1375,50 +1375,49 @@ export default function RemboursementsPage() {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
 
-          {/* Filtre par catégorie */}
-          <div>
+          {/* Filtre par catégorie - Désactivé temporairement (non implémenté) */}
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Catégorie
             </label>
             <select
-              value={filters.categorie || ""}
-              onChange={(e) => applyFilter("categorie", e.target.value || null)}
+              value=""
+              onChange={() => {}}
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled
             >
               <option value="">Toutes les catégories</option>
               <option value="mono-mois">Mono-mois</option>
               <option value="multi-mois">Multi-mois</option>
             </select>
-          </div>
+          </div> */}
 
-          {/* Filtre par période personnalisée */}
-          <div>
+          {/* Filtre par période personnalisée - Désactivé temporairement (non implémenté) */}
+          {/* <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Période personnalisée
             </label>
             <div className="flex gap-2">
               <input
                 type="date"
-                value={filters.date_debut || ""}
-                onChange={(e) =>
-                  applyFilter("date_debut", e.target.value || null)
-                }
+                value=""
+                onChange={() => {}}
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Date début"
+                disabled
               />
               <input
                 type="date"
-                value={filters.date_fin || ""}
-                onChange={(e) =>
-                  applyFilter("date_fin", e.target.value || null)
-                }
+                value=""
+                onChange={() => {}}
                 className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Date fin"
+                disabled
               />
             </div>
-          </div>
+          </div> */}
         </div>
         )}
 
