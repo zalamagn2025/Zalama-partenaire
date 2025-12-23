@@ -235,14 +235,16 @@
   }
 
   html {
-    font-family: var(--font-inter), Inter, system-ui, sans-serif;
+    font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
   }
 
   body {
     @apply bg-background text-foreground font-sans;
-    font-family: var(--font-inter), Inter, system-ui, sans-serif;
+    font-family: "Inter", "Roboto", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     font-variation-settings: normal;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Appliquer Inter à tous les éléments par défaut */

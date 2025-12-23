@@ -11,6 +11,8 @@ import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 // import { usePaymentHistory } from "@/hooks/usePaymentHistory"; // Hook désactivé - route API n'existe pas
 import { usePartnerFinancesRemboursements } from "@/hooks/usePartnerFinances";
 import { toast } from "sonner";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useUrlFilters } from "@/hooks/useUrlFilters";
 
 import {
   ArcElement,
@@ -133,6 +135,8 @@ const getStatusBadge = (statut: string) => {
 
 export default function RemboursementsPage() {
   const { session, loading } = useEdgeAuthContext();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   
   // ✅ Utilisation du hook pour les paiements de salaire
   // Hook désactivé - la route /api/proxy/payments n'existe pas
@@ -142,7 +146,7 @@ export default function RemboursementsPage() {
   //   loading: paymentLoading,
   //   loadPayments: loadPaymentHistoryData
   // } = usePaymentHistory(session?.access_token);
-  
+
   // États temporaires pour compatibilité
   const paymentHistory: any[] = [];
   const paymentStatistics: any = null;
@@ -167,12 +171,57 @@ export default function RemboursementsPage() {
   // ✅ État pour le type de données affichées
   const [dataType, setDataType] = useState<'tous' | 'avances' | 'paiements'>('tous');
 
-  // États pour les filtres
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  // États pour les filtres - initialiser depuis l'URL
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(() => {
+    const mois = searchParams.get('mois');
+    return mois ? parseInt(mois, 10) : null;
+  });
+  const [selectedYear, setSelectedYear] = useState<number | null>(() => {
+    const annee = searchParams.get('annee');
+    return annee ? parseInt(annee, 10) : null;
+  });
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(() => {
+    return searchParams.get('status') || null;
+  });
+  const [currentPage, setCurrentPage] = useState(() => {
+    const page = searchParams.get('page');
+    return page ? parseInt(page, 10) : 1;
+  });
   const itemsPerPage = 10;
+
+  // Hook pour synchroniser les filtres avec l'URL
+  const { updateFilter, resetFilters: resetUrlFilters } = useUrlFilters({
+    mois: selectedMonth,
+    annee: selectedYear,
+    status: selectedStatus,
+    page: currentPage,
+  }, {
+    exclude: ['showDetailModal', 'showFinancialInfoModal', 'showEmployeeDetailsModal', 'selectedRemboursement', 'dataType'],
+  });
+
+  // Fonctions wrapper pour mettre à jour les filtres et l'URL
+  const handleMonthChange = (value: number | null) => {
+    setSelectedMonth(value);
+    updateFilter('mois', value);
+    setCurrentPage(1);
+  };
+
+  const handleYearChange = (value: number | null) => {
+    setSelectedYear(value);
+    updateFilter('annee', value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (value: string | null) => {
+    setSelectedStatus(value);
+    updateFilter('status', value);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    updateFilter('page', page);
+  };
 
   // Utiliser les hooks pour récupérer les données
   const { data: remboursementsResponse, isLoading: isLoadingRemboursements, refetch: refetchRemboursements } = usePartnerFinancesRemboursements({
@@ -358,10 +407,10 @@ export default function RemboursementsPage() {
   // Les données sont maintenant chargées automatiquement via les hooks
   const loadRemboursementsData = async (customFilters: any = {}) => {
     // Mettre à jour les filtres - les hooks rechargeront automatiquement
-    if (customFilters.mois !== undefined) setSelectedMonth(customFilters.mois);
-    if (customFilters.annee !== undefined) setSelectedYear(customFilters.annee);
-    if (customFilters.status !== undefined) setSelectedStatus(customFilters.status);
-    if (customFilters.offset !== undefined) setCurrentPage(Math.floor(customFilters.offset / itemsPerPage) + 1);
+    if (customFilters.mois !== undefined) handleMonthChange(customFilters.mois);
+    if (customFilters.annee !== undefined) handleYearChange(customFilters.annee);
+    if (customFilters.status !== undefined) handleStatusChange(customFilters.status);
+    if (customFilters.offset !== undefined) handlePageChange(Math.floor(customFilters.offset / itemsPerPage) + 1);
   };
 
   // Fonction pour charger les données de filtres dynamiques
@@ -418,21 +467,14 @@ export default function RemboursementsPage() {
     await loadStatistics(newFilters);
   };
 
-  // Fonction pour réinitialiser tous les filtres
+  // Fonction pour réinitialiser tous les filtres et l'URL
   const resetFilters = async () => {
-    const defaultFilters = {
-      mois: null,
-      annee: null,
-      status: null,
-      employee_id: null,
-      categorie: null,
-      date_debut: null,
-      date_fin: null,
-      limit: 50,
-      offset: 0,
-    };
-    setFilters(defaultFilters);
-    await loadRemboursementsData(defaultFilters);
+    handleMonthChange(null);
+    handleYearChange(null);
+    handleStatusChange(null);
+    setCurrentPage(1);
+    resetUrlFilters(); // Réinitialiser l'URL
+    await loadRemboursementsData({});
   };
 
   // Charger les remboursements au montage
@@ -1736,7 +1778,7 @@ export default function RemboursementsPage() {
             totalPages={totalPages}
             totalItems={dataForPagination.length}
             itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
+            onPageChange={handlePageChange}
           />
         )}
         </div>

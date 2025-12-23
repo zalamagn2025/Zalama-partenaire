@@ -76,7 +76,7 @@ type Payment = {
   // Propriétés optionnelles pour compatibilité (snake_case)
   employe_id?: string;
   date_paiement?: string;
-  salaire_net?: number;
+    salaire_net?: number;
   salaire_disponible?: number;
   avances_deduites?: number;
   periode_debut?: string;
@@ -160,7 +160,7 @@ export default function PaymentSalaryPage() {
   const [paymentDate, setPaymentDate] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
-  
+
   // États pour le mois et l'année de paiement (utilisés pour récupérer les employés)
   const [paymentMonthNumber, setPaymentMonthNumber] = useState<number | undefined>(undefined);
   const [paymentYear, setPaymentYear] = useState<number | undefined>(undefined);
@@ -262,7 +262,7 @@ export default function PaymentSalaryPage() {
   });
   
   const employees = employeesList;
-  
+
   // Pagination
   const totalPaymentsCount = paymentsResponse?.total || 0;
   const totalPages = Math.ceil(totalPaymentsCount / itemsPerPage);
@@ -596,46 +596,46 @@ export default function PaymentSalaryPage() {
                         const avancesActives = employee.avancesActives;
                         
                         return (
-                          <div 
-                            key={employee.id} 
-                            className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
-                              selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
-                            }`}
-                            onClick={() => toggleEmployeeSelection(employee.id)}
-                          >
-                            <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div 
+                        key={employee.id} 
+                        className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
+                          selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
+                        }`}
+                        onClick={() => toggleEmployeeSelection(employee.id)}
+                      >
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {photoUrl ? (
-                                <Image
+                            <Image
                                   src={photoUrl}
                                   alt={`${prenom} ${nom}`}
-                                  width={40}
-                                  height={40}
-                                  className="w-full h-full object-cover rounded-full"
-                                />
-                              ) : (
-                                <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
                                   {prenom?.charAt(0) || ''}
                                   {nom?.charAt(0) || ''}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white truncate">
+            </span>
+                          )}
+          </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 dark:text-white truncate">
                                 {prenom} {nom}
-                              </p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                                 {poste}
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate">
                                 {email}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white">
                                   {formatAmount(salaireNet)}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                                   Salaire net
                                 </p>
                                 {salaireRestant !== undefined && salaireRestant !== null && (
@@ -650,23 +650,23 @@ export default function PaymentSalaryPage() {
                                     )}
                                   </>
                                 )}
-                              </div>
-                              <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
-                                selectedEmployees.includes(employee.id) 
-                                  ? 'border-orange-500 bg-orange-500' 
-                                  : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
-                              }`}>
-                                {selectedEmployees.includes(employee.id) && (
-                                  <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
-                                )}
-                              </div>
-                            </div>
                           </div>
+                          <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
+                            selectedEmployees.includes(employee.id) 
+                              ? 'border-orange-500 bg-orange-500' 
+                              : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
+                          }`}>
+                            {selectedEmployees.includes(employee.id) && (
+                              <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
+                            )}
+                          </div>
+                        </div>
+              </div>
                         );
                       })
                     )}
-                  </div>
-                </div>
+          </div>
+        </div>
               </div>
             )}
 

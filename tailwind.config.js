@@ -50,7 +50,7 @@ module.exports = {
         xl: "var(--radius-xl)",
       },
       fontFamily: {
-        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        sans: ["Inter", "Roboto", "system-ui", "sans-serif"],
         mono: [
           "var(--font-mono)",
           "ui-monospace",
