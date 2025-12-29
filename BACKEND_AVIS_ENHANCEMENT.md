@@ -94,3 +94,4 @@ Ajouter un objet `user` ou `employee` (selon votre structure) contenant :
 
 Ces deux routes doivent retourner les mêmes informations enrichies avec les données de l'utilisateur/employé.
 
+
