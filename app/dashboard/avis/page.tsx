@@ -23,11 +23,18 @@ import {
   X,
   ChevronDown,
   Clock,
+  Trash2,
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { usePartnerEmployeeAvis } from "@/hooks/usePartnerEmployee";
+import { 
+  useAvis, 
+  useAvisStatistics,
+  useApproveAvis,
+  useRejectAvis,
+  useDeleteAvis,
+  type Avis as AvisType
+} from "@/hooks/useAvis";
 import { usePartnerEmployees } from "@/hooks/usePartnerEmployee";
-import type { PartnerEmployeeAvis } from "@/types/api";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
@@ -35,27 +42,27 @@ import { toast } from "sonner";
 
 // Types d'avis disponibles
 const avisCategories = [
-  { id: "service", label: "Service" },
-  { id: "application", label: "Application" },
-  { id: "support", label: "Support" },
-  { id: "general", label: "Général" },
+  { id: "positif", label: "Positif" },
+  { id: "negatif", label: "Négatif" },
 ];
 
-// Utiliser les types depuis types/api.ts
-type Avis = PartnerEmployeeAvis;
 type Employee = {
   id: string;
   nom: string;
   prenom: string;
-  poste: string;
-  nom_complet: string;
+  poste?: string;
+  nom_complet?: string;
   photo_url?: string;
+  photoUrl?: string;
+  email?: string;
+  telephone?: string;
 };
 
-// Type étendu pour inclure les données des employés
-interface AvisWithEmployee extends Avis {
-  employees?: Employee;
-}
+// Type étendu pour inclure les données des employés (si disponibles)
+type AvisWithEmployee = AvisType & {
+  employee?: Employee;
+  employee_id?: string;
+};
 
 export default function AvisPage() {
   const { session, loading } = useEdgeAuthContext();
@@ -69,46 +76,107 @@ export default function AvisPage() {
   const [selectedAvis, setSelectedAvis] = useState<AvisWithEmployee | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
+  // Hooks pour les mutations
+  const approveAvisMutation = useApproveAvis();
+  const rejectAvisMutation = useRejectAvis();
+  const deleteAvisMutation = useDeleteAvis();
+
   // Utiliser les hooks pour récupérer les données
-  const { data: avisResponse, isLoading: loadingAvis } = usePartnerEmployeeAvis({
+  const { data: avisResponse, isLoading: loadingAvis, refetch: refetchAvis } = useAvis({
     userId: selectedEmployee !== 'all' ? selectedEmployee : undefined,
-    typeRetour: selectedCategory !== 'all' ? selectedCategory : undefined,
+    typeRetour: selectedCategory !== 'all' ? (selectedCategory as 'positif' | 'negatif') : undefined,
     limit: itemsPerPage,
     page: currentPage,
       });
 
+  const { data: statisticsResponse } = useAvisStatistics();
   const { data: employeesResponse } = usePartnerEmployees({
     limit: 1000, // Récupérer tous les employés pour le filtre
   });
 
   // Extraire les données
-  const avis = (avisResponse?.data || []) as AvisWithEmployee[];
+  const avisRaw = (avisResponse?.data || []) as AvisWithEmployee[];
   const employees = (employeesResponse?.data || employeesResponse?.employees || []) as Employee[];
+  
+  // Enrichir les avis avec les données des employés en utilisant userId
+  const avis = avisRaw.map(avisItem => {
+    // Chercher l'employé par userId ou employee_id
+    const userId = (avisItem as any).userId || (avisItem as any).employee_id;
+    if (userId) {
+      const employee = employees.find(emp => emp.id === userId);
+      if (employee) {
+        return {
+          ...avisItem,
+          employee: {
+            ...employee,
+            photo_url: employee.photo_url || employee.photoUrl,
+          }
+        };
+      }
+    }
+    return avisItem;
+  }) as AvisWithEmployee[];
+  
   const loadingData = loadingAvis;
   const totalAvisCount = avisResponse?.total || 0;
-  const totalPages = Math.ceil(totalAvisCount / itemsPerPage);
+  const totalPages = avisResponse?.totalPages || Math.ceil(totalAvisCount / itemsPerPage);
 
-  // Filtrer les avis
+  // Filtrer les avis côté client (recherche uniquement, les autres filtres sont gérés par l'API)
   const filteredAvis = (avis || []).filter((avis) => {
     const matchesSearch = 
       avis.employee?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       avis.employee?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       avis.commentaire?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = selectedCategory === "all" || avis.type_retour === selectedCategory;
-    const matchesEmployee = selectedEmployee === "all" || avis.employee_id === selectedEmployee;
-
-    return matchesSearch && matchesCategory && matchesEmployee;
+    return matchesSearch;
   });
 
   // Pagination côté serveur - les données sont déjà paginées
   const currentAvis = filteredAvis;
 
-  // Statistiques
-  const totalAvis = totalAvisCount || avis.length;
-  const averageNote = avis.length > 0 ? avis.reduce((sum, a) => sum + a.note, 0) / avis.length : 0;
-  const approvedAvis = avis.filter(a => a.approuve).length;
-  const pendingAvis = avis.filter(a => !a.approuve).length;
+  // Fonctions pour gérer les actions
+  const handleApprove = async (id: string) => {
+    try {
+      await approveAvisMutation.mutateAsync(id);
+      toast.success("Avis approuvé avec succès");
+      refetchAvis();
+    } catch (error) {
+      toast.error("Erreur lors de l'approbation de l'avis");
+      console.error(error);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      await rejectAvisMutation.mutateAsync(id);
+      toast.success("Avis rejeté avec succès");
+      refetchAvis();
+    } catch (error) {
+      toast.error("Erreur lors du rejet de l'avis");
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cet avis ?")) {
+      return;
+    }
+    try {
+      await deleteAvisMutation.mutateAsync(id);
+      toast.success("Avis supprimé avec succès");
+      refetchAvis();
+    } catch (error) {
+      toast.error("Erreur lors de la suppression de l'avis");
+      console.error(error);
+    }
+  };
+
+  // Statistiques - utiliser les statistiques de l'API si disponibles, sinon calculer localement
+  const statistics = statisticsResponse;
+  const totalAvis = statistics?.total || totalAvisCount || avis.length;
+  const averageNote = statistics?.moyenneNote || (avis.length > 0 ? avis.reduce((sum, a) => sum + a.note, 0) / avis.length : 0);
+  const approvedAvis = statistics?.avisApprouves || avis.filter(a => a.approuve).length;
+  const pendingAvis = statistics?.avisEnAttente || avis.filter(a => !a.approuve).length;
 
   // Fonction pour obtenir la couleur du badge selon la note
   const getNoteBadgeVariant = (note: number) => {
@@ -177,7 +245,7 @@ export default function AvisPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 w-full max-w-full overflow-x-hidden">
       {/* En-tête avec statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
         {/* Total Avis */}
@@ -257,13 +325,12 @@ export default function AvisPage() {
       <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 mb-6 backdrop-blur-sm">
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
               placeholder="Rechercher par employé ou commentaire..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />
           </div>
         </div>
@@ -296,8 +363,8 @@ export default function AvisPage() {
               </button>
               <button
                 onClick={() => {
-                  // Les données sont rechargées automatiquement via les hooks
-                  console.log("🔄 Rechargement des données...");
+                  refetchAvis();
+                  toast.success("Données actualisées");
                 }}
                 disabled={loadingData}
                 className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
@@ -320,10 +387,13 @@ export default function AvisPage() {
               </label>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={(e) => {
+                  setSelectedCategory(e.target.value);
+                  setCurrentPage(1); // Réinitialiser la pagination
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
-                <option value="all">Toutes les catégories</option>
+                <option value="all">Tous les types</option>
                 {avisCategories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.label}
@@ -339,7 +409,10 @@ export default function AvisPage() {
               </label>
               <select
                 value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
+                onChange={(e) => {
+                  setSelectedEmployee(e.target.value);
+                  setCurrentPage(1); // Réinitialiser la pagination
+                }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
               >
                 <option value="all">Tous les employés</option>
@@ -372,30 +445,30 @@ export default function AvisPage() {
           </p>
         </div>
       ) : (
-        <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed dark:divide-gray-700">
+        <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg shadow overflow-hidden backdrop-blur-sm w-full">
+          <div className="overflow-x-auto w-full" style={{ maxWidth: '100%' }}>
+            <table className="w-full dark:divide-gray-700" style={{ minWidth: '800px' }}>
               <thead className="bg-gray-50 dark:bg-[var(--zalama-card)] border-b border-[var(--zalama-border)] border-opacity-20">
                 <tr>
-                  <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[180px]">
                     Employé
                   </th>
-                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-20">
                     Note
                   </th>
-                  <th className="w-1/4 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider min-w-[200px]">
                     Commentaire
                   </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
                     Catégorie
                   </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-24">
                     Statut
                   </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-28 whitespace-nowrap">
                     Date
                   </th>
-                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-32 whitespace-nowrap">
                     Actions
                   </th>
                 </tr>
@@ -409,9 +482,9 @@ export default function AvisPage() {
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {(avis.employee as any)?.photo_url ? (
+                          {avis.employee?.photo_url || avis.employee?.photoUrl ? (
                             <Image
-                              src={(avis.employee as any).photo_url}
+                              src={avis.employee.photo_url || avis.employee.photoUrl || ''}
                               alt={`${avis.employee?.prenom} ${avis.employee?.nom}`}
                               width={40}
                               height={40}
@@ -419,8 +492,8 @@ export default function AvisPage() {
                             />
                           ) : (
                             <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                              {avis.employee?.prenom?.charAt(0)}
-                              {avis.employee?.nom?.charAt(0)}
+                              {avis.employee?.prenom?.charAt(0) || '?'}
+                              {avis.employee?.nom?.charAt(0) || ''}
                             </span>
                           )}
                         </div>
@@ -449,10 +522,10 @@ export default function AvisPage() {
                     </td>
                     <td className="px-3 py-4 text-center">
                       <Badge 
-                        variant={avis.note >= 3 ? "success" : "error"} 
+                        variant={avis.typeRetour === 'positif' || avis.note >= 3 ? "success" : "error"} 
                         className="text-xs"
                       >
-                        {avis.note >= 3 ? "Positif" : "Négatif"}
+                        {avis.typeRetour === 'positif' ? "Positif" : avis.typeRetour === 'negatif' ? "Négatif" : (avis.note >= 3 ? "Positif" : "Négatif")}
                       </Badge>
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -460,23 +533,53 @@ export default function AvisPage() {
                         {avis.approuve ? "Approuvé" : "En attente"}
                       </Badge>
                     </td>
-                    <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(avis.date_avis || avis.created_at)}
+                    <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                      {formatDate((avis as any).dateAvis || (avis as any).date_avis || (avis as any).created_at || '')}
                     </td>
-                    <td className="px-3 py-4 text-center">
+                    <td className="px-3 py-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-1.5">
               <button
                 onClick={() => {
                           setSelectedAvis(avis);
                           setShowDetailModal(true);
                 }}
-                        className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        className="group relative p-1.5 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                         title="Voir les détails"
               >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-3.5 w-3.5" />
                         <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
                           Voir
                         </div>
               </button>
+                        {!avis.approuve && (
+                          <button
+                            onClick={() => handleApprove(avis.id)}
+                            disabled={approveAvisMutation.isPending}
+                            className="p-1.5 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Approuver"
+                          >
+                            <ThumbsUp className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {avis.approuve && (
+                          <button
+                            onClick={() => handleReject(avis.id)}
+                            disabled={rejectAvisMutation.isPending}
+                            className="p-1.5 rounded-full bg-yellow-50 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Rejeter"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(avis.id)}
+                          disabled={deleteAvisMutation.isPending}
+                          className="p-1.5 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -530,9 +633,9 @@ export default function AvisPage() {
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
                   <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                    {(selectedAvis.employee as any)?.photo_url ? (
+                    {selectedAvis.employee?.photo_url || selectedAvis.employee?.photoUrl ? (
                       <Image
-                        src={(selectedAvis.employee as any).photo_url}
+                        src={selectedAvis.employee.photo_url || selectedAvis.employee.photoUrl || ''}
                         alt={`${selectedAvis.employee?.prenom} ${selectedAvis.employee?.nom}`}
                         width={80}
                         height={80}
@@ -540,8 +643,8 @@ export default function AvisPage() {
                       />
                     ) : (
                       <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                        {selectedAvis.employee?.prenom?.charAt(0)}
-                        {selectedAvis.employee?.nom?.charAt(0)}
+                        {selectedAvis.employee?.prenom?.charAt(0) || ''}
+                        {selectedAvis.employee?.nom?.charAt(0) || ''}
                       </span>
                     )}
                   </div>
@@ -618,10 +721,10 @@ export default function AvisPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Catégorie</span>
             </div>
                     <Badge 
-                      variant={selectedAvis.note >= 3 ? "success" : "error"} 
+                      variant={selectedAvis.typeRetour === 'positif' || selectedAvis.note >= 3 ? "success" : "error"} 
                       className="text-xs"
                     >
-                      {selectedAvis.note >= 3 ? "Positif" : "Négatif"}
+                      {selectedAvis.typeRetour === 'positif' ? "Positif" : selectedAvis.typeRetour === 'negatif' ? "Négatif" : (selectedAvis.note >= 3 ? "Positif" : "Négatif")}
                     </Badge>
       </div>
 
@@ -634,7 +737,7 @@ export default function AvisPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {formatDate(selectedAvis.date_avis || selectedAvis.created_at)}
+                      {formatDate((selectedAvis as any).dateAvis || (selectedAvis as any).date_avis || (selectedAvis as any).created_at || '')}
                     </p>
                   </div>
                 </div>

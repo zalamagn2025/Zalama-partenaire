@@ -189,6 +189,18 @@ export const API_ROUTES = {
     release: (id: string) => `/treasury-advances/${id}/release`,
     repay: (id: string) => `/treasury-advances/${id}/repay`,
   },
+  
+  // Avis
+  avis: {
+    list: '/avis',
+    get: (id: string) => `/avis/${id}`,
+    create: '/avis',
+    update: (id: string) => `/avis/${id}`,
+    delete: (id: string) => `/avis/${id}`,
+    approve: (id: string) => `/avis/${id}/approve`,
+    reject: (id: string) => `/avis/${id}/reject`,
+    statistics: '/avis/statistics',
+  },
 } as const;
 
 /**
