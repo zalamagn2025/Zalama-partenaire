@@ -26,10 +26,22 @@ interface PartnerPaymentsStatisticsFilters {
   date_fin?: string;
 }
 
+interface DirectPaymentInfo {
+  numeroReception: string;
+  typeCompte: 'lp-om-gn' | 'lp-momo-gn'; // Lengo Pay: Orange Money ou Mobile Money
+}
+
+interface CustomSalaryInfo {
+  salaireAPayer: number;
+  raison?: string;
+}
+
 interface BatchProcessWalletRequest {
   employeeIds: string[];
   mois: number;
   annee: number;
+  directPayments?: Record<string, DirectPaymentInfo>;
+  salairesPersonnalises?: Record<string, CustomSalaryInfo>;
 }
 
 interface BulletinPaieParams {

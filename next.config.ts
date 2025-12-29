@@ -154,6 +154,19 @@ const nextConfig: NextConfig = {
         port: "",
         pathname: "/**",
       },
+      // https://mspmrzlqhwpdkkburjiw.supabase.co/storage/v1/object/public/employee-photos/d2509ff6-96a2-4929-a3e0-755c3f7427b8/1758653159120.webp) on `next/image`, hostname "mspmrzlqhwpdkkburjiw.supabase.co" is not configured under images in your `next.config.js`
+      {
+        protocol: "https",
+        hostname: "mspmrzlqhwpdkkburjiw.supabase.co",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "mspmrzlqhwpdkkburjiw.supabase.co",
+        port: "",
+        pathname: "/**",
+      },
     ],
     // Redimensionnement automatique
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],

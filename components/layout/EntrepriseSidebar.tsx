@@ -246,8 +246,20 @@ export default function EntrepriseSidebar() {
                 collapsed ? "justify-center" : ""
               }`}
             >
-              <div className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold flex-shrink-0 group-hover:scale-110 transition-all duration-300 shadow-lg" style={{ background: 'var(--zalama-orange)' }}>
-                {session?.admin?.display_name?.charAt(0) || "P"}
+              <div className="relative w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-all duration-300 shadow-lg overflow-hidden" style={{ background: session?.admin?.photoUrl ? 'transparent' : 'var(--zalama-orange)' }}>
+                {session?.admin?.photoUrl ? (
+                  <Image
+                    src={session.admin.photoUrl}
+                    alt={session?.admin?.display_name || "Profil"}
+                    fill
+                    className="object-cover rounded-full"
+                    sizes="32px"
+                  />
+                ) : (
+                  <span className="text-white font-semibold">
+                    {session?.admin?.display_name?.charAt(0) || "P"}
+                  </span>
+                )}
               </div>
               {!collapsed && (
                 <div className="ml-3 sidebar-text min-w-0 flex-1 text-left">

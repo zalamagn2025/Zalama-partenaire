@@ -3,6 +3,7 @@
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { usePartnerApiKey, useRegeneratePartnerApiKey } from "@/hooks/usePartnerAuth";
+import { API_ROUTES, API_CONFIG, getApiUrl, getDefaultHeaders } from "@/config/api";
 import {
   Building,
   Calendar,
@@ -42,15 +43,22 @@ import {
   BarChart3,
   TrendingUp,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { toast } from "sonner";
 import { PinInput } from "@/components/ui/PinInput";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 
 export default function ParametresPage() {
   const { theme, toggleTheme } = useTheme();
-  const { session } = useEdgeAuthContext();
+  const { session: sessionRaw } = useEdgeAuthContext();
+  
+  // Mémoriser la session pour éviter les re-renders inutiles
+  // Utiliser l'ID de session comme clé de dépendance
+  const sessionId = sessionRaw?.admin?.id || sessionRaw?.partner?.id || null;
+  const session = useMemo(() => sessionRaw, [sessionId]);
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
@@ -58,6 +66,10 @@ export default function ParametresPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPartner, setIsSavingPartner] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingProfileImage, setIsUploadingProfileImage] = useState(false);
   
   // Utiliser les hooks pour récupérer et régénérer la clé API
   const { data: apiKeyResponse, isLoading: isLoadingApiKey, refetch: refetchApiKey } = usePartnerApiKey();
@@ -74,6 +86,9 @@ export default function ParametresPage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  // Initialiser les états avec des valeurs par défaut
+  // Ces états ne seront JAMAIS réinitialisés automatiquement
   const [profileData, setProfileData] = useState({
     nom: "",
     email: "",
@@ -81,6 +96,7 @@ export default function ParametresPage() {
     poste: "",
     display_name: "",
   });
+  
   const [partnerData, setPartnerData] = useState({
     company_name: "",
     activity_domain: "",
@@ -91,57 +107,161 @@ export default function ParametresPage() {
     payment_date: "",
     payment_day: 25,
   });
+  
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  // Charger les données de session au montage
+  // Initialiser UNE SEULE FOIS quand la session devient disponible
+  const initializedRef = useRef(false);
+  
+  // Utiliser useEffect pour éviter les mutations directes pendant le render
   useEffect(() => {
-    if (session?.admin) {
-      setProfileData({
-        nom: session.admin.display_name || "",
-        email: session.admin.email || "",
-        telephone: "",
-        poste: session.admin.role || "",
-        display_name: session.admin.display_name || "",
-      });
-    }
-    if (session?.partner) {
-      setPartnerData({
-        company_name: session.partner.company_name || "",
-        activity_domain: session.partner.activity_domain || "",
-        headquarters_address: session.partner.address || "",
-        phone: session.partner.phone || "",
-        email: session.partner.email || "",
-        legal_status: session.partner.legal_status || "",
-        payment_date: "",
-        payment_day: 25,
-      });
+    if (session && !initializedRef.current) {
+      initializedRef.current = true;
+      
+      if (session.admin) {
+        setProfileData({
+          nom: session.admin.display_name || session.admin.lastName || "",
+          email: session.admin.email || "",
+          telephone: session.admin.phone || "",
+          poste: session.admin.role || "",
+          display_name: session.admin.display_name || `${session.admin.firstName || ""} ${session.admin.lastName || ""}`.trim(),
+        });
+        
+        if (session.admin.photoUrl) {
+          setProfileImagePreview(session.admin.photoUrl);
+        }
+      }
+      
+      if (session.partner) {
+        setPartnerData({
+          company_name: session.partner.companyName || "",
+          activity_domain: session.partner.activityDomain || "",
+          headquarters_address: session.partner.headquartersAddress || "",
+          phone: session.partner.phone || "",
+          email: session.partner.email || "",
+          legal_status: session.partner.legalStatus || "",
+          payment_date: "",
+          payment_day: 25,
+        });
+        
+        if (session.partner.logoUrl) {
+          setLogoPreview(session.partner.logoUrl);
+        }
+      }
     }
   }, [session]);
 
   // La clé API est chargée automatiquement via le hook usePartnerApiKey
 
+  // Handlers stables pour éviter les re-renders
+  const handleProfileChange = useCallback((field: string, value: string) => {
+    setProfileData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handlePartnerChange = useCallback((field: string, value: string) => {
+    setPartnerData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  const handlePasswordChange = useCallback((field: string, value: string) => {
+    setPasswordData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
   const handleSaveProfile = async () => {
-    setIsEditingProfile(false);
-    toast.success("Profil mis à jour avec succès");
+    if (!session?.admin?.id || !session?.access_token) {
+      toast.error("Session invalide");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    try {
+      const response = await fetch(getApiUrl(API_ROUTES.users.update(session.admin.id)), {
+        method: 'PUT',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify({
+          firstName: profileData.display_name?.split(' ')[0] || profileData.nom,
+          lastName: profileData.display_name?.split(' ').slice(1).join(' ') || profileData.nom,
+          email: profileData.email,
+          phone: profileData.telephone,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la mise à jour' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      const data = await response.json();
+      toast.success("Profil mis à jour avec succès");
+      setIsEditingProfile(false);
+      
+      // Rafraîchir la session si nécessaire
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la mise à jour du profil:', error);
+      toast.error(error.message || "Erreur lors de la mise à jour du profil");
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   const handleChangePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast.error("Veuillez remplir tous les champs");
+      return;
+    }
+
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas");
+      toast.error("Les nouveaux mots de passe ne correspondent pas");
+      return;
+    }
+
+    // Validation : exactement 6 chiffres
+    const passwordRegex = /^\d{6}$/;
+    if (!passwordRegex.test(passwordData.newPassword)) {
+      toast.error("Le mot de passe doit contenir exactement 6 chiffres");
+      return;
+    }
+
+    // Vérifier que le nouveau mot de passe est différent de l'ancien
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      toast.error("Le nouveau mot de passe doit être différent de l'ancien");
+      return;
+    }
+
+    if (!session?.access_token) {
+      toast.error("Session invalide");
       return;
     }
 
     setIsChangingPassword(true);
     try {
-      // Simulation d'un appel API
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      toast.success("Mot de passe modifié avec succès");
+      const response = await fetch(getApiUrl(API_ROUTES.auth.changePassword), {
+        method: 'POST',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la modification' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "Mot de passe modifié avec succès");
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-    } catch (error) {
-      toast.error("Erreur lors de la modification du mot de passe");
+    } catch (error: any) {
+      console.error('Erreur lors de la modification du mot de passe:', error);
+      toast.error(error.message || "Erreur lors de la modification du mot de passe");
     } finally {
       setIsChangingPassword(false);
     }
@@ -175,13 +295,201 @@ export default function ParametresPage() {
         toast.success("Clé API régénérée avec succès");
         await refetchApiKey(); // Recharger la clé API
       } else {
-        throw new Error(response.message || "Erreur lors de la régénération");
+        throw new Error("Erreur lors de la régénération");
       }
     } catch (error: any) {
       console.error("Erreur lors de la régénération de la clé API:", error);
       toast.error(
         error.message || "Erreur lors de la régénération de la clé API"
       );
+    }
+  };
+
+  const handleSavePartnerInfo = async () => {
+    if (!session?.access_token) {
+      toast.error("Session invalide");
+      return;
+    }
+
+    setIsSavingPartner(true);
+    try {
+      const response = await fetch(getApiUrl(API_ROUTES.partnerInfo.update), {
+        method: 'PUT',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify({
+          companyName: partnerData.company_name,
+          activityDomain: partnerData.activity_domain,
+          headquartersAddress: partnerData.headquarters_address,
+          phone: partnerData.phone,
+          email: partnerData.email,
+          legalStatus: partnerData.legal_status,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la mise à jour' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      const data = await response.json();
+      toast.success(data.message || "Informations de l'entreprise mises à jour avec succès");
+      
+      // Rafraîchir la session si nécessaire
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la mise à jour des informations entreprise:', error);
+      toast.error(error.message || "Erreur lors de la mise à jour des informations");
+    } finally {
+      setIsSavingPartner(false);
+    }
+  };
+
+  // Fonction pour uploader une image
+  const uploadImage = async (file: File, subfolder: string): Promise<string> => {
+    if (!session?.access_token) {
+      throw new Error("Session invalide");
+    }
+
+    // Validation du type de fichier
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Type de fichier non supporté. Utilisez JPG, PNG ou WebP');
+    }
+
+    // Validation de la taille (max 5MB)
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      throw new Error('Fichier trop volumineux. Taille maximale: 5MB');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('subfolder', subfolder);
+
+    const response = await fetch(getApiUrl(API_ROUTES.upload.file), {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Erreur lors de l\'upload' }));
+      throw new Error(errorData.message || `Erreur ${response.status}`);
+    }
+
+    const data = await response.json();
+    // Construire l'URL complète
+    const baseUrl = API_CONFIG.baseURL.replace(/\/$/, ''); // Enlever le slash final s'il existe
+    const fileUrl = data.url.startsWith('/') ? data.url : `/${data.url}`;
+    return `${baseUrl}${fileUrl}`;
+  };
+
+  // Upload du logo du partenaire
+  const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!session?.partner?.id || !session?.access_token) {
+      toast.error("Session invalide");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      // Créer un aperçu
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Uploader l'image
+      const logoUrl = await uploadImage(file, 'partners');
+
+      // Mettre à jour le partenaire avec le nouveau logo
+      const response = await fetch(getApiUrl(API_ROUTES.partnerInfo.update), {
+        method: 'PUT',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify({
+          logoUrl: logoUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la mise à jour' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      toast.success("Logo mis à jour avec succès");
+      
+      // Rafraîchir la session
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload du logo:', error);
+      toast.error(error.message || "Erreur lors de l'upload du logo");
+      setLogoPreview(null);
+    } finally {
+      setIsUploadingLogo(false);
+      // Réinitialiser l'input
+      e.target.value = '';
+    }
+  };
+
+  // Upload de la photo de profil
+  const handleUploadProfileImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!session?.admin?.id || !session?.access_token) {
+      toast.error("Session invalide");
+      return;
+    }
+
+    setIsUploadingProfileImage(true);
+    try {
+      // Créer un aperçu
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfileImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Uploader l'image
+      const imageUrl = await uploadImage(file, 'profiles');
+
+      // Mettre à jour l'utilisateur avec la nouvelle photo
+      const response = await fetch(getApiUrl(API_ROUTES.users.update(session.admin.id)), {
+        method: 'PUT',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify({
+          photoUrl: imageUrl,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la mise à jour' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      toast.success("Photo de profil mise à jour avec succès");
+      // Rafraîchir la session
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload de la photo:', error);
+      toast.error(error.message || "Erreur lors de l'upload de la photo");
+      setProfileImagePreview(null);
+    } finally {
+      setIsUploadingProfileImage(false);
+      // Réinitialiser l'input
+      e.target.value = '';
     }
   };
 
@@ -213,8 +521,8 @@ export default function ParametresPage() {
     <div className={`bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-6 shadow-sm backdrop-blur-sm hover:shadow-md transition-all duration-200 ${className}`}>
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-            <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+            <Icon className="w-5 h-5 text-orange-600 dark:text-orange-400" />
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -246,7 +554,7 @@ export default function ParametresPage() {
     trend?: string | null;
   }) => {
     const colorClasses = {
-      blue: "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400",
+      blue: "bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
       green: "bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400",
       orange: "bg-orange-100 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400",
       purple: "bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400",
@@ -301,35 +609,35 @@ export default function ParametresPage() {
   return (
     <div className="p-6 space-y-6">
 
-      {/* Onglets modernes */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-xl p-2 backdrop-blur-sm">
-        <div className="flex flex-wrap gap-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => !tab.disabled && setActiveTab(tab.id)}
-                disabled={tab.disabled}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
-                  activeTab === tab.id
-                    ? "bg-blue-600 text-white shadow-md"
-                    : tab.disabled
-                    ? "text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
-                    : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span className="font-medium">{tab.label}</span>
-                {tab.disabled && (
-                  <Badge variant="warning" className="text-xs ml-1">
-                    Bientôt
-                  </Badge>
-                )}
-              </button>
-            );
-          })}
-        </div>
+      {/* Onglets avec design remboursements */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1" style={{scrollbarWidth: 'none'}}>
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => !tab.disabled && setActiveTab(tab.id)}
+              disabled={tab.disabled}
+              className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-all border ${
+                isActive
+                  ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 border-orange-300 dark:border-orange-700' 
+                  : tab.disabled
+                  ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50 border-transparent'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-white hover:border-orange-300 dark:hover:border-orange-700 border-transparent'
+              }`}
+              style={{ height: '2rem', lineHeight: '1' }}
+            >
+              <Icon className="w-4 h-4 flex-shrink-0" style={{ lineHeight: '1' }} />
+              <span className="flex-shrink-0" style={{ lineHeight: '1' }}>{tab.label}</span>
+              {tab.disabled && (
+                <Badge variant="warning" className="text-xs ml-1 flex-shrink-0">
+                  Bientôt
+                </Badge>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Vue d'ensemble */}
@@ -346,8 +654,8 @@ export default function ParametresPage() {
             >
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
+                    <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
@@ -360,7 +668,7 @@ export default function ParametresPage() {
                 </div>
                 <button
                   onClick={() => setActiveTab("profil")}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
                 >
                   <Edit3 className="w-4 h-4" />
                   Modifier le profil
@@ -463,47 +771,46 @@ export default function ParametresPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nom complet
                 </label>
-                <input
+                <Input
                   type="text"
                   value={profileData.display_name}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, display_name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => handleProfileChange('display_name', e.target.value)}
+                  className="w-full"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Email
                 </label>
-                <input
+                <Input
                   type="email"
                   value={profileData.email}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, email: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => handleProfileChange('email', e.target.value)}
+                  className="w-full"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Poste
                 </label>
-                <input
+                <Input
                   type="text"
                   value={profileData.poste}
-                  onChange={(e) =>
-                    setProfileData({ ...profileData, poste: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => handleProfileChange('poste', e.target.value)}
+                  className="w-full"
                 />
               </div>
               <button
                 onClick={handleSaveProfile}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={isSavingProfile}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Save className="w-4 h-4" />
-                Sauvegarder les modifications
+                {isSavingProfile ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSavingProfile ? "Sauvegarde en cours..." : "Sauvegarder les modifications"}
               </button>
             </div>
           </SettingCard>
@@ -515,15 +822,46 @@ export default function ParametresPage() {
           >
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-                  <User className="w-10 h-10 text-blue-600 dark:text-blue-400" />
+                <div className="relative w-20 h-20 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center overflow-hidden">
+                  {profileImagePreview || session?.admin?.photoUrl ? (
+                    <Image
+                      src={profileImagePreview || session?.admin?.photoUrl || ''}
+                      alt="Photo de profil"
+                      fill
+                      className="object-cover rounded-full"
+                      sizes="80px"
+                    />
+                  ) : (
+                    <User className="w-10 h-10 text-orange-600 dark:text-orange-400" />
+                  )}
+                  {isUploadingProfileImage && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+                      <RefreshCw className="w-6 h-6 text-white animate-spin" />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    Changer la photo
-                  </button>
+                <div className="flex-1">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleUploadProfileImage}
+                      disabled={isUploadingProfileImage}
+                      className="hidden"
+                    />
+                    <div className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors inline-block disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isUploadingProfileImage ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Upload en cours...
+                        </span>
+                      ) : (
+                        "Changer la photo"
+                      )}
+                    </div>
+                  </label>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    JPG, PNG jusqu'à 2MB
+                    JPG, PNG, WebP jusqu'à 5MB
                   </p>
                 </div>
               </div>
@@ -546,13 +884,11 @@ export default function ParametresPage() {
                   Mot de passe actuel
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showCurrentPassword ? "text" : "password"}
                     value={passwordData.currentPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, currentPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
+                    className="w-full pr-10"
                   />
                   <button
                     type="button"
@@ -572,13 +908,13 @@ export default function ParametresPage() {
                   Nouveau mot de passe
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showNewPassword ? "text" : "password"}
                     value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, newPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                    maxLength={6}
+                    placeholder="6 chiffres"
+                    className="w-full pr-10"
                   />
                   <button
                     type="button"
@@ -592,19 +928,22 @@ export default function ParametresPage() {
                     )}
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Le mot de passe doit contenir exactement 6 chiffres
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Confirmer le nouveau mot de passe
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showConfirmPassword ? "text" : "password"}
                     value={passwordData.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordData({ ...passwordData, confirmPassword: e.target.value })
-                    }
-                    className="w-full px-3 py-2 pr-10 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
+                    maxLength={6}
+                    placeholder="6 chiffres"
+                    className="w-full pr-10"
                   />
                   <button
                     type="button"
@@ -618,6 +957,16 @@ export default function ParametresPage() {
                     )}
                   </button>
                 </div>
+                {passwordData.newPassword && passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
+                  <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                    Les mots de passe ne correspondent pas
+                  </p>
+                )}
+                {passwordData.newPassword && passwordData.confirmPassword && passwordData.newPassword === passwordData.confirmPassword && /^\d{6}$/.test(passwordData.newPassword) && (
+                  <p className="text-xs text-green-500 dark:text-green-400 mt-1">
+                    ✓ Les mots de passe correspondent
+                  </p>
+                )}
               </div>
               <button
                 onClick={handleChangePassword}
@@ -645,11 +994,11 @@ export default function ParametresPage() {
                   Clé API actuelle
                 </label>
                 <div className="flex gap-2">
-                  <input
+                  <Input
                     type={showApiKey ? "text" : "password"}
                     value={apiKeyData.api_key}
                     readOnly
-                    className="flex-1 px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white font-mono text-sm"
+                    className="flex-1 bg-gray-50 dark:bg-gray-800 font-mono text-sm"
                   />
                   <button
                     onClick={() => setShowApiKey(!showApiKey)}
@@ -659,7 +1008,7 @@ export default function ParametresPage() {
                   </button>
                   <button
                     onClick={handleCopyApiKey}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="px-3 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -702,6 +1051,64 @@ export default function ParametresPage() {
       {activeTab === "entreprise" && (
         <div className="space-y-6">
           <SettingCard
+            title="Logo de l'entreprise"
+            description="Téléchargez le logo de votre entreprise"
+            icon={Building}
+          >
+            <div className="space-y-4">
+              <div className="flex items-center gap-6">
+                <div className="relative w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                  {logoPreview || session?.partner?.logoUrl ? (
+                    <Image
+                      src={logoPreview || session?.partner?.logoUrl || ''}
+                      alt="Logo entreprise"
+                      fill
+                      className="object-contain p-2"
+                      sizes="128px"
+                    />
+                  ) : (
+                    <Building className="w-16 h-16 text-gray-400 dark:text-gray-600" />
+                  )}
+                  {isUploadingLogo && (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                      <RefreshCw className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp"
+                      onChange={handleUploadLogo}
+                      disabled={isUploadingLogo}
+                      className="hidden"
+                    />
+                    <div className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors inline-block disabled:opacity-50 disabled:cursor-not-allowed">
+                      {isUploadingLogo ? (
+                        <span className="flex items-center gap-2">
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          Upload en cours...
+                        </span>
+                      ) : (
+                        "Changer le logo"
+                      )}
+                    </div>
+                  </label>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    JPG, PNG, WebP jusqu'à 5MB
+                  </p>
+                  {session?.partner?.logoUrl && !logoPreview && (
+                    <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">
+                      Logo actuel
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </SettingCard>
+
+          <SettingCard
             title="Informations de l'entreprise"
             description="Gérez les informations de votre entreprise"
             icon={Building}
@@ -711,39 +1118,33 @@ export default function ParametresPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Nom de l'entreprise
                 </label>
-                <input
+                <Input
                   type="text"
                   value={partnerData.company_name}
-                  onChange={(e) =>
-                    setPartnerData({ ...partnerData, company_name: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => handlePartnerChange('company_name', e.target.value)}
+                  className="w-full"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Domaine d'activité
                 </label>
-                <input
+                <Input
                   type="text"
                   value={partnerData.activity_domain}
-                  onChange={(e) =>
-                    setPartnerData({ ...partnerData, activity_domain: e.target.value })
-                  }
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => handlePartnerChange('activity_domain', e.target.value)}
+                  className="w-full"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Adresse du siège
                 </label>
-                <textarea
+                <Textarea
                   value={partnerData.headquarters_address}
-                  onChange={(e) =>
-                    setPartnerData({ ...partnerData, headquarters_address: e.target.value })
-                  }
+                  onChange={(e) => handlePartnerChange('headquarters_address', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full"
                 />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -751,32 +1152,36 @@ export default function ParametresPage() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Téléphone
                   </label>
-                  <input
+                  <Input
                     type="tel"
                     value={partnerData.phone}
-                    onChange={(e) =>
-                      setPartnerData({ ...partnerData, phone: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handlePartnerChange('phone', e.target.value)}
+                    className="w-full"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Email
                   </label>
-                  <input
+                  <Input
                     type="email"
                     value={partnerData.email}
-                    onChange={(e) =>
-                      setPartnerData({ ...partnerData, email: e.target.value })
-                    }
-                    className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    onChange={(e) => handlePartnerChange('email', e.target.value)}
+                    className="w-full"
                   />
                 </div>
               </div>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                <Save className="w-4 h-4" />
-                Sauvegarder les modifications
+              <button
+                onClick={handleSavePartnerInfo}
+                disabled={isSavingPartner}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSavingPartner ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {isSavingPartner ? "Sauvegarde en cours..." : "Sauvegarder les modifications"}
               </button>
             </div>
           </SettingCard>
@@ -804,7 +1209,7 @@ export default function ParametresPage() {
                 <button
                   onClick={toggleTheme}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    theme === "dark" ? "bg-blue-600" : "bg-gray-200"
+                    theme === "dark" ? "bg-orange-600" : "bg-gray-200"
                   }`}
                 >
                   <span
@@ -850,8 +1255,8 @@ export default function ParametresPage() {
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex items-center gap-3 p-4 bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg">
-                  <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                    <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                    <Mail className="w-5 h-5 text-orange-600 dark:text-orange-400" />
                   </div>
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900 dark:text-white">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import {
@@ -68,7 +68,6 @@ export default function AvisPage() {
   const [itemsPerPage] = useState(10);
   const [selectedAvis, setSelectedAvis] = useState<AvisWithEmployee | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const filterMenuRef = useRef<HTMLDivElement>(null);
 
   // Utiliser les hooks pour récupérer les données
   const { data: avisResponse, isLoading: loadingAvis } = usePartnerEmployeeAvis({
@@ -144,22 +143,6 @@ export default function AvisPage() {
     ));
   };
 
-  // Gérer le clic en dehors du menu des filtres
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        filterMenuRef.current &&
-        !filterMenuRef.current.contains(event.target as Node)
-      ) {
-        setShowFilters(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
   if (loading || loadingData) {
     return (
@@ -270,10 +253,9 @@ export default function AvisPage() {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
-      <div className="bg-transparent border border-[var(--zalama-border)] rounded-lg p-6 mb-6 backdrop-blur-sm">
+      {/* Recherche */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 mb-6 backdrop-blur-sm">
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          {/* Recherche */}
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -281,104 +263,95 @@ export default function AvisPage() {
               placeholder="Rechercher par employé ou commentaire..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
             />
           </div>
+        </div>
+      </div>
 
-          {/* Boutons de filtres */}
-          <div className="flex items-center gap-3">
-            <div className="relative" ref={filterMenuRef}>
-            <button
+      {/* Filtres avancés */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
+            <div className="flex items-center gap-2">
+              <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 px-4 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors backdrop-blur-sm"
+                className="px-3 py-1 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 border border-orange-300 dark:border-orange-600 rounded-md hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors flex items-center gap-1"
               >
-                <Filter className="w-4 h-4" />
-                Filtres
-                <ChevronDown className="w-4 h-4" />
-            </button>
-
-              {showFilters && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-lg shadow-lg z-10 backdrop-blur-sm">
-                  <div className="p-4 space-y-4">
-                    {/* Filtre par catégorie */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Catégorie
-                      </label>
-                    <select
-                        value={selectedCategory}
-                        onChange={(e) => setSelectedCategory(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-                      >
-                        <option value="all">Toutes les catégories</option>
-                        {avisCategories.map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {category.label}
-                        </option>
-                      ))}
-                    </select>
-                </div>
-
-                    {/* Filtre par employé */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    Employé
-                      </label>
-                  <select
-                        value={selectedEmployee}
-                        onChange={(e) => setSelectedEmployee(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
-                      >
-                        <option value="all">Tous les employés</option>
-                    {employees.map((employee) => (
-                      <option key={employee.id} value={employee.id}>
-                            {employee.prenom} {employee.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                    {/* Boutons d'action */}
-                    <div className="flex gap-2 pt-2">
-                  <button
-                        onClick={() => {
-                          setSelectedCategory("all");
-                          setSelectedEmployee("all");
-                          setSearchTerm("");
-                        }}
-                        className="flex-1 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Réinitialiser
-                  </button>
-                  <button
-                        onClick={() => setShowFilters(false)}
-                        className="flex-1 px-3 py-2 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors"
-                  >
-                    Appliquer
-                  </button>
-                    </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <button
+                <Filter className="h-3 w-3" />
+                {showFilters ? "Masquer" : "Afficher"}
+              </button>
+              <button
+                onClick={() => {
+                  setSelectedCategory("all");
+                  setSelectedEmployee("all");
+                  setSearchTerm("");
+                }}
+                className="px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Réinitialiser
+              </button>
+              <button
                 onClick={() => {
                   // Les données sont rechargées automatiquement via les hooks
                   console.log("🔄 Rechargement des données...");
                 }}
-              disabled={loadingData}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loadingData ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <RefreshCw className="w-4 h-4" />
-              )}
-              Actualiser
-          </button>
+                disabled={loadingData}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+              >
+                {loadingData ? (
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                ) : null}
+                Actualiser
+              </button>
+            </div>
           </div>
         </div>
+
+        {showFilters && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            {/* Filtre par catégorie */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Catégorie
+              </label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              >
+                <option value="all">Toutes les catégories</option>
+                {avisCategories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Filtre par employé */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Employé
+              </label>
+              <select
+                value={selectedEmployee}
+                onChange={(e) => setSelectedEmployee(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+              >
+                <option value="all">Tous les employés</option>
+                {employees.map((employee) => (
+                  <option key={employee.id} value={employee.id}>
+                    {employee.prenom} {employee.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Tableau des avis */}

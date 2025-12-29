@@ -40,11 +40,13 @@ import {
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { usePartnerFinancesEmployeeStats } from "@/hooks/usePartnerFinances";
 import { usePartnerPayments, usePartnerPaymentsEmployees, usePartnerPaymentsStatistics, usePartnerPaymentsBatchProcess, usePartnerPaymentsBulletinPaie } from "@/hooks/usePartnerPayments";
+import { usePartnerWallet } from "@/hooks/usePartnerWallet";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
+import { getApiUrl, API_ROUTES, getDefaultHeaders } from "@/config/api";
 
 // Types pour les données (selon l'API /partner-payments - camelCase)
 type Payment = {
@@ -65,6 +67,10 @@ type Payment = {
   createdAt?: string;
   fraisIntervention?: number;
   fraisWallet?: number;
+  // Nouveaux champs pour salaire personnalisé
+  salaireAPayer?: number;
+  raison?: string;
+  raisonSalaire?: string;
   employe?: {
     id: string;
     firstName: string;
@@ -73,12 +79,19 @@ type Payment = {
     phone: string;
     poste?: string; // Peut ne pas être dans l'API
     photoUrl?: string;
+    // Compatibilité snake_case
+    nom?: string;
+    prenom?: string;
+    telephone?: string;
+    salaire_net?: number;
   };
   // Propriétés optionnelles pour compatibilité (snake_case)
   employe_id?: string;
   date_paiement?: string;
-    salaire_net?: number;
+  salaire_net?: number;
   salaire_disponible?: number;
+  salaire_a_payer?: number;
+  raison_salaire?: string;
   avances_deduites?: number;
   periode_debut?: string;
   periode_fin?: string;
@@ -119,24 +132,6 @@ type Employee = {
   lastName?: string;
   firstName?: string;
   phone?: string;
-  poste: string;
-  salaireNet: number;
-  salaireRestant: number;
-  avancesActives: {
-    nombre: number;
-    montantTotal: number;
-    details: Array<{
-      id: string;
-      montantTotalRemboursement: number;
-      dateLimiteRemboursement: string;
-    }>;
-  };
-  dejaPaye: boolean;
-  paiementEnAttente: boolean;
-  // Propriétés optionnelles pour compatibilité
-  photo_url?: string;
-  salaire_net?: number;
-  salaire_mensuel?: number;
 };
 
 export default function PaymentSalaryPage() {
@@ -160,7 +155,7 @@ export default function PaymentSalaryPage() {
     employee: selectedEmployee,
     page: currentPage,
   }, {
-    exclude: ['showFilters', 'showPaymentPage', 'showDetailModal', 'selectedPayment', 'selectedEmployees', 'paymentMonth', 'paymentDate', 'paymentMethod', 'currentStep', 'paymentMonthNumber', 'paymentYear', 'showBulletinModal', 'bulletinMonth', 'bulletinYear'],
+    exclude: ['showFilters', 'showPaymentPage', 'showDetailModal', 'selectedPayment', 'selectedEmployees', 'paymentMonth', 'paymentMethod', 'currentStep', 'paymentMonthNumber', 'paymentYear', 'showBulletinModal', 'bulletinMonth', 'bulletinYear'],
   });
   
   // Initialiser les filtres depuis l'URL au chargement
@@ -228,9 +223,13 @@ export default function PaymentSalaryPage() {
   // États pour la page de paiement
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [paymentMonth, setPaymentMonth] = useState<string>("");
-  const [paymentDate, setPaymentDate] = useState<string>("");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [currentStep, setCurrentStep] = useState(1);
+  // États pour les paiements directs par employé
+  const [directPayments, setDirectPayments] = useState<Record<string, { numeroReception: string; typeCompte: 'lp-om-gn' | 'lp-momo-gn' | ''; useDirect: boolean }>>({});
+  
+  // États pour les salaires personnalisés par employé
+  const [customSalaries, setCustomSalaries] = useState<Record<string, { salaireAPayer: number | null; raison: string; useCustom: boolean }>>({});
 
   // États pour le mois et l'année de paiement (utilisés pour récupérer les employés)
   const [paymentMonthNumber, setPaymentMonthNumber] = useState<number | undefined>(undefined);
@@ -241,11 +240,45 @@ export default function PaymentSalaryPage() {
   const [bulletinMonth, setBulletinMonth] = useState<number>(new Date().getMonth() + 1);
   const [bulletinYear, setBulletinYear] = useState<number>(new Date().getFullYear());
 
+  // États pour la demande d'avance de trésorerie
+  const [showTreasuryAdvanceModal, setShowTreasuryAdvanceModal] = useState(false);
+  const [treasuryAdvanceData, setTreasuryAdvanceData] = useState({
+    montantDemande: '',
+    mois: new Date().getMonth() + 1,
+    annee: new Date().getFullYear(),
+    commentaire: '',
+    reference: '',
+  });
+  const [isSubmittingTreasuryAdvance, setIsSubmittingTreasuryAdvance] = useState(false);
+
+  // Convertir selectedMonth en periode_debut et periode_fin si un mois est sélectionné
+  const getPeriodFilters = () => {
+    if (selectedMonth && selectedMonth !== 'all') {
+      const [year, month] = selectedMonth.split('-');
+      const yearNum = parseInt(year);
+      const monthNum = parseInt(month);
+      
+      // Premier jour du mois
+      const periodeDebut = new Date(yearNum, monthNum - 1, 1);
+      // Dernier jour du mois
+      const periodeFin = new Date(yearNum, monthNum, 0);
+      
+      return {
+        periode_debut: periodeDebut.toISOString().split('T')[0],
+        periode_fin: periodeFin.toISOString().split('T')[0],
+      };
+    }
+    return {};
+  };
+
+  const periodFilters = getPeriodFilters();
+
   // Utiliser les hooks pour récupérer les données
   const { data: paymentsResponse, isLoading: loadingPayments, refetch: refetchPayments } = usePartnerPayments({
     employee_id: selectedEmployee !== 'all' ? selectedEmployee : undefined,
     search: searchTerm || undefined,
     statut: selectedStatus !== 'all' ? selectedStatus : undefined,
+    ...periodFilters,
     limit: itemsPerPage,
     page: currentPage,
   });
@@ -262,7 +295,10 @@ export default function PaymentSalaryPage() {
   
   // Utiliser aussi usePartnerFinancesEmployeeStats pour les pénalités de retard
   const { data: financesStatsResponse, isLoading: loadingFinancesStats, refetch: refetchFinancesStats } = usePartnerFinancesEmployeeStats();
-
+  
+  // Récupérer le wallet du partenaire
+  const { data: walletResponse, isLoading: loadingWallet } = usePartnerWallet();
+  
   // Hook pour traiter les paiements en batch
   const batchProcessMutation = usePartnerPaymentsBatchProcess();
   
@@ -470,8 +506,27 @@ export default function PaymentSalaryPage() {
     return date.toLocaleDateString("fr-FR", { year: "numeric", month: "long" });
   };
 
-  // Mois disponibles pour le filtre
-  const availableMonths = Array.from(new Set(payments.map(p => p.mois_paye).filter((m): m is string => Boolean(m)))).sort();
+  // Générer les 12 derniers mois pour le filtre
+  const generateAvailableMonths = () => {
+    const months: string[] = [];
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+    
+    // Générer les 12 derniers mois
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(currentYear, currentMonth - i - 1, 1);
+      const year = date.getFullYear();
+      const month = date.getMonth() + 1;
+      const monthString = `${year}-${month.toString().padStart(2, '0')}`;
+      months.push(monthString);
+    }
+    
+    return months;
+  };
+
+  // Mois disponibles pour le filtre (12 derniers mois)
+  const availableMonths = generateAvailableMonths();
 
   // Fonctions pour la gestion des employés sélectionnés
   const toggleEmployeeSelection = (employeeId: string) => {
@@ -521,15 +576,25 @@ export default function PaymentSalaryPage() {
   }
   
   const totalAmountSelected = selectedEmployeesData.reduce((sum, emp) => {
-    // L'API retourne salaireNet (camelCase) ou salaire_net (snake_case)
-    // Vérifier toutes les variantes possibles
-    const salaireNet = emp.salaireNet 
-      || emp.salaire_net 
-      || emp.salaire_mensuel 
-      || (emp as any).salaireNet
-      || (emp as any).salaire_net
-      || (emp as any).salaire_mensuel
-      || 0;
+    // Vérifier si un salaire personnalisé est défini pour cet employé
+    const customSalary = customSalaries[emp.id];
+    let salaireNet: number;
+    
+    if (customSalary?.useCustom && customSalary.salaireAPayer !== null && customSalary.salaireAPayer > 0) {
+      // Utiliser le salaire personnalisé
+      salaireNet = Number(customSalary.salaireAPayer) || 0;
+    } else {
+      // Utiliser le salaire net de l'employé
+      // L'API retourne salaireNet (camelCase) ou salaire_net (snake_case)
+      // Vérifier toutes les variantes possibles
+      salaireNet = emp.salaireNet 
+        || emp.salaire_net 
+        || emp.salaire_mensuel 
+        || (emp as any).salaireNet
+        || (emp as any).salaire_net
+        || (emp as any).salaire_mensuel
+        || 0;
+    }
     
     // Debug en développement
     if (process.env.NODE_ENV === 'development') {
@@ -541,6 +606,7 @@ export default function PaymentSalaryPage() {
           salaireNet: emp.salaireNet,
           salaire_net: emp.salaire_net,
           salaire_mensuel: emp.salaire_mensuel,
+          customSalary: customSalary,
           allProps: Object.keys(emp),
           empObject: emp,
         });
@@ -550,11 +616,20 @@ export default function PaymentSalaryPage() {
           nom: emp.nom || emp.lastName,
           prenom: emp.prenom || emp.firstName,
           salaireNet,
+          isCustom: customSalary?.useCustom || false,
         });
       }
     }
     
     return sum + (Number(salaireNet) || 0);
+  }, 0);
+  
+  // Calcul du total des avances actives pour tous les employés sélectionnés
+  const totalAvancesActives = selectedEmployeesData.reduce((sum, emp) => {
+    const avancesActives = emp.avancesActives;
+    // L'API retourne montantTotal (camelCase) ou montant_total (snake_case)
+    const montantTotal = avancesActives?.montantTotal || (avancesActives as any)?.montant_total || 0;
+    return sum + (Number(montantTotal) || 0);
   }, 0);
   
   // Calcul des frais de transaction (1.7% selon la documentation API)
@@ -574,7 +649,7 @@ export default function PaymentSalaryPage() {
 
   // Navigation entre étapes
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -634,10 +709,38 @@ export default function PaymentSalaryPage() {
         });
       }
 
+      // Construire l'objet directPayments pour les employés avec paiement direct configuré
+      const directPaymentsToSend: Record<string, { numeroReception: string; typeCompte: 'lp-om-gn' | 'lp-momo-gn' }> = {};
+      
+      employeeIds.forEach(empId => {
+        const directPayment = directPayments[empId];
+        if (directPayment?.useDirect && directPayment.numeroReception && directPayment.typeCompte) {
+          directPaymentsToSend[empId] = {
+            numeroReception: directPayment.numeroReception,
+            typeCompte: directPayment.typeCompte as 'lp-om-gn' | 'lp-momo-gn',
+          };
+        }
+      });
+
+      // Construire l'objet salairesPersonnalises pour les employés avec salaire personnalisé
+      const salairesPersonnalisesToSend: Record<string, { salaireAPayer: number; raison?: string }> = {};
+      
+      employeeIds.forEach(empId => {
+        const customSalary = customSalaries[empId];
+        if (customSalary?.useCustom && customSalary.salaireAPayer !== null && customSalary.salaireAPayer > 0) {
+          salairesPersonnalisesToSend[empId] = {
+            salaireAPayer: Number(customSalary.salaireAPayer),
+            ...(customSalary.raison && { raison: customSalary.raison }),
+          };
+        }
+      });
+
       const result = await batchProcessMutation.mutateAsync({
         employeeIds: employeeIds, // Utiliser directement les IDs des employés
         mois: paymentMonthNumber,
         annee: paymentYear,
+        ...(Object.keys(directPaymentsToSend).length > 0 && { directPayments: directPaymentsToSend }),
+        ...(Object.keys(salairesPersonnalisesToSend).length > 0 && { salairesPersonnalises: salairesPersonnalisesToSend }),
       });
 
       // Afficher les résultats
@@ -665,10 +768,11 @@ export default function PaymentSalaryPage() {
       setSelectedEmployees([]);
       setCurrentStep(1);
       setPaymentMonth("");
-      setPaymentDate("");
       setPaymentMethod("");
       setPaymentMonthNumber(undefined);
       setPaymentYear(undefined);
+      setDirectPayments({});
+      setCustomSalaries({});
     } catch (error: any) {
       console.error("Erreur lors du traitement des paiements:", error);
       // Afficher un message d'erreur plus détaillé
@@ -691,6 +795,68 @@ export default function PaymentSalaryPage() {
           toast.error(`Employés en erreur: ${failedEmployees}`);
         }
       }
+    }
+  };
+
+  // Fonction pour créer une demande d'avance de trésorerie
+  const handleCreateTreasuryAdvance = async () => {
+    if (!session?.partner?.id || !session?.access_token) {
+      toast.error("Session invalide");
+      return;
+    }
+
+    // Validation
+    if (!treasuryAdvanceData.mois || !treasuryAdvanceData.annee) {
+      toast.error("Veuillez sélectionner un mois et une année");
+      return;
+    }
+
+    setIsSubmittingTreasuryAdvance(true);
+    try {
+      const payload: any = {
+        partenaireId: session.partner.id,
+        mois: treasuryAdvanceData.mois,
+        annee: treasuryAdvanceData.annee,
+      };
+
+      if (treasuryAdvanceData.commentaire) {
+        payload.commentaire = treasuryAdvanceData.commentaire;
+      }
+
+      if (treasuryAdvanceData.reference) {
+        payload.reference = treasuryAdvanceData.reference;
+      }
+
+      const response = await fetch(getApiUrl(API_ROUTES.treasuryAdvances.request), {
+        method: 'POST',
+        headers: getDefaultHeaders(session.access_token),
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de la création' }));
+        throw new Error(errorData.message || `Erreur ${response.status}`);
+      }
+
+      const result = await response.json();
+      toast.success("Demande d'avance de trésorerie créée avec succès");
+      setShowTreasuryAdvanceModal(false);
+      setTreasuryAdvanceData({
+        montantDemande: '',
+        mois: new Date().getMonth() + 1,
+        annee: new Date().getFullYear(),
+        commentaire: '',
+        reference: '',
+      });
+      // Recharger les données si nécessaire
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de la création de la demande:', error);
+      toast.error(error.message || "Erreur lors de la création de la demande d'avance");
+    } finally {
+      setIsSubmittingTreasuryAdvance(false);
     }
   };
 
@@ -773,7 +939,7 @@ export default function PaymentSalaryPage() {
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="info" className="text-sm">
-              Étape {currentStep} sur 3
+              Étape {currentStep} sur 4
             </Badge>
           </div>
       </div>
@@ -790,7 +956,7 @@ export default function PaymentSalaryPage() {
               <span className={`text-sm font-medium ${
                 currentStep >= 1 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
               }`}>
-                Sélectionner
+                Mois
               </span>
             </div>
             <div className={`w-16 h-0.5 ${
@@ -805,7 +971,7 @@ export default function PaymentSalaryPage() {
               <span className={`text-sm font-medium ${
                 currentStep >= 2 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
               }`}>
-                Configurer
+                Sélectionner
               </span>
             </div>
             <div className={`w-16 h-0.5 ${
@@ -820,6 +986,21 @@ export default function PaymentSalaryPage() {
               <span className={`text-sm font-medium ${
                 currentStep >= 3 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
               }`}>
+                Configurer
+              </span>
+            </div>
+            <div className={`w-16 h-0.5 ${
+              currentStep >= 4 ? 'bg-orange-600' : 'bg-gray-300 dark:bg-gray-600'
+            }`}></div>
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                currentStep >= 4 ? 'bg-orange-600 text-white' : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-400'
+              }`}>
+                4
+              </div>
+              <span className={`text-sm font-medium ${
+                currentStep >= 4 ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'
+              }`}>
                 Confirmer
               </span>
             </div>
@@ -829,8 +1010,69 @@ export default function PaymentSalaryPage() {
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Section principale */}
           <div className="xl:col-span-2 space-y-6">
-            {/* Étape 1: Sélection des employés */}
+            {/* Étape 1: Sélection du mois de paiement */}
             {currentStep === 1 && (
+              <div className="space-y-6">
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <CalendarIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Sélection du mois de paiement
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        Mois de paiement
+                      </label>
+                      <select 
+                        value={paymentMonth}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          setPaymentMonth(value);
+                          if (value) {
+                            const [year, month] = value.split('-');
+                            setPaymentYear(parseInt(year));
+                            setPaymentMonthNumber(parseInt(month));
+                            // Recharger les employés avec le nouveau mois/année
+                            setTimeout(() => refetchEmployees(), 100);
+                          } else {
+                            setPaymentYear(undefined);
+                            setPaymentMonthNumber(undefined);
+                          }
+                        }}
+                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <option value="">Sélectionner le mois</option>
+                        {(() => {
+                          const currentDate = new Date();
+                          const currentYear = currentDate.getFullYear();
+                          const currentMonth = currentDate.getMonth() + 1;
+                          const options = [];
+                          // Générer les 12 derniers mois
+                          for (let i = 0; i < 12; i++) {
+                            const date = new Date(currentYear, currentMonth - i - 1, 1);
+                            const year = date.getFullYear();
+                            const month = date.getMonth() + 1;
+                            const monthName = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                            options.push(
+                              <option key={`${year}-${month}`} value={`${year}-${month}`}>
+                                {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
+                              </option>
+                            );
+                          }
+                          return options;
+                        })()}
+                      </select>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                        Le mois sélectionné sera utilisé pour filtrer les employés disponibles pour le paiement.
+                      </p>
+        </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Étape 2: Sélection des employés */}
+            {currentStep === 2 && (
               <div className="space-y-6">
                 {/* Recherche et filtres */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
@@ -902,14 +1144,18 @@ export default function PaymentSalaryPage() {
                         const salaireNet = employee.salaireNet || employee.salaire_net || employee.salaire_mensuel || 0;
                         const salaireRestant = employee.salaireRestant;
                         const avancesActives = employee.avancesActives;
+                        const dejaPaye = employee.dejaPaye || false;
+                        const paiementEnAttente = employee.paiementEnAttente || false;
                         
                         return (
                       <div 
                         key={employee.id} 
-                        className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 cursor-pointer ${
+                        className={`flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors border-b border-[var(--zalama-border)]/20 last:border-b-0 ${
+                          dejaPaye ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                        } ${
                           selectedEmployees.includes(employee.id) ? 'bg-orange-50 dark:bg-orange-900/20' : ''
                         }`}
-                        onClick={() => toggleEmployeeSelection(employee.id)}
+                        onClick={() => !dejaPaye && toggleEmployeeSelection(employee.id)}
                       >
                         <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {photoUrl ? (
@@ -928,9 +1174,21 @@ export default function PaymentSalaryPage() {
                           )}
           </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-gray-900 dark:text-white truncate">
-                                {prenom} {nom}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-gray-900 dark:text-white truncate">
+                                  {prenom} {nom}
+                            </p>
+                            {dejaPaye && (
+                              <Badge variant="success" className="text-xs">
+                                Déjà payé
+                              </Badge>
+                            )}
+                            {paiementEnAttente && !dejaPaye && (
+                              <Badge variant="warning" className="text-xs">
+                                En attente
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
                                 {poste}
                           </p>
@@ -959,15 +1217,21 @@ export default function PaymentSalaryPage() {
                                   </>
                                 )}
                           </div>
-                          <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
-                            selectedEmployees.includes(employee.id) 
-                              ? 'border-orange-500 bg-orange-500' 
-                              : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
-                          }`}>
-                            {selectedEmployees.includes(employee.id) && (
-                              <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
-                            )}
-                          </div>
+                          {dejaPaye ? (
+                            <div className="w-5 h-5 border-2 rounded border-gray-300 dark:border-gray-600 opacity-50" title="Déjà payé pour ce mois">
+                              <X className="w-3 h-3 text-gray-400 m-0.5" />
+                            </div>
+                          ) : (
+                            <div className={`w-5 h-5 border-2 rounded cursor-pointer transition-colors ${
+                              selectedEmployees.includes(employee.id) 
+                                ? 'border-orange-500 bg-orange-500' 
+                                : 'border-gray-300 dark:border-gray-600 hover:border-orange-500'
+                            }`}>
+                              {selectedEmployees.includes(employee.id) && (
+                                <CheckCircle2 className="w-3 h-3 text-white m-0.5" />
+                              )}
+                            </div>
+                          )}
                         </div>
               </div>
                         );
@@ -978,92 +1242,222 @@ export default function PaymentSalaryPage() {
               </div>
             )}
 
-            {/* Étape 2: Configuration */}
-            {currentStep === 2 && (
+            {/* Étape 3: Configuration */}
+            {currentStep === 3 && (
               <div className="space-y-6">
+                {/* Configuration des salaires personnalisés par employé */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <CalendarIcon className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    Configuration du paiement
+                    <DollarSign className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Personnalisation des salaires (optionnel)
                   </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Mois de paiement
-                      </label>
-                      <select 
-                        value={paymentMonth}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setPaymentMonth(value);
-                          if (value) {
-                            const [year, month] = value.split('-');
-                            setPaymentYear(parseInt(year));
-                            setPaymentMonthNumber(parseInt(month));
-                            // Recharger les employés avec le nouveau mois/année
-                            setTimeout(() => refetchEmployees(), 100);
-                          } else {
-                            setPaymentYear(undefined);
-                            setPaymentMonthNumber(undefined);
-                          }
-                        }}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      >
-                        <option value="">Sélectionner le mois</option>
-                        {(() => {
-                          const currentDate = new Date();
-                          const currentYear = currentDate.getFullYear();
-                          const currentMonth = currentDate.getMonth() + 1;
-                          const options = [];
-                          // Générer les 12 derniers mois
-                          for (let i = 0; i < 12; i++) {
-                            const date = new Date(currentYear, currentMonth - i - 1, 1);
-                            const year = date.getFullYear();
-                            const month = date.getMonth() + 1;
-                            const monthName = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-                            options.push(
-                              <option key={`${year}-${month}`} value={`${year}-${month}`}>
-                                {monthName.charAt(0).toUpperCase() + monthName.slice(1)}
-                              </option>
-                            );
-                          }
-                          return options;
-                        })()}
-                      </select>
-        </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Date de paiement
-                      </label>
-                      <input
-                        type="date"
-                        value={paymentDate}
-                        onChange={(e) => setPaymentDate(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Méthode de paiement
-                      </label>
-                      <select 
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value)}
-                        className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                      >
-                        <option value="">Sélectionner la méthode</option>
-                        <option value="mobile_money">Mobile Money</option>
-                        <option value="bank_transfer">Virement bancaire</option>
-                        <option value="cash">Espèces</option>
-                      </select>
-                    </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Par défaut, le salaire net de l'employé est utilisé. Vous pouvez personnaliser le salaire à payer avec une raison (ex: nombre de jours travaillés, heures supplémentaires, etc.).
+                  </p>
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {selectedEmployees.map((employeeId) => {
+                      const employee = employees.find(emp => emp.id === employeeId);
+                      if (!employee) return null;
+                      
+                      const nom = employee.nom || employee.lastName || '';
+                      const prenom = employee.prenom || employee.firstName || '';
+                      const salaireNet = employee.salaireNet || employee.salaire_net || employee.salaire_mensuel || 0;
+                      const customSalary = customSalaries[employeeId] || { salaireAPayer: null, raison: '', useCustom: false };
+                      
+                      return (
+                        <div key={employeeId} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex-1">
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {prenom} {nom}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Salaire net: {formatAmount(salaireNet)} GNF
+                              </p>
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={customSalary.useCustom}
+                                onChange={(e) => {
+                                  setCustomSalaries(prev => ({
+                                    ...prev,
+                                    [employeeId]: {
+                                      ...customSalary,
+                                      useCustom: e.target.checked,
+                                      salaireAPayer: e.target.checked ? (customSalary.salaireAPayer || salaireNet) : null,
+                                      raison: e.target.checked ? customSalary.raison : '',
+                                    }
+                                  }));
+                                }}
+                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">Personnaliser</span>
+                            </label>
+                          </div>
+                          
+                          {customSalary.useCustom && (
+                            <div className="space-y-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Salaire à payer (GNF)
+                                </label>
+                                <input
+                                  type="number"
+                                  value={customSalary.salaireAPayer || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value ? parseFloat(e.target.value) : null;
+                                    setCustomSalaries(prev => ({
+                                      ...prev,
+                                      [employeeId]: {
+                                        ...customSalary,
+                                        salaireAPayer: value,
+                                      }
+                                    }));
+                                  }}
+                                  placeholder={formatAmount(salaireNet)}
+                                  min="0"
+                                  step="1000"
+                                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                />
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                  Par défaut: {formatAmount(salaireNet)} GNF
+                                </p>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Raison (ex: Nombre de jours travaillés: 20/30)
+                                </label>
+                                <input
+                                  type="text"
+                                  value={customSalary.raison}
+                                  onChange={(e) => {
+                                    setCustomSalaries(prev => ({
+                                      ...prev,
+                                      [employeeId]: {
+                                        ...customSalary,
+                                        raison: e.target.value,
+                                      }
+                                    }));
+                                  }}
+                                  placeholder="Ex: Nombre de jours travaillés: 20/30"
+                                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Configuration des paiements directs par employé */}
+                <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
+                  <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                    <CreditCard className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Paiements directs sur compte (optionnel)
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Par défaut, les paiements sont effectués sur le wallet de l'employé. Vous pouvez configurer un paiement direct sur le compte bancaire ou mobile money pour certains employés.
+                  </p>
+                  <div className="space-y-4 max-h-96 overflow-y-auto">
+                    {selectedEmployees.map((employeeId) => {
+                      const employee = employees.find(emp => emp.id === employeeId);
+                      if (!employee) return null;
+                      
+                      const nom = employee.nom || employee.lastName || '';
+                      const prenom = employee.prenom || employee.firstName || '';
+                      const directPayment = directPayments[employeeId] || { numeroReception: '', typeCompte: '', useDirect: false };
+                      
+                      return (
+                        <div key={employeeId} className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center justify-between mb-3">
+                            <div>
+                              <p className="font-medium text-gray-900 dark:text-white">
+                                {prenom} {nom}
+                              </p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                {employee.poste || 'N/A'}
+                              </p>
+                            </div>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={directPayment.useDirect}
+                                onChange={(e) => {
+                                  setDirectPayments(prev => ({
+                                    ...prev,
+                                    [employeeId]: {
+                                      ...directPayment,
+                                      useDirect: e.target.checked,
+                                      numeroReception: e.target.checked ? directPayment.numeroReception : '',
+                                      typeCompte: e.target.checked ? directPayment.typeCompte : '',
+                                    }
+                                  }));
+                                }}
+                                className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                              />
+                              <span className="text-sm text-gray-700 dark:text-gray-300">Paiement direct</span>
+                            </label>
+                          </div>
+                          
+                          {directPayment.useDirect && (
+                            <div className="space-y-3 mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Type de compte
+                                </label>
+                                <select
+                                  value={directPayment.typeCompte}
+                                  onChange={(e) => {
+                                    setDirectPayments(prev => ({
+                                      ...prev,
+                                      [employeeId]: {
+                                        ...directPayment,
+                                        typeCompte: e.target.value as 'lp-om-gn' | 'lp-momo-gn',
+                                      }
+                                    }));
+                                  }}
+                                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                >
+                                  <option value="">Sélectionner le type</option>
+                                  <option value="lp-om-gn">Orange Money</option>
+                                  <option value="lp-momo-gn">Mobile Money</option>
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                  Numéro de réception
+                                </label>
+                                <input
+                                  type="text"
+                                  value={directPayment.numeroReception}
+                                  onChange={(e) => {
+                                    setDirectPayments(prev => ({
+                                      ...prev,
+                                      [employeeId]: {
+                                        ...directPayment,
+                                        numeroReception: e.target.value,
+                                      }
+                                    }));
+                                  }}
+                                  placeholder="Ex: REC-2024-001234 ou +224625212115"
+                                  className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Étape 3: Confirmation */}
-            {currentStep === 3 && (
+            {/* Étape 4: Confirmation */}
+            {currentStep === 4 && (
               <div className="space-y-6">
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-6 shadow-sm backdrop-blur-sm">
                   <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -1091,22 +1485,68 @@ export default function PaymentSalaryPage() {
                         <p className="text-gray-900 dark:text-white">{getMonthName(paymentMonth)}</p>
           </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date de paiement</label>
-                        <p className="text-gray-900 dark:text-white">{formatDate(paymentDate)}</p>
-          </div>
-                          <div>
-                        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Méthode</label>
-                        <p className="text-gray-900 dark:text-white">
-                          {paymentMethod === "mobile_money" ? "Mobile Money" :
-                           paymentMethod === "bank_transfer" ? "Virement bancaire" :
-                           paymentMethod === "cash" ? "Espèces" : "Non sélectionnée"}
-                            </p>
-                          </div>
-                      <div>
                         <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Employés sélectionnés</label>
                         <p className="text-gray-900 dark:text-white">{selectedEmployees.length} employé(s)</p>
                       </div>
                     </div>
+
+                    {/* Résumé des paiements directs */}
+                    {Object.keys(directPayments).filter(empId => directPayments[empId]?.useDirect).length > 0 && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          Paiements directs configurés
+                        </h5>
+                        <div className="space-y-2 max-h-64 overflow-y-auto">
+                          {selectedEmployees.map((employeeId) => {
+                            const employee = employees.find(emp => emp.id === employeeId);
+                            const directPayment = directPayments[employeeId];
+                            
+                            if (!directPayment?.useDirect || !employee) return null;
+                            
+                            const nom = employee.nom || employee.lastName || '';
+                            const prenom = employee.prenom || employee.firstName || '';
+                            const typeCompteLabel = directPayment.typeCompte === 'lp-om-gn' ? 'Orange Money' : directPayment.typeCompte === 'lp-momo-gn' ? 'Mobile Money' : 'Non défini';
+                            
+                            return (
+                              <div key={employeeId} className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {prenom} {nom}
+                                    </p>
+                                    <div className="mt-1 space-y-1">
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        <span className="font-medium">Type:</span> {typeCompteLabel}
+                                      </p>
+                                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                                        <span className="font-medium">Numéro:</span> {directPayment.numeroReception || 'Non renseigné'}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="info" className="text-xs">
+                                    Direct
+                                  </Badge>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Résumé des paiements via wallet */}
+                    {selectedEmployees.filter(empId => !directPayments[empId]?.useDirect).length > 0 && (
+                      <div className="mt-4">
+                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                          <DollarSign className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                          Paiements via wallet ({selectedEmployees.filter(empId => !directPayments[empId]?.useDirect).length})
+                        </h5>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          Ces employés recevront leur salaire sur leur wallet ZaLaMa.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1127,18 +1567,55 @@ export default function PaymentSalaryPage() {
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{selectedEmployees.length}</span>
               </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">Montant total</span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Montant total
+                    {Object.values(customSalaries).some(cs => cs.useCustom && cs.salaireAPayer !== null) && (
+                      <span className="ml-2 text-xs text-orange-600 dark:text-orange-400">(salaire personnalisé)</span>
+                    )}
+                  </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{formatAmount(totalAmountSelected)} GNF</span>
                 </div>
+                {totalAvancesActives > 0 && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Avances à déduire</span>
+                    <span className="text-sm font-medium text-orange-600 dark:text-orange-400">- {formatAmount(totalAvancesActives)} GNF</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-600 dark:text-gray-400">Frais de transaction (1.7%)</span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{formatAmount(fraisTransaction)} GNF</span>
                 </div>
-                <div className="border-t border-[var(--zalama-border)]/30 pt-3">
-                  <div className="flex justify-between items-center">
+                <div className="border-t border-[var(--zalama-border)]/30 pt-3 mt-3">
+                  <div className="flex justify-between items-center mb-2">
                     <span className="font-medium text-gray-900 dark:text-white">Total à payer</span>
                     <span className="text-lg font-bold text-orange-600 dark:text-orange-400">{formatAmount(totalAPayer)} GNF</span>
                   </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-[var(--zalama-border)]/30">
+                    <span className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                      <Banknote className="w-4 h-4" />
+                      Solde wallet
+                    </span>
+                    <span className={`text-sm font-medium ${(() => {
+                      const walletBalance = parseFloat(walletResponse?.balance || '0');
+                      const hasEnoughBalance = walletBalance >= totalAPayer;
+                      return hasEnoughBalance 
+                        ? 'text-green-600 dark:text-green-400' 
+                        : 'text-red-600 dark:text-red-400';
+                    })()}`}>
+                      {loadingWallet ? (
+                        <Loader2 className="w-4 h-4 animate-spin inline" />
+                      ) : (
+                        formatAmount(parseFloat(walletResponse?.balance || '0'))
+                      )} GNF
+                    </span>
+                  </div>
+                  {!loadingWallet && walletResponse && parseFloat(walletResponse.balance) < totalAPayer && (
+                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                      <p className="text-xs text-red-700 dark:text-red-300">
+                        ⚠️ Solde insuffisant. Il manque {formatAmount(totalAPayer - parseFloat(walletResponse.balance))} GNF
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1184,22 +1661,60 @@ export default function PaymentSalaryPage() {
                   </button>
                 )}
                 
-                {currentStep < 3 && (
+                {currentStep < 4 && (
                   <button 
                     onClick={nextStep}
-                    disabled={currentStep === 1 && selectedEmployees.length === 0}
+                    disabled={
+                      (currentStep === 1 && (!paymentMonthNumber || !paymentYear)) ||
+                      (currentStep === 2 && selectedEmployees.length === 0)
+                    }
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={
+                      currentStep === 1 && (!paymentMonthNumber || !paymentYear)
+                        ? "Veuillez sélectionner un mois de paiement"
+                        : currentStep === 2 && selectedEmployees.length === 0
+                        ? "Veuillez sélectionner au moins un employé"
+                        : ""
+                    }
                   >
                     Étape suivante
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 )}
 
-                {currentStep === 3 && (
+                {currentStep === 4 && (
                   <button 
                     onClick={handleProcessPayment}
-                    disabled={!paymentMonthNumber || !paymentYear || selectedEmployees.length === 0 || batchProcessMutation.isPending}
+                    disabled={(() => {
+                      // Vérifier les conditions de base
+                      if (!paymentMonthNumber || !paymentYear || selectedEmployees.length === 0 || batchProcessMutation.isPending) {
+                        return true;
+                      }
+                      
+                      // Vérifier que tous les paiements directs configurés ont les champs requis
+                      const directPaymentsWithErrors = selectedEmployees.filter(empId => {
+                        const directPayment = directPayments[empId];
+                        if (directPayment?.useDirect) {
+                          return !directPayment.typeCompte || !directPayment.numeroReception;
+                        }
+                        return false;
+                      });
+                      
+                      return directPaymentsWithErrors.length > 0;
+                    })()}
                     className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={
+                      !paymentMonthNumber || !paymentYear 
+                        ? "Veuillez sélectionner un mois de paiement"
+                        : selectedEmployees.length === 0
+                        ? "Veuillez sélectionner au moins un employé"
+                        : Object.keys(directPayments).some(empId => {
+                            const dp = directPayments[empId];
+                            return dp?.useDirect && (!dp.typeCompte || !dp.numeroReception);
+                          })
+                        ? "Veuillez compléter les informations des paiements directs (type de compte et numéro de réception)"
+                        : ""
+                    }
                   >
                     {batchProcessMutation.isPending ? (
                       <>
@@ -1604,9 +2119,20 @@ export default function PaymentSalaryPage() {
                   </div>
                     </td>
                     <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {payment.periodeDebut || payment.periode_debut 
-                        ? new Date(payment.periodeDebut || payment.periode_debut).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
-                        : 'N/A'}
+                      {(() => {
+                        // Le mois correspond au mois de la date de fin (periodeFin)
+                        // Exemple: si paymentDay = 25, période 25 nov - 24 déc = décembre (mois de periodeFin)
+                        const periodeFin = payment.periodeFin || payment.periode_fin;
+                        const periodeDebut = payment.periodeDebut || payment.periode_debut;
+                        
+                        if (periodeFin) {
+                          return new Date(periodeFin).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                        } else if (periodeDebut) {
+                          // Fallback sur periodeDebut si periodeFin n'est pas disponible
+                          return new Date(periodeDebut).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                        }
+                        return 'N/A';
+                      })()}
                     </td>
                     <td className="px-3 py-4 text-center text-sm font-medium text-gray-900 dark:text-white">
                       {formatAmount(payment.salaireNet || payment.salaire_net || 0)}
@@ -1755,6 +2281,131 @@ export default function PaymentSalaryPage() {
         </div>
       )}
 
+      {/* Modal pour demander une avance de trésorerie */}
+      {showTreasuryAdvanceModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-md w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-[var(--zalama-border)]/30 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                  <Banknote className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Demander une avance de trésorerie
+                  </h3>
+                  <p className="text-[var(--zalama-text-secondary)] text-sm mt-0.5">
+                    Créez une demande d'avance pour payer vos employés
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowTreasuryAdvanceModal(false)}
+                className="p-1.5 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-lg p-4">
+                <p className="text-sm text-orange-800 dark:text-orange-200">
+                  <strong>Note:</strong> Le montant sera calculé automatiquement en fonction des employés non payés pour le mois sélectionné.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mois <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={treasuryAdvanceData.mois}
+                  onChange={(e) => setTreasuryAdvanceData({ ...treasuryAdvanceData, mois: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <option key={month} value={month}>
+                      {new Date(2024, month - 1, 1).toLocaleDateString('fr-FR', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Année <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={treasuryAdvanceData.annee}
+                  onChange={(e) => setTreasuryAdvanceData({ ...treasuryAdvanceData, annee: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Référence (optionnel)
+                </label>
+                <input
+                  type="text"
+                  value={treasuryAdvanceData.reference}
+                  onChange={(e) => setTreasuryAdvanceData({ ...treasuryAdvanceData, reference: e.target.value })}
+                  placeholder="Ex: AV-TRES-2024-001"
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Commentaire (optionnel)
+                </label>
+                <textarea
+                  value={treasuryAdvanceData.commentaire}
+                  onChange={(e) => setTreasuryAdvanceData({ ...treasuryAdvanceData, commentaire: e.target.value })}
+                  placeholder="Ex: Paiement des salaires du mois de décembre 2024"
+                  rows={3}
+                  className="w-full px-3 py-2 border border-[var(--zalama-border)] rounded-lg bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                />
+              </div>
+              
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  onClick={() => setShowTreasuryAdvanceModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleCreateTreasuryAdvance}
+                  disabled={isSubmittingTreasuryAdvance || !treasuryAdvanceData.mois || !treasuryAdvanceData.annee}
+                  className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  {isSubmittingTreasuryAdvance ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Création...
+                    </>
+                  ) : (
+                    <>
+                      <Banknote className="w-4 h-4" />
+                      Créer la demande
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal de détails du paiement */}
       {showDetailModal && selectedPayment && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[99999] p-4">
@@ -1794,7 +2445,7 @@ export default function PaymentSalaryPage() {
                       </div>
                 <div className="space-y-2">
                   <p className="font-bold text-lg text-gray-900 dark:text-white">
-                    {selectedPayment.employe?.prenom} {selectedPayment.employe?.nom}
+                    {selectedPayment.employe?.prenom || selectedPayment.employe?.firstName} {selectedPayment.employe?.nom || selectedPayment.employe?.lastName}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-medium">Email:</span> {selectedPayment.employe?.email || "Non renseigné"}
@@ -1813,9 +2464,31 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire Net</span>
                   </div>
                   <p className="font-medium text-orange-600 dark:text-orange-400">
-                    {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || 0)} GNF
+                    {formatAmount(selectedPayment.employe?.salaire_net || selectedPayment.salaire_net || selectedPayment.salaireNet || 0)} GNF
                     </p>
                   </div>
+                
+                {/* Salaire à payer (si personnalisé) */}
+                {(selectedPayment.salaireAPayer || selectedPayment.salaire_a_payer) && 
+                 (selectedPayment.salaireAPayer || selectedPayment.salaire_a_payer) !== (selectedPayment.salaire_net || selectedPayment.salaireNet) && (
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire à payer</span>
+                    </div>
+                    <p className="font-medium text-blue-600 dark:text-blue-400">
+                      {formatAmount(selectedPayment.salaireAPayer || selectedPayment.salaire_a_payer || 0)} GNF
+                    </p>
+                    {(selectedPayment.raison || selectedPayment.raisonSalaire || selectedPayment.raison_salaire) && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">
+                        {selectedPayment.raison || selectedPayment.raisonSalaire || selectedPayment.raison_salaire}
+                      </p>
+                    )}
+                  </div>
+                )}
+                
                 {/* Mois payé */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
@@ -1825,7 +2498,21 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Mois payé</span>
                 </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedPayment.mois_paye ? getMonthName(selectedPayment.mois_paye) : "N/A"}
+                    {(() => {
+                      // Le mois correspond au mois de la date de fin (periodeFin)
+                      const periodeFin = selectedPayment.periodeFin || selectedPayment.periode_fin;
+                      const periodeDebut = selectedPayment.periodeDebut || selectedPayment.periode_debut;
+                      
+                      if (periodeFin) {
+                        return new Date(periodeFin).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                      } else if (periodeDebut) {
+                        // Fallback sur periodeDebut si periodeFin n'est pas disponible
+                        return new Date(periodeDebut).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+                      } else if (selectedPayment.mois_paye) {
+                        return getMonthName(selectedPayment.mois_paye);
+                      }
+                      return "N/A";
+                    })()}
                   </p>
               </div>
 
@@ -1838,7 +2525,7 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                 </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatPhoneNumber(selectedPayment.employe?.telephone)}
+                    {formatPhoneNumber(selectedPayment.employe?.telephone || selectedPayment.employe?.phone)}
                   </p>
             </div>
             
@@ -1890,7 +2577,7 @@ export default function PaymentSalaryPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Date de paiement</span>
                       </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {formatDate(selectedPayment.date_paiement)}
+                    {formatDate(selectedPayment.date_paiement || selectedPayment.datePaiement || '')}
                   </p>
               </div>
 

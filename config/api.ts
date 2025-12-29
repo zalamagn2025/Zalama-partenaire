@@ -4,7 +4,7 @@
  */
 
 export const API_CONFIG = {
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sandbox.zalamagn.com',
+  baseURL:  'https://sandbox.zalamagn.com',
   timeout: 30000, // 30 secondes
 } as const;
 
@@ -66,6 +66,13 @@ export const API_ROUTES = {
   // Informations partenaire
   partnerInfo: {
     get: '/partner-info',
+    update: '/partner-info',
+  },
+  
+  // Utilisateurs
+  users: {
+    get: (id: string) => `/users/${id}`,
+    update: (id: string) => `/users/${id}`,
   },
   
   // Partenaires
@@ -82,6 +89,7 @@ export const API_ROUTES = {
     create: '/employees',
     update: (id: string) => `/employees/${id}`,
     delete: (id: string) => `/employees/${id}`,
+    bulkUpload: '/employees/bulk-upload',
   },
   
   // Demandes d'avance sur salaire
@@ -92,6 +100,22 @@ export const API_ROUTES = {
     update: (id: string) => `/salary-advance-requests/${id}`,
     approve: (id: string) => `/salary-advance-requests/${id}/approve`,
     reject: (id: string) => `/salary-advance-requests/${id}/reject`,
+  },
+  
+  // Avances sur salaire (routes backend directes)
+  salaryAdvances: {
+    list: '/salary-advances',
+    get: (id: string) => `/salary-advances/${id}`,
+    create: '/salary-advances',
+    update: (id: string) => `/salary-advances/${id}`,
+    approve: (id: string) => `/salary-advances/${id}/approve`,
+    reject: (id: string) => `/salary-advances/${id}/reject`,
+  },
+  
+  // Avances sur salaire (Partenaire - Multi-mois uniquement)
+  partnerSalaryAdvances: {
+    approve: (id: string) => `/partner-salary-advances/${id}/approve`,
+    reject: (id: string) => `/partner-salary-advances/${id}/reject`,
   },
   
   // Paiements
@@ -110,6 +134,11 @@ export const API_ROUTES = {
     statistics: '/partner-payments/statistics',
     batchProcessWallet: '/partner-payments/batch/process-wallet',
     bulletinPaie: '/partner-payments/bulletin-paie',
+  },
+  
+  // Wallet partenaire
+  partnerWallets: {
+    me: '/partner-wallets/me',
   },
   
   // Remboursements
@@ -143,6 +172,22 @@ export const API_ROUTES = {
     get: (id: string) => `/notifications/${id}`,
     markAsRead: (id: string) => `/notifications/${id}/read`,
     markAllAsRead: '/notifications/read-all',
+  },
+  
+  // Upload
+  upload: {
+    file: '/upload/file',
+  },
+  
+  // Treasury Advances
+  treasuryAdvances: {
+    list: '/treasury-advances',
+    get: (id: string) => `/treasury-advances/${id}`,
+    request: '/treasury-advances/request',
+    approve: (id: string) => `/treasury-advances/${id}/approve`,
+    reject: (id: string) => `/treasury-advances/${id}/reject`,
+    release: (id: string) => `/treasury-advances/${id}/release`,
+    repay: (id: string) => `/treasury-advances/${id}/repay`,
   },
 } as const;
 

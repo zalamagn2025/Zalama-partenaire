@@ -53,6 +53,23 @@ const serviceTypes = [
 
 // Fonction pour obtenir le badge de statut
 const getStatusBadge = (statut: string) => {
+  const statutUpper = statut.toUpperCase();
+  
+  // Gérer les statuts en majuscules (format API)
+  if (statutUpper === "APPROUVE" || statutUpper === "APPROUVEE") {
+    return <Badge className="bg-green-500">Approuvé</Badge>;
+  }
+  if (statutUpper === "EN_ATTENTE" || statutUpper === "PENDING") {
+    return <Badge className="bg-yellow-500">En attente</Badge>;
+  }
+  if (statutUpper === "REJETE" || statutUpper === "REJECTED") {
+    return <Badge className="bg-red-500">Rejeté</Badge>;
+  }
+  if (statutUpper === "ANNULE" || statutUpper === "CANCELLED") {
+    return <Badge className="bg-gray-500">Annulé</Badge>;
+  }
+  
+  // Gérer les statuts en français (format legacy)
   switch (statut) {
     case "Validé":
       return <Badge className="bg-green-500">Validé</Badge>;
@@ -410,6 +427,13 @@ export default function DemandesPage() {
 
   // ✅ Statistiques des remboursements (montants)
   const remboursementsPaye = allDemandes.reduce((total, d) => {
+    // Vérifier d'abord statutRemboursement au niveau racine
+    const statutRemb = (d as any).statutRemboursement || (d as any).statut_remboursement;
+    if (statutRemb && (statutRemb.toUpperCase() === "REMBOURSE" || statutRemb.toUpperCase() === "PAYE")) {
+      return total + ((d as any).montantTotal || (d as any).montant_total || (d as any).montantDemande || 0);
+    }
+    
+    // Sinon, vérifier dans remboursement/remboursements
     const remb = (d as any).remboursement || (d as any).remboursements;
     if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "PAYE") {
       return total + (remb[0]?.montant_total_remboursement || 0);
@@ -418,6 +442,13 @@ export default function DemandesPage() {
   }, 0);
 
   const remboursementsEnAttente = allDemandes.reduce((total, d) => {
+    // Vérifier d'abord statutRemboursement au niveau racine
+    const statutRemb = (d as any).statutRemboursement || (d as any).statut_remboursement;
+    if (statutRemb && (statutRemb.toUpperCase() === "EN_ATTENTE" || statutRemb.toUpperCase() === "PENDING")) {
+      return total + ((d as any).montantTotal || (d as any).montant_total || (d as any).montantDemande || 0);
+    }
+    
+    // Sinon, vérifier dans remboursement/remboursements
     const remb = (d as any).remboursement || (d as any).remboursements;
     if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_ATTENTE") {
       return total + (remb[0]?.montant_total_remboursement || 0);
@@ -426,6 +457,13 @@ export default function DemandesPage() {
   }, 0);
 
   const remboursementsEnRetard = allDemandes.reduce((total, d) => {
+    // Vérifier d'abord statutRemboursement au niveau racine
+    const statutRemb = (d as any).statutRemboursement || (d as any).statut_remboursement;
+    if (statutRemb && (statutRemb.toUpperCase() === "EN_RETARD" || statutRemb.toUpperCase() === "OVERDUE")) {
+      return total + ((d as any).montantTotal || (d as any).montant_total || (d as any).montantDemande || 0);
+    }
+    
+    // Sinon, vérifier dans remboursement/remboursements
     const remb = (d as any).remboursement || (d as any).remboursements;
     if (Array.isArray(remb) && remb.length > 0 && remb[0]?.statut === "EN_RETARD") {
       return total + (remb[0]?.montant_total_remboursement || 0);
@@ -493,44 +531,51 @@ export default function DemandesPage() {
 
     setApprovingRequest(requestId);
     try {
-      // Déterminer le rôle de l'utilisateur
-      const userRole = session.admin?.role?.toLowerCase();
-      const approverRole =
-        userRole === "rh" || userRole === "responsable" ? userRole : "rh";
-
       // Afficher un toast de chargement
-      const loadingToast = toast.loading(
-        "Traitement de l'approbation... (8 secondes)"
+      const loadingToast = toast.loading("Traitement de l'approbation...");
+
+      // Trouver la demande pour déterminer si c'est une avance multi-mois
+      const demande = allDemandes.find((d) => d.id === requestId);
+      const isMultiMois = demande && (
+        (demande as any).numInstallments && (demande as any).numInstallments > 1 ||
+        (demande as any).repaymentMode === "MONTHLY" ||
+        demande.categorie === "multi-mois"
       );
 
-      // Utiliser le nouveau proxy partner-approval
-      const response = await fetch("/api/proxy/partner-approval", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          requestId: requestId,
-          action: "approve",
-          approverId: session.admin?.id || session.user?.id,
-          approverRole: approverRole,
-          reason: "Demande approuvée par le service RH",
-        }),
-      });
+      // Utiliser la route partenaire pour les avances multi-mois, sinon la route standard
+      const route = isMultiMois
+        ? `/partner-salary-advances/${requestId}/approve`
+        : `/salary-advances/${requestId}/approve`;
+
+      // Utiliser directement le backend
+      const accessToken = session.access_token;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sandbox.zalamagn.com'}${route}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            raison: "Demande approuvée par le service RH",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Erreur lors de l'approbation" }));
+        throw new Error(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
 
       const result = await response.json();
 
       // Fermer le toast de chargement
       toast.dismiss(loadingToast);
 
-      if (result.success) {
-        toast.success("Demande approuvée avec succès");
-        // Recharger immédiatement les demandes pour avoir les données à jour
-        await loadSalaryDemandsData(filters);
-      } else {
-        throw new Error(result.message || "Erreur lors de l'approbation");
-      }
+      toast.success("Demande approuvée avec succès");
+      // Recharger immédiatement les demandes pour avoir les données à jour
+      await refetch();
     } catch (error: any) {
       console.error("Erreur lors de l'approbation:", error);
       toast.error(error.message || "Erreur lors de l'approbation");
@@ -548,44 +593,51 @@ export default function DemandesPage() {
 
     setRejectingRequest(requestId);
     try {
-      // Déterminer le rôle de l'utilisateur
-      const userRole = session.admin?.role?.toLowerCase();
-      const approverRole =
-        userRole === "rh" || userRole === "responsable"
-          ? userRole
-          : "responsable";
-
       // Afficher un toast de chargement
-      const loadingToast = toast.loading("Traitement du rejet... (8 secondes)");
+      const loadingToast = toast.loading("Traitement du rejet...");
 
-      // Utiliser le nouveau proxy partner-approval
-      const response = await fetch("/api/proxy/partner-approval", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          requestId: requestId,
-          action: "reject",
-          approverId: session.admin?.id || session.user?.id,
-          approverRole: approverRole,
-          reason: "Demande rejetée par le service RH",
-        }),
-      });
+      // Trouver la demande pour déterminer si c'est une avance multi-mois
+      const demande = allDemandes.find((d) => d.id === requestId);
+      const isMultiMois = demande && (
+        (demande as any).numInstallments && (demande as any).numInstallments > 1 ||
+        (demande as any).repaymentMode === "MONTHLY" ||
+        demande.categorie === "multi-mois"
+      );
+
+      // Utiliser la route partenaire pour les avances multi-mois, sinon la route standard
+      const route = isMultiMois
+        ? `/partner-salary-advances/${requestId}/reject`
+        : `/salary-advances/${requestId}/reject`;
+
+      // Utiliser directement le backend
+      const accessToken = session.access_token;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sandbox.zalamagn.com'}${route}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            motif: "Demande rejetée par le service RH - Montant ou conditions non conformes",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Erreur lors du rejet" }));
+        throw new Error(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
 
       const result = await response.json();
 
       // Fermer le toast de chargement
       toast.dismiss(loadingToast);
 
-      if (result.success) {
-        toast.success("Demande rejetée avec succès");
-        // Recharger immédiatement les demandes pour avoir les données à jour
-        await loadSalaryDemandsData(filters);
-      } else {
-        throw new Error(result.message || "Erreur lors du rejet");
-      }
+      toast.success("Demande rejetée avec succès");
+      // Recharger immédiatement les demandes pour avoir les données à jour
+      await refetch();
     } catch (error: any) {
       console.error("Erreur lors du rejet:", error);
       toast.error(error.message || "Erreur lors du rejet");
@@ -677,7 +729,7 @@ export default function DemandesPage() {
               Réinitialiser
             </button>
             <button
-              onClick={() => loadSalaryDemandsData(filters)}
+              onClick={() => refetch()}
               disabled={loading}
               className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
             >
@@ -1183,7 +1235,47 @@ export default function DemandesPage() {
                     </td>
                     <td className="px-3 py-4 text-center">
                       {(() => {
-                        // ✅ Compatibilité: Edge Function = "remboursement", Supabase direct = "remboursements"
+                        // ✅ Priorité 1: statutRemboursement au niveau racine (nouveau format API)
+                        const statutRemboursement = (demande as any).statutRemboursement || (demande as any).statut_remboursement;
+                        if (statutRemboursement) {
+                          const getRemboursementBadgeVariant = (statut: string) => {
+                            const statutUpper = statut.toUpperCase();
+                            if (statutUpper === "REMBOURSE" || statutUpper === "PAYE") {
+                              return "success";
+                            } else if (statutUpper === "EN_ATTENTE" || statutUpper === "PENDING") {
+                              return "warning";
+                            } else if (statutUpper === "EN_RETARD" || statutUpper === "OVERDUE") {
+                              return "error";
+                            } else if (statutUpper === "ANNULE" || statutUpper === "CANCELLED") {
+                              return "default";
+                            }
+                            return "default";
+                          };
+                          
+                          const getRemboursementLabel = (statut: string) => {
+                            const statutUpper = statut.toUpperCase();
+                            if (statutUpper === "REMBOURSE") return "Remboursé";
+                            if (statutUpper === "PAYE") return "Payé";
+                            if (statutUpper === "EN_ATTENTE") return "En attente";
+                            if (statutUpper === "PENDING") return "En attente";
+                            if (statutUpper === "EN_RETARD") return "En retard";
+                            if (statutUpper === "OVERDUE") return "En retard";
+                            if (statutUpper === "ANNULE") return "Annulé";
+                            if (statutUpper === "CANCELLED") return "Annulé";
+                            return statut;
+                          };
+                          
+                          return (
+                            <Badge
+                              variant={getRemboursementBadgeVariant(statutRemboursement)}
+                              className="text-xs"
+                            >
+                              {getRemboursementLabel(statutRemboursement)}
+                            </Badge>
+                          );
+                        }
+                        
+                        // ✅ Priorité 2: Compatibilité: Edge Function = "remboursement", Supabase direct = "remboursements"
                         const remboursement = (demande as any).remboursement || (demande as any).remboursements;
                         
                         // Vérifier si remboursement existe et n'est pas vide
@@ -1210,7 +1302,7 @@ export default function DemandesPage() {
                         }
                         
                         // Pas de remboursement : afficher selon le statut de la demande
-                        if (demande.statut === "Validé" || demande.statut === "Approuvée") {
+                        if (demande.statut === "Validé" || demande.statut === "Approuvée" || demande.statut === "APPROUVE") {
                           return <span className="text-xs text-yellow-500 dark:text-yellow-400">Pas encore</span>;
                         }
                         
@@ -1218,56 +1310,69 @@ export default function DemandesPage() {
                       })()}
                     </td>
                     <td className="px-3 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        {/* Actions pour les demandes en attente RH/Responsable */}
-                        {demande.statut === "En attente RH/Responsable" ? (
-                          <div className="flex flex-col items-center gap-1">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleApproveRequest(demande.id);
-                              }}
-                              disabled={
-                                approvingRequest === demande.id ||
-                                rejectingRequest === demande.id ||
-                                tableLoading
-                              }
-                              className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Approuver la demande"
-                            >
-                              {approvingRequest === demande.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
-                              ) : (
-                                <Check className="h-4 w-4" />
-                              )}
-                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                {approvingRequest === demande.id ? "Traitement..." : "Approuver"}
-                              </div>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRejectRequest(demande.id);
-                              }}
-                              disabled={
-                                rejectingRequest === demande.id ||
-                                approvingRequest === demande.id ||
-                                tableLoading
-                              }
-                              className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                              title="Rejeter la demande"
-                            >
-                              {rejectingRequest === demande.id ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
-                              ) : (
-                                <X className="h-4 w-4" />
-                              )}
-                              <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
-                                {rejectingRequest === demande.id ? "Traitement..." : "Rejeter"}
-                              </div>
-                            </button>
-                          </div>
-                        ) : null}
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Actions pour les demandes en attente RH/Responsable ou avances multi-mois EN_ATTENTE */}
+                        {(() => {
+                          const statut = (demande as any).statut || demande.statut;
+                          const categorie = demande.categorie || (demande as any).repaymentMode;
+                          const isMultiMois = categorie === "multi-mois" || (demande as any).repaymentMode === "MONTHLY";
+                          const isEnAttente = 
+                            demande.statut === "En attente RH/Responsable" ||
+                            statut === "EN_ATTENTE" ||
+                            statut === "En attente";
+                          
+                          // Afficher les boutons pour les demandes en attente RH/Responsable OU les avances multi-mois en attente
+                          const shouldShowActions = isEnAttente && (demande.statut === "En attente RH/Responsable" || isMultiMois);
+                          
+                          return shouldShowActions ? (
+                            <>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleApproveRequest(demande.id);
+                                }}
+                                disabled={
+                                  approvingRequest === demande.id ||
+                                  rejectingRequest === demande.id ||
+                                  tableLoading
+                                }
+                                className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                title="Approuver la demande"
+                              >
+                                {approvingRequest === demande.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent" />
+                                ) : (
+                                  <Check className="h-4 w-4" />
+                                )}
+                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                  {approvingRequest === demande.id ? "Traitement..." : "Approuver"}
+                                </div>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRejectRequest(demande.id);
+                                }}
+                                disabled={
+                                  rejectingRequest === demande.id ||
+                                  approvingRequest === demande.id ||
+                                  tableLoading
+                                }
+                                className="group relative p-2 rounded-full bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                                title="Rejeter la demande"
+                              >
+                                {rejectingRequest === demande.id ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-red-600 border-t-transparent" />
+                                ) : (
+                                  <X className="h-4 w-4" />
+                                )}
+                                <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                                  {rejectingRequest === demande.id ? "Traitement..." : "Rejeter"}
+                                </div>
+                              </button>
+                            </>
+                          ) : null;
+                        })()}
                         <button
                           onClick={() => {
                             setSelectedDemande(demande);
@@ -1438,9 +1543,72 @@ export default function DemandesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Montant demandé</span>
                   </div>
                     <p className="font-medium text-green-600 dark:text-green-400">
-                      {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
+                      {(selectedDemande.montant_total_demande || selectedDemande.montantDemande || selectedDemande.montant || 0).toLocaleString()} GNF
                     </p>
                   </div>
+
+                  <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                        <DollarSign className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                      <span className="text-gray-600 dark:text-gray-400 text-xs">Salaire net</span>
+                  </div>
+                    <p className="font-medium text-blue-600 dark:text-blue-400">
+                      {(selectedDemande.salaireNet || selectedDemande.salaire_net || 0).toLocaleString()} GNF
+                    </p>
+                  </div>
+
+                  {/* Statut de remboursement */}
+                  {(() => {
+                    const statutRemb = selectedDemande.statutRemboursement || selectedDemande.statut_remboursement;
+                    if (statutRemb) {
+                      const getRemboursementBadgeVariant = (statut: string) => {
+                        const statutUpper = statut.toUpperCase();
+                        if (statutUpper === "REMBOURSE" || statutUpper === "PAYE") {
+                          return "success";
+                        } else if (statutUpper === "EN_ATTENTE" || statutUpper === "PENDING") {
+                          return "warning";
+                        } else if (statutUpper === "EN_RETARD" || statutUpper === "OVERDUE") {
+                          return "error";
+                        } else if (statutUpper === "ANNULE" || statutUpper === "CANCELLED") {
+                          return "default";
+                        }
+                        return "default";
+                      };
+                      
+                      const getRemboursementLabel = (statut: string) => {
+                        const statutUpper = statut.toUpperCase();
+                        if (statutUpper === "REMBOURSE") return "Remboursé";
+                        if (statutUpper === "PAYE") return "Payé";
+                        if (statutUpper === "EN_ATTENTE") return "En attente";
+                        if (statutUpper === "PENDING") return "En attente";
+                        if (statutUpper === "EN_RETARD") return "En retard";
+                        if (statutUpper === "OVERDUE") return "En retard";
+                        if (statutUpper === "ANNULE") return "Annulé";
+                        if (statutUpper === "CANCELLED") return "Annulé";
+                        return statut;
+                      };
+                      
+                      return (
+                        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
+                          <div className="flex items-center gap-3 mb-2">
+                            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/20 rounded-lg">
+                              <Receipt className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                            </div>
+                            <span className="text-gray-600 dark:text-gray-400 text-xs">Statut remboursement</span>
+                          </div>
+                          <Badge
+                            variant={getRemboursementBadgeVariant(statutRemb)}
+                            className="text-xs"
+                          >
+                            {getRemboursementLabel(statutRemb)}
+                          </Badge>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
 
                   <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                     <div className="flex items-center gap-3 mb-2">
@@ -1450,7 +1618,7 @@ export default function DemandesPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Type de motif</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.type_motif || "Autre"}
+                      {selectedDemande.demandes_detailes?.[0]?.type_motif || selectedDemande.typeMotif || selectedDemande.type_motif || "Autre"}
                     </p>
               </div>
 
@@ -1513,10 +1681,162 @@ export default function DemandesPage() {
                   </div>
                 )}
 
-                {/* Plan de remboursement pour multi-mois */}
+                {/* Plan de remboursement - Utilise les données réelles des installments */}
                 {(() => {
-                  const numInstallments = selectedDemande.demandes_detailes?.[0]?.num_installments || selectedDemande.num_installments;
-                  if (selectedDemande.categorie === "multi-mois" && numInstallments && numInstallments > 1) {
+                  // Utiliser les installments de l'API si disponibles
+                  const installments = selectedDemande.installments || [];
+                  const numInstallments = selectedDemande.numInstallments || selectedDemande.demandes_detailes?.[0]?.num_installments || selectedDemande.num_installments;
+                  const repaymentMode = selectedDemande.repaymentMode || selectedDemande.demandes_detailes?.[0]?.repayment_mode;
+                  
+                  // Afficher les échéances si c'est un remboursement mensuel avec installments
+                  if (repaymentMode === "MONTHLY" && installments.length > 0) {
+                    const montantTotal = selectedDemande.montantTotal || selectedDemande.montant_total_demande || selectedDemande.montant || 0;
+                    
+                    return (
+                      <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                            <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-purple-900 dark:text-purple-100">
+                              Plan de remboursement Multi-mois
+                            </h4>
+                            <p className="text-xs text-purple-600 dark:text-purple-400">
+                              {installments.length} mensualité{installments.length > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          {installments.map((installment: any) => {
+                            const isPaid = installment.statut === "PAYE" || installment.statut === "PAID" || installment.datePaiement !== null;
+                            const isOverdue = !isPaid && installment.dateEcheance && new Date(installment.dateEcheance) < new Date();
+                            
+                            return (
+                              <div 
+                                key={installment.id || installment.installmentNumber} 
+                                className={`flex items-center justify-between p-3 rounded-lg border ${
+                                  isPaid 
+                                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800/20' 
+                                    : isOverdue
+                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800/20'
+                                    : 'bg-white dark:bg-[var(--zalama-bg-light)] border-purple-200 dark:border-purple-800/20'
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                                    isPaid
+                                      ? 'bg-green-100 dark:bg-green-900/30'
+                                      : isOverdue
+                                      ? 'bg-red-100 dark:bg-red-900/30'
+                                      : 'bg-purple-100 dark:bg-purple-900/30'
+                                  }`}>
+                                    {isPaid ? (
+                                      <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                    ) : (
+                                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
+                                        {installment.installmentNumber || installment.installment_number || '?'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                                      Échéance {installment.installmentNumber || installment.installment_number || 'N/A'}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                                        {installment.dateEcheance || installment.date_echeance
+                                          ? new Date(installment.dateEcheance || installment.date_echeance).toLocaleDateString('fr-FR', { 
+                                              day: 'numeric',
+                                              month: 'long', 
+                                              year: 'numeric' 
+                                            })
+                                          : 'Date non définie'}
+                                      </p>
+                                      {installment.datePaiement || installment.date_paiement ? (
+                                        <Badge variant="success" className="text-xs">
+                                          Payé le {new Date(installment.datePaiement || installment.date_paiement).toLocaleDateString('fr-FR')}
+                                        </Badge>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="text-right">
+                                  <p className={`text-sm font-bold ${
+                                    isPaid
+                                      ? 'text-green-900 dark:text-green-100'
+                                      : isOverdue
+                                      ? 'text-red-900 dark:text-red-100'
+                                      : 'text-purple-900 dark:text-purple-100'
+                                  }`}>
+                                    {(installment.montant || 0).toLocaleString()} GNF
+                                  </p>
+                                  {montantTotal > 0 && (
+                                    <p className="text-xs text-purple-600 dark:text-purple-400">
+                                      {Math.round(((installment.montant || 0) / montantTotal) * 100)}% du total
+                                    </p>
+                                  )}
+                                  {installment.statut && (
+                                    <Badge 
+                                      variant={
+                                        installment.statut === "PAYE" || installment.statut === "PAID" 
+                                          ? "success" 
+                                          : installment.statut === "EN_RETARD" || isOverdue
+                                          ? "error"
+                                          : "warning"
+                                      }
+                                      className="text-xs mt-1"
+                                    >
+                                      {installment.statut === "PAYE" || installment.statut === "PAID" 
+                                        ? "Payé" 
+                                        : installment.statut === "EN_RETARD"
+                                        ? "En retard"
+                                        : "En attente"}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        
+                        <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
+                            <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
+                              {montantTotal.toLocaleString()} GNF
+                            </span>
+                          </div>
+                          {(() => {
+                            const paidCount = installments.filter((i: any) => i.statut === "PAYE" || i.statut === "PAID" || i.datePaiement).length;
+                            const totalPaid = installments
+                              .filter((i: any) => i.statut === "PAYE" || i.statut === "PAID" || i.datePaiement)
+                              .reduce((sum: number, i: any) => sum + (i.montant || 0), 0);
+                            
+                            if (paidCount > 0) {
+                              return (
+                                <div className="mt-2 pt-2 border-t border-purple-200 dark:border-purple-800/20">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-xs text-purple-600 dark:text-purple-400">
+                                      Remboursé ({paidCount}/{installments.length})
+                                    </span>
+                                    <span className="text-sm font-semibold text-green-600 dark:text-green-400">
+                                      {totalPaid.toLocaleString()} GNF
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  // Fallback pour les anciennes données sans installments
+                  if (selectedDemande.categorie === "multi-mois" && numInstallments && numInstallments > 1 && installments.length === 0) {
                     return (
                       <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-200 dark:border-purple-800/30 rounded-lg p-4 shadow-sm">
                         <div className="flex items-center gap-3 mb-4">
@@ -1532,62 +1852,13 @@ export default function DemandesPage() {
                             </p>
                           </div>
                         </div>
-                        
-                        <div className="space-y-2">
-                          {(() => {
-                            const montantTotal = selectedDemande.montant_total_demande || selectedDemande.montant || 0;
-                            const nbMois = numInstallments || 1;
-                            const montantParMois = Math.floor(montantTotal / nbMois);
-                            const dernierMontant = montantTotal - (montantParMois * (nbMois - 1));
-                            
-                            return Array.from({ length: nbMois }, (_, i) => {
-                              const moisIndex = i + 1;
-                              const montant = moisIndex === nbMois ? dernierMontant : montantParMois;
-                              const dateEcheance = new Date();
-                              dateEcheance.setMonth(dateEcheance.getMonth() + moisIndex);
-                              
-                              return (
-                                <div key={moisIndex} className="flex items-center justify-between p-3 bg-white dark:bg-[var(--zalama-bg-light)] rounded-lg border border-purple-200 dark:border-purple-800/20">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                                      <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                                        {moisIndex}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        Échéance {moisIndex}
-                                      </p>
-                                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        {dateEcheance.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="text-right">
-                                    <p className="text-sm font-bold text-purple-900 dark:text-purple-100">
-                                      {montant.toLocaleString()} GNF
-                                    </p>
-                                    <p className="text-xs text-purple-600 dark:text-purple-400">
-                                      {Math.round((montant / montantTotal) * 100)}% du total
-                                    </p>
-                                  </div>
-                                </div>
-                              );
-                            });
-                          })()}
-                        </div>
-                        
-                        <div className="mt-4 pt-4 border-t border-purple-200 dark:border-purple-800/30">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Total</span>
-                            <span className="text-lg font-bold text-purple-900 dark:text-purple-100">
-                              {(selectedDemande.montant_total_demande || selectedDemande.montant || 0).toLocaleString()} GNF
-                            </span>
-                          </div>
-                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                          Les détails des échéances ne sont pas encore disponibles.
+                        </p>
                       </div>
                     );
                   }
+                  
                   return null;
                 })()}
 

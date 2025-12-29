@@ -7,7 +7,6 @@ import {
   Search,
   Filter,
   Eye,
-  RefreshCw,
   Calendar,
   TrendingUp,
   AlertTriangle,
@@ -20,6 +19,11 @@ import {
   MapPin,
   Hash,
   UserCheck,
+  Upload,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Download,
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -30,6 +34,7 @@ import { toast } from "sonner";
 import { usePartnerEmployees, usePartnerEmployeeStats } from "@/hooks/usePartnerEmployee";
 import type { PartnerEmployee } from "@/types/api";
 import { useUrlFilters } from "@/hooks/useUrlFilters";
+import { API_CONFIG, API_ROUTES, getApiUrl, getDefaultHeaders } from "@/config/api";
 
 // Type pour les employés - utilise directement PartnerEmployee qui contient déjà typeContrat, salaireNet, dateEmbauche
 type Employee = PartnerEmployee;
@@ -122,6 +127,15 @@ export default function EmployesPage() {
   // États pour les modales
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResults, setUploadResults] = useState<{
+    total: number;
+    success: number;
+    failed: number;
+    errors: Array<{ row: number; email?: string; error: string }>;
+  } | null>(null);
 
   // Utiliser les hooks pour récupérer les données
   const { data: employeesResponse, isLoading, refetch: refetchEmployees } = usePartnerEmployees({
@@ -216,6 +230,133 @@ export default function EmployesPage() {
   const closeViewModal = () => {
     setSelectedEmployee(null);
     setIsViewModalOpen(false);
+  };
+
+  // Gestion de l'upload en masse
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      if (!['csv', 'xlsx', 'xls'].includes(fileExtension || '')) {
+        toast.error('Format de fichier non supporté. Utilisez CSV ou Excel (.csv, .xlsx, .xls)');
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Le fichier est trop volumineux. Taille maximale: 10MB');
+        return;
+      }
+      setUploadFile(file);
+      setUploadResults(null);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile || !session?.access_token) {
+      toast.error('Veuillez sélectionner un fichier');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadResults(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadFile);
+
+      const response = await fetch(getApiUrl(API_ROUTES.employees.bulkUpload), {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Erreur lors de l\'upload' }));
+        throw new Error(errorData.message || `Erreur ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setUploadResults(data);
+      
+      if (data.success > 0) {
+        toast.success(`${data.success} employé(s) créé(s) avec succès`);
+        await refetchEmployees();
+      }
+      
+      if (data.failed > 0) {
+        toast.warning(`${data.failed} employé(s) n'ont pas pu être créé(s)`);
+      }
+    } catch (error: any) {
+      console.error('Erreur lors de l\'upload:', error);
+      toast.error(error.message || 'Erreur lors de l\'upload du fichier');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const closeUploadModal = () => {
+    setIsUploadModalOpen(false);
+    setUploadFile(null);
+    setUploadResults(null);
+  };
+
+  // Télécharger un fichier exemple avec les en-têtes
+  const handleDownloadTemplate = (format: 'csv' | 'xlsx' = 'csv') => {
+    // Colonnes obligatoires: nom, prenom, telephone (numero), salaireNet
+    // Colonnes optionnelles: email, poste, genre, adresse, matricule, typeContrat
+    const headers = [
+      'nom',
+      'prenom',
+      'telephone', // numero - OBLIGATOIRE
+      'salaireNet',
+      'email', // optionnel
+      'poste', // optionnel
+      'genre', // optionnel
+      'adresse', // optionnel
+      'matricule', // optionnel
+      'typeContrat', // optionnel
+    ];
+
+    if (format === 'csv') {
+      // Créer un CSV avec les en-têtes et une ligne d'exemple
+      // email est vide pour montrer qu'il est optionnel
+      const exampleRow = [
+        'Diallo',
+        'Mamadou',
+        '+224612345678', // numero obligatoire
+        '500000',
+        '', // email optionnel
+        'Développeur Full Stack', // poste optionnel
+        'M', // genre optionnel
+        'Rue 123, Commune de Kaloum, Conakry', // adresse optionnelle
+        'EMP-2024-001', // matricule optionnel
+        'CDI', // typeContrat optionnel
+      ];
+
+      const csvContent = [
+        headers.join(','),
+        exampleRow.join(','),
+        // Ligne vide pour montrer qu'on peut ajouter plus de lignes
+        '',
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'modele_import_employes.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success('Fichier exemple téléchargé avec succès');
+    } else {
+      // Pour Excel, on génère un CSV simple (Excel peut l'ouvrir)
+      // Ou on pourrait utiliser une bibliothèque comme xlsx pour créer un vrai fichier Excel
+      toast.info('Le format Excel sera disponible prochainement. Utilisez CSV pour l\'instant.');
+    }
   };
 
   // Export CSV
@@ -433,14 +574,11 @@ export default function EmployesPage() {
                 Réinitialiser
               </button>
               <button
-                onClick={() => refetchEmployees()}
-                disabled={isLoading}
-                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                onClick={() => setIsUploadModalOpen(true)}
+                className="px-3 py-1 text-sm bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors flex items-center gap-1"
               >
-                {isLoading ? (
-                  <RefreshCw className="h-3 w-3 animate-spin" />
-                ) : null}
-                Actualiser
+                <Upload className="h-3 w-3" />
+                Importer en masse
               </button>
             </div>
           </div>
@@ -456,7 +594,7 @@ export default function EmployesPage() {
               <select
                 value={selectedContractType || ""}
                 onChange={(e) => handleContractTypeChange(e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               >
                 <option value="">Tous les contrats</option>
                 <option value="CDI">CDI</option>
@@ -475,7 +613,7 @@ export default function EmployesPage() {
               <select
                 value={selectedStatus || ""}
                 onChange={(e) => handleStatusChange(e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               >
                 <option value="">Tous les statuts</option>
                 <option value="actif">Actifs</option>
@@ -491,7 +629,7 @@ export default function EmployesPage() {
               <select
                 value={selectedPoste || ""}
                 onChange={(e) => handlePosteChange(e.target.value || null)}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               >
                 <option value="">Tous les postes</option>
                 {employees.length > 0 ? (
@@ -512,7 +650,7 @@ export default function EmployesPage() {
               <select
                 value={sortBy}
                 onChange={(e) => handleSortByChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               >
                 <option value="createdAt">Date de création</option>
                 <option value="updatedAt">Date de modification</option>
@@ -532,7 +670,7 @@ export default function EmployesPage() {
               <select
                 value={sortOrder}
                 onChange={(e) => handleSortOrderChange(e.target.value as "ASC" | "DESC")}
-                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 backdrop-blur-sm"
+                className="w-full px-3 py-2 text-sm border border-[var(--zalama-border)] rounded-md bg-transparent text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               >
                 <option value="ASC">Croissant (ASC)</option>
                 <option value="DESC">Décroissant (DESC)</option>
@@ -579,7 +717,7 @@ export default function EmployesPage() {
                 >
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {employee.photoUrl && !employee.photoUrl.includes('example.com') ? (
                           <Image
                             src={employee.photoUrl}
@@ -594,12 +732,12 @@ export default function EmployesPage() {
                               const parent = target.parentElement;
                               if (parent) {
                                 const initials = `${employee.prenom?.charAt(0) || ''}${employee.nom?.charAt(0) || ''}`;
-                                parent.innerHTML = `<span class="text-blue-600 dark:text-blue-400 font-semibold text-sm">${initials}</span>`;
+                                parent.innerHTML = `<span class="text-orange-600 dark:text-orange-400 font-semibold text-sm">${initials}</span>`;
                               }
                             }}
                           />
                         ) : (
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                          <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
                             {employee.prenom?.charAt(0) || ''}
                             {employee.nom?.charAt(0) || ''}
                           </span>
@@ -714,7 +852,7 @@ export default function EmployesPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {selectedEmployee.photoUrl && !selectedEmployee.photoUrl.includes('example.com') ? (
                       <Image
                         src={selectedEmployee.photoUrl}
@@ -729,12 +867,12 @@ export default function EmployesPage() {
                           const parent = target.parentElement;
                           if (parent) {
                             const initials = `${selectedEmployee.prenom?.charAt(0) || ''}${selectedEmployee.nom?.charAt(0) || ''}`;
-                            parent.innerHTML = `<span class="text-blue-600 dark:text-blue-400 font-bold text-2xl">${initials}</span>`;
+                            parent.innerHTML = `<span class="text-orange-600 dark:text-orange-400 font-bold text-2xl">${initials}</span>`;
                           }
                         }}
                       />
                     ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
+                      <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
                         {selectedEmployee.prenom?.charAt(0) || ''}
                         {selectedEmployee.nom?.charAt(0) || ''}
                       </span>
@@ -764,8 +902,8 @@ export default function EmployesPage() {
                 {/* Email - prend toute la largeur */}
                 <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 shadow-sm backdrop-blur-sm">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
-                      <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    <div className="p-2 bg-orange-100 dark:bg-orange-900/20 rounded-lg">
+                      <Mail className="w-4 h-4 text-orange-600 dark:text-orange-400" />
                     </div>
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
@@ -945,6 +1083,185 @@ export default function EmployesPage() {
               </div>
             </div>
             
+          </div>
+        </div>
+      )}
+
+      {/* Modal d'upload en masse */}
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-[var(--zalama-bg-darker)] border border-[var(--zalama-border)] rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-[var(--zalama-border)]/30 flex-shrink-0 bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+                  <Upload className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                    Importer des employés en masse
+                  </h2>
+                  <p className="text-sm text-[var(--zalama-text-secondary)] mt-1">
+                    Téléchargez un fichier CSV ou Excel
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeUploadModal}
+                className="p-2 rounded-full hover:bg-white/10 text-[var(--zalama-text-secondary)] hover:text-white transition-all duration-200 hover:scale-110"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Content - Scrollable */}
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
+              {/* Instructions */}
+              <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-200 dark:border-orange-800/30 rounded-lg p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-sm font-semibold text-orange-900 dark:text-orange-100">
+                    Format du fichier requis
+                  </h3>
+                  <button
+                    onClick={() => handleDownloadTemplate('csv')}
+                    className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/30 rounded-md hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors"
+                    title="Télécharger un fichier exemple avec les en-têtes"
+                  >
+                    <Download className="h-3 w-3" />
+                    Télécharger le modèle
+                  </button>
+                </div>
+                <ul className="text-xs text-orange-800 dark:text-orange-200 space-y-1 list-disc list-inside">
+                  <li>Colonnes obligatoires: <strong>nom</strong>, <strong>prenom</strong>, <strong>telephone</strong> (numéro), <strong>salaireNet</strong></li>
+                  <li>Colonnes optionnelles: <strong>email</strong>, <strong>poste</strong>, <strong>genre</strong>, <strong>adresse</strong>, <strong>matricule</strong>, <strong>typeContrat</strong></li>
+                  <li>Formats acceptés: CSV (.csv), Excel (.xlsx, .xls)</li>
+                  <li>Taille maximale: 10MB</li>
+                </ul>
+              </div>
+
+              {/* Sélection de fichier */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Sélectionner un fichier
+                </label>
+                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-lg hover:border-orange-400 dark:hover:border-orange-500 transition-colors">
+                  <div className="space-y-1 text-center">
+                    <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                    <div className="flex text-sm text-gray-600 dark:text-gray-400">
+                      <label
+                        htmlFor="file-upload"
+                        className="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-orange-600 dark:text-orange-400 hover:text-orange-500 dark:hover:text-orange-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500"
+                      >
+                        <span>Télécharger un fichier</span>
+                        <input
+                          id="file-upload"
+                          name="file-upload"
+                          type="file"
+                          accept=".csv,.xlsx,.xls"
+                          className="sr-only"
+                          onChange={handleFileSelect}
+                          disabled={isUploading}
+                        />
+                      </label>
+                      <p className="pl-1">ou glissez-déposez</p>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      CSV, XLSX, XLS jusqu'à 10MB
+                    </p>
+                    {uploadFile && (
+                      <div className="mt-2 flex items-center justify-center gap-2 text-sm text-green-600 dark:text-green-400">
+                        <FileText className="h-4 w-4" />
+                        <span>{uploadFile.name}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          ({(uploadFile.size / 1024).toFixed(2)} KB)
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Résultats de l'upload */}
+              {uploadResults && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        {uploadResults.total}
+                      </div>
+                    </div>
+                    <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-4 border border-green-200 dark:border-green-800/30">
+                      <div className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Succès
+                      </div>
+                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">
+                        {uploadResults.success}
+                      </div>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/10 rounded-lg p-4 border border-red-200 dark:border-red-800/30">
+                      <div className="text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
+                        <XCircle className="h-4 w-4" />
+                        Échecs
+                      </div>
+                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">
+                        {uploadResults.failed}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Liste des erreurs */}
+                  {uploadResults.errors.length > 0 && (
+                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800/30 rounded-lg p-4 max-h-60 overflow-y-auto">
+                      <h4 className="text-sm font-semibold text-red-900 dark:text-red-100 mb-2">
+                        Erreurs ({uploadResults.errors.length})
+                      </h4>
+                      <div className="space-y-2">
+                        {uploadResults.errors.map((error, index) => (
+                          <div
+                            key={index}
+                            className="text-xs text-red-800 dark:text-red-200 bg-red-100 dark:bg-red-900/20 rounded p-2"
+                          >
+                            <div className="font-medium">Ligne {error.row}</div>
+                            {error.email && <div className="text-red-600 dark:text-red-400">Email: {error.email}</div>}
+                            <div>{error.error}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-[var(--zalama-border)]/30 flex-shrink-0">
+              <button
+                onClick={closeUploadModal}
+                disabled={isUploading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploadResults ? 'Fermer' : 'Annuler'}
+              </button>
+              <button
+                onClick={handleUpload}
+                disabled={!uploadFile || isUploading}
+                className="px-4 py-2 text-sm font-medium text-white bg-orange-600 rounded-md hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Upload en cours...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" />
+                    Importer
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
