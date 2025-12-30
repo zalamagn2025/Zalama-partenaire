@@ -259,8 +259,8 @@ export default function PaymentSalaryPage() {
         },
         body: JSON.stringify({
           employeeIds: Array.from(selectedEmployees),
-          mois: selectedMonth || undefined,
-          annee: selectedYear || undefined,
+        mois: selectedMonth || undefined,
+        annee: selectedYear || undefined,
         }),
       });
 
@@ -317,11 +317,11 @@ export default function PaymentSalaryPage() {
               { duration: 10000 }
             );
           }
-          } else {
-            toast.error(
+        } else {
+          toast.error(
               responseFormatted.message || "Erreur lors de l'exécution des paiements"
-            );
-          }
+          );
+        }
 
         // Ne pas fermer le dialog en cas d'erreur pour que l'utilisateur puisse voir les détails
         return;

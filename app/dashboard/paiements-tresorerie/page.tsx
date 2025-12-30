@@ -28,7 +28,7 @@ import {
   useTreasuryAdvances,
   useRepayTreasuryAdvance,
 } from "@/hooks/useTreasuryAdvances";
-import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import Pagination from "@/components/ui/Pagination";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -288,7 +288,65 @@ export default function PaiementsTresoreriePage() {
   if (loading || isLoading) {
     return (
       <div className="p-6 space-y-6">
-        <LoadingSpinner />
+        {/* Skeleton pour l'en-tête */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="space-y-2">
+            <Skeleton className="h-9 w-96" />
+            <Skeleton className="h-5 w-80" />
+          </div>
+          <Skeleton className="h-12 w-48" />
+        </div>
+
+        {/* Skeleton pour les statistiques */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="rounded-lg p-5 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <Skeleton className="h-5 w-16 rounded-full" />
+              </div>
+              <Skeleton className="h-8 w-24 mb-2" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          ))}
+        </div>
+
+        {/* Skeleton pour les filtres */}
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <Skeleton className="h-6 w-32" />
+            <div className="flex gap-2">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-24" />
+            </div>
+          </div>
+        </div>
+
+        {/* Skeleton pour le tableau */}
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+            <Skeleton className="h-6 w-48" />
+          </div>
+          <div className="p-4 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                <div className="flex items-center gap-4 flex-1">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                  <Skeleton className="h-8 w-24" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -516,11 +574,30 @@ export default function PaiementsTresoreriePage() {
 
       {/* Tableau des avances */}
       {isLoading ? (
-        <div className="flex items-center justify-center py-8">
-          <LoadingSpinner />
-          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
-            Chargement des avances...
-          </span>
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="overflow-x-auto">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <Skeleton className="h-6 w-48" />
+            </div>
+            <div className="p-4 space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="flex items-center justify-between py-3 border-b border-gray-200 dark:border-gray-700 last:border-0">
+                  <div className="flex items-center gap-4 flex-1">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-8 w-24" />
+                    <Skeleton className="h-8 w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       ) : filteredAdvances.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
