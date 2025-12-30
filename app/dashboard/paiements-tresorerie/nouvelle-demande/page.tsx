@@ -10,6 +10,7 @@ import {
   FileText,
   Save,
   X,
+  User,
 } from "lucide-react";
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
 import { useCreateTreasuryAdvance } from "@/hooks/useTreasuryAdvances";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import Image from "next/image";
 
 // Fonction pour formatter les montants en GNF
 const gnfFormatter = (value: number | null | undefined) => {
@@ -72,7 +74,9 @@ export default function NouvelleDemandeTresoreriePage() {
   });
 
   // L'API peut retourner directement un tableau ou un objet avec une propriété data
-  const employeesListRaw = employeesResponse?.data || employeesResponse || [];
+  const employeesListRaw = (employeesResponse && typeof employeesResponse === 'object' && 'data' in employeesResponse) 
+    ? (employeesResponse as any).data 
+    : (Array.isArray(employeesResponse) ? employeesResponse : []);
   const employees = (Array.isArray(employeesListRaw) ? employeesListRaw : []) as any[];
 
   // Filtrer les employés selon le terme de recherche
@@ -425,11 +429,18 @@ export default function NouvelleDemandeTresoreriePage() {
                           }
                         }}
                       >
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                            {(emp.prenom || emp.firstName || '').charAt(0) || ''}
-                            {(emp.nom || emp.lastName || '').charAt(0) || ''}
-                          </span>
+                        <div className="relative w-10 h-10 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {emp.photo_url || emp.photoUrl ? (
+                            <Image
+                              src={emp.photo_url || emp.photoUrl}
+                              alt={empName || "Employé"}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                          )}
                         </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">

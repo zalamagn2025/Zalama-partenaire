@@ -1157,7 +1157,7 @@ export default function PaymentSalaryPage() {
                         }`}
                         onClick={() => !dejaPaye && toggleEmployeeSelection(employee.id)}
                       >
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="relative w-10 h-10 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                               {photoUrl ? (
                             <Image
                                   src={photoUrl}
@@ -1167,10 +1167,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                                  {prenom?.charAt(0) || ''}
-                                  {nom?.charAt(0) || ''}
-            </span>
+                            <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                           )}
           </div>
                         <div className="flex-1 min-w-0">
@@ -2092,7 +2089,7 @@ export default function PaymentSalaryPage() {
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <div className="relative w-10 h-10 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                           {payment.employe?.photo_url ? (
                             <Image
                               src={payment.employe.photo_url}
@@ -2102,10 +2099,7 @@ export default function PaymentSalaryPage() {
                               className="w-full h-full object-cover rounded-full"
                             />
                           ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                              {payment.employe?.prenom?.charAt(0)}
-                              {payment.employe?.nom?.charAt(0)}
-                    </span>
+                            <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                           )}
                   </div>
                         <div>
