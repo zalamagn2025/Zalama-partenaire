@@ -717,7 +717,7 @@ export default function EmployesPage() {
                 >
                   <td className="px-3 py-4 whitespace-nowrap">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="relative w-10 h-10 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {employee.photoUrl && !employee.photoUrl.includes('example.com') ? (
                           <Image
                             src={employee.photoUrl}
@@ -726,21 +726,17 @@ export default function EmployesPage() {
                             height={40}
                             className="w-full h-full object-cover rounded-full"
                             onError={(e) => {
-                              // En cas d'erreur, masquer l'image et afficher les initiales
+                              // En cas d'erreur, masquer l'image et afficher l'icône User
                               const target = e.target as HTMLImageElement;
                               target.style.display = 'none';
                               const parent = target.parentElement;
                               if (parent) {
-                                const initials = `${employee.prenom?.charAt(0) || ''}${employee.nom?.charAt(0) || ''}`;
-                                parent.innerHTML = `<span class="text-orange-600 dark:text-orange-400 font-semibold text-sm">${initials}</span>`;
+                                parent.innerHTML = `<svg class="w-6 h-6 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`;
                               }
                             }}
                           />
                         ) : (
-                          <span className="text-orange-600 dark:text-orange-400 font-semibold text-sm">
-                            {employee.prenom?.charAt(0) || ''}
-                            {employee.nom?.charAt(0) || ''}
-                          </span>
+                          <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                         )}
                       </div>
                       <div>
@@ -852,7 +848,7 @@ export default function EmployesPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                  <div className="relative w-20 h-20 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                     {selectedEmployee.photoUrl && !selectedEmployee.photoUrl.includes('example.com') ? (
                       <Image
                         src={selectedEmployee.photoUrl}
@@ -861,21 +857,17 @@ export default function EmployesPage() {
                         height={80}
                         className="w-full h-full object-cover rounded-full"
                         onError={(e) => {
-                          // En cas d'erreur, masquer l'image et afficher les initiales
+                          // En cas d'erreur, masquer l'image et afficher l'icône User
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
                           const parent = target.parentElement;
                           if (parent) {
-                            const initials = `${selectedEmployee.prenom?.charAt(0) || ''}${selectedEmployee.nom?.charAt(0) || ''}`;
-                            parent.innerHTML = `<span class="text-orange-600 dark:text-orange-400 font-bold text-2xl">${initials}</span>`;
+                            parent.innerHTML = `<svg class="w-10 h-10 text-orange-600 dark:text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>`;
                           }
                         }}
                       />
                     ) : (
-                      <span className="text-orange-600 dark:text-orange-400 font-bold text-2xl">
-                        {selectedEmployee.prenom?.charAt(0) || ''}
-                        {selectedEmployee.nom?.charAt(0) || ''}
-                      </span>
+                      <User className="w-10 h-10 text-orange-600 dark:text-orange-400" />
                     )}
                   </div>
                   <div>
