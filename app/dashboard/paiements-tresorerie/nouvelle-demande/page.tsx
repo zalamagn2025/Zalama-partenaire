@@ -192,7 +192,7 @@ export default function NouvelleDemandeTresoreriePage() {
   // Si en cours de chargement initial
   if (loading || isLoadingEmployees) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="flex items-center justify-center min-h-[60vh] w-full">
         <LoadingSpinner />
       </div>
     );
