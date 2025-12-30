@@ -1,7 +1,6 @@
 "use client";
 
 import { useEdgeAuthContext } from "@/contexts/EdgeAuthContext";
-import { useTheme } from "@/contexts/ThemeContext";
 import { usePartnerApiKey, useRegeneratePartnerApiKey } from "@/hooks/usePartnerAuth";
 import { API_ROUTES, API_CONFIG, getApiUrl, getDefaultHeaders } from "@/config/api";
 import {
@@ -14,11 +13,8 @@ import {
   Lock,
   Mail,
   MapPin,
-  Moon,
-  Palette,
   Phone,
   Save,
-  Sun,
   User,
   Key,
   RefreshCw,
@@ -52,7 +48,6 @@ import { Textarea } from "@/components/ui/textarea";
 import Image from "next/image";
 
 export default function ParametresPage() {
-  const { theme, toggleTheme } = useTheme();
   const { session: sessionRaw } = useEdgeAuthContext();
   
   // Mémoriser la session pour éviter les re-renders inutiles
@@ -631,7 +626,6 @@ export default function ParametresPage() {
     { id: "profil", label: "Profil", icon: User },
     { id: "securite", label: "Sécurité", icon: Shield },
     { id: "entreprise", label: "Entreprise", icon: Building },
-    { id: "apparence", label: "Apparence", icon: Palette },
     { id: "integrations", label: "Intégrations", icon: Zap, disabled: true },
   ];
 
@@ -1256,62 +1250,6 @@ export default function ParametresPage() {
                 )}
                 {isSavingPartner ? "Sauvegarde en cours..." : "Sauvegarder les modifications"}
               </button>
-            </div>
-          </SettingCard>
-        </div>
-      )}
-
-      {/* Apparence */}
-      {activeTab === "apparence" && (
-        <div className="space-y-6">
-          <SettingCard
-            title="Thème"
-            description="Personnalisez l'apparence de votre interface"
-            icon={Palette}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 dark:text-white">
-                    Mode sombre
-                  </h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Basculez entre le mode clair et sombre
-                  </p>
-                </div>
-                <button
-                  onClick={toggleTheme}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    theme === "dark" ? "bg-orange-600" : "bg-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      theme === "dark" ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                  {theme === "dark" ? (
-                    <Moon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  ) : (
-                    <Sun className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    Thème {theme === "dark" ? "sombre" : "clair"}
-                  </p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    {theme === "dark" 
-                      ? "Interface optimisée pour les environnements sombres"
-                      : "Interface claire et lumineuse"
-                    }
-                  </p>
-                </div>
-              </div>
             </div>
           </SettingCard>
         </div>
