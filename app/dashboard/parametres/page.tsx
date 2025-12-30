@@ -110,6 +110,36 @@ export default function ParametresPage() {
   
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoFileType, setLogoFileType] = useState<string | null>(null);
+
+  // Fonction pour détecter si l'image nécessite un fond blanc (formats transparents)
+  const needsWhiteBackground = (imageUrl: string | null | undefined): boolean => {
+    if (!imageUrl) return false;
+    
+    // Vérifier d'abord le type de fichier stocké
+    if (logoFileType) {
+      const type = logoFileType.toLowerCase();
+      if (type === 'image/png' || type === 'image/svg+xml' || type.includes('png') || type.includes('svg')) {
+        return true;
+      }
+    }
+    
+    const url = imageUrl.toLowerCase();
+    
+    // Vérifier les data URLs (base64)
+    if (url.startsWith('data:image/')) {
+      if (url.includes('image/png') || url.includes('image/svg+xml') || url.includes('image/svg')) {
+        return true;
+      }
+    }
+    
+    // Vérifier l'extension dans l'URL - chercher .png ou .svg n'importe où dans l'URL
+    if (url.includes('.png') || url.includes('.svg')) {
+      return true;
+    }
+    
+    return false;
+  };
 
   // Initialiser UNE SEULE FOIS quand la session devient disponible
   const initializedRef = useRef(false);
@@ -147,6 +177,13 @@ export default function ParametresPage() {
         
         if (session.partner.logoUrl) {
           setLogoPreview(session.partner.logoUrl);
+          // Détecter le type depuis l'URL si possible
+          const logoUrl = session.partner.logoUrl.toLowerCase();
+          if (logoUrl.includes('.png') || logoUrl.match(/\.png(\?|$|#)/i)) {
+            setLogoFileType('image/png');
+          } else if (logoUrl.includes('.svg') || logoUrl.match(/\.svg(\?|$|#)/i)) {
+            setLogoFileType('image/svg+xml');
+          }
         }
       }
     }
@@ -400,6 +437,9 @@ export default function ParametresPage() {
 
     setIsUploadingLogo(true);
     try {
+      // Stocker le type de fichier pour la détection
+      setLogoFileType(file.type);
+      
       // Créer un aperçu
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -1067,15 +1107,38 @@ export default function ParametresPage() {
           >
             <div className="space-y-4">
               <div className="flex items-center gap-6">
-                <div className="relative w-32 h-32 bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-gray-700">
+                <div 
+                  className="relative w-32 h-32 rounded-lg flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-gray-700"
+                  style={{
+                    backgroundColor: needsWhiteBackground(logoPreview || session?.partner?.logoUrl) 
+                      ? '#ffffff' 
+                      : undefined
+                  }}
+                >
                   {logoPreview || session?.partner?.logoUrl ? (
-                    <Image
-                      src={logoPreview || session?.partner?.logoUrl || ''}
-                      alt="Logo entreprise"
-                      fill
-                      className="object-contain p-2"
-                      sizes="128px"
-                    />
+                    <>
+                      {/* Fond blanc derrière l'image pour les formats transparents */}
+                      {needsWhiteBackground(logoPreview || session?.partner?.logoUrl) && (
+                        <div 
+                          className="absolute inset-0 bg-white z-0"
+                          style={{ backgroundColor: '#ffffff' }}
+                        />
+                      )}
+                      <div className="relative z-10 w-full h-full flex items-center justify-center">
+                        <Image
+                          src={logoPreview || session?.partner?.logoUrl || ''}
+                          alt="Logo entreprise"
+                          fill
+                          className="object-contain p-2"
+                          sizes="128px"
+                          style={{
+                            backgroundColor: needsWhiteBackground(logoPreview || session?.partner?.logoUrl) 
+                              ? '#ffffff' 
+                              : 'transparent'
+                          }}
+                        />
+                      </div>
+                    </>
                   ) : (
                     <Building className="w-16 h-16 text-gray-400 dark:text-gray-600" />
                   )}
