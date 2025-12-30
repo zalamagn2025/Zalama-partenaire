@@ -654,8 +654,18 @@ export default function ParametresPage() {
             >
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center">
-                    <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                  <div className="relative w-12 h-12 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center overflow-hidden">
+                    {session?.admin?.photoUrl ? (
+                      <Image
+                        src={session.admin.photoUrl}
+                        alt={profileData.display_name || "Utilisateur"}
+                        width={48}
+                        height={48}
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                    )}
                   </div>
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">
@@ -822,7 +832,7 @@ export default function ParametresPage() {
           >
             <div className="space-y-4">
               <div className="flex items-center gap-4">
-                <div className="relative w-20 h-20 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center overflow-hidden">
+                <div className="relative w-20 h-20 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center overflow-hidden">
                   {profileImagePreview || session?.admin?.photoUrl ? (
                     <Image
                       src={profileImagePreview || session?.admin?.photoUrl || ''}
