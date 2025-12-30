@@ -51,9 +51,17 @@ type Employee = {
   photo_url?: string;
 };
 
-// Type étendu pour inclure les données des employés
-interface AvisWithEmployee extends Avis {
-  employees?: Employee;
+// Type étendu pour inclure les données de l'utilisateur
+interface AvisWithUser extends Avis {
+  user?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    photoUrl?: string | null;
+  };
+  employee?: Employee; // Pour compatibilité
 }
 
 export default function AvisPage() {
@@ -65,7 +73,7 @@ export default function AvisPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-  const [selectedAvis, setSelectedAvis] = useState<AvisWithEmployee | null>(null);
+  const [selectedAvis, setSelectedAvis] = useState<AvisWithUser | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Utiliser les hooks pour récupérer les données
@@ -81,7 +89,7 @@ export default function AvisPage() {
   });
 
   // Extraire les données
-  const avis = (avisResponse?.data || []) as AvisWithEmployee[];
+  const avis = (avisResponse?.data || []) as AvisWithUser[];
   const employees = (employeesResponse?.data || employeesResponse?.employees || []) as Employee[];
   const loadingData = loadingAvis;
   const totalAvisCount = avisResponse?.total || 0;
@@ -89,13 +97,16 @@ export default function AvisPage() {
 
   // Filtrer les avis
   const filteredAvis = (avis || []).filter((avis) => {
+    const user = (avis as any).user || avis.employee;
     const matchesSearch = 
-      avis.employee?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      avis.employee?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user?.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       avis.commentaire?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesCategory = selectedCategory === "all" || avis.type_retour === selectedCategory;
-    const matchesEmployee = selectedEmployee === "all" || avis.employee_id === selectedEmployee;
+    const matchesCategory = selectedCategory === "all" || avis.typeRetour === selectedCategory || avis.type_retour === selectedCategory;
+    const matchesEmployee = selectedEmployee === "all" || (avis as any).user?.id === selectedEmployee || avis.employee_id === selectedEmployee;
 
     return matchesSearch && matchesCategory && matchesEmployee;
   });
@@ -418,9 +429,6 @@ export default function AvisPage() {
                     Catégorie
                   </th>
                   <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                    Statut
-                  </th>
-                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
                   <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
@@ -436,28 +444,43 @@ export default function AvisPage() {
                   >
                     <td className="px-3 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {(avis.employee as any)?.photo_url ? (
-                            <Image
-                              src={(avis.employee as any).photo_url}
-                              alt={`${avis.employee?.prenom} ${avis.employee?.nom}`}
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover rounded-full"
-                            />
-                          ) : (
-                            <span className="text-blue-600 dark:text-blue-400 font-semibold text-sm">
-                              {avis.employee?.prenom?.charAt(0)}
-                              {avis.employee?.nom?.charAt(0)}
-                            </span>
-                          )}
+                        <div className="w-10 h-10 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                          {(() => {
+                            const user = (avis as any).user || avis.employee;
+                            const photoUrl = user?.photoUrl || (user as any)?.photo_url;
+                            const firstName = user?.firstName || user?.prenom || '';
+                            const lastName = user?.lastName || user?.nom || '';
+                            
+                            if (photoUrl) {
+                              return (
+                                <Image
+                                  src={photoUrl}
+                                  alt={`${firstName} ${lastName}`}
+                                  width={40}
+                                  height={40}
+                                  className="w-full h-full object-cover rounded-full"
+                                />
+                              );
+                            }
+                            return (
+                              <User className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                            );
+                          })()}
                         </div>
                         <div>
                           <div className="font-medium text-sm text-gray-900 dark:text-white">
-                            {avis.employee?.prenom} {avis.employee?.nom}
+                            {(() => {
+                              const user = (avis as any).user || avis.employee;
+                              const firstName = user?.firstName || user?.prenom || '';
+                              const lastName = user?.lastName || user?.nom || '';
+                              return `${firstName} ${lastName}`.trim() || 'N/A';
+                            })()}
                           </div>
                           <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {avis.employee?.poste || "N/A"}
+                            {(() => {
+                              const user = (avis as any).user || avis.employee;
+                              return user?.email || "N/A";
+                            })()}
                           </div>
                         </div>
                       </div>
@@ -483,13 +506,8 @@ export default function AvisPage() {
                         {avis.note >= 3 ? "Positif" : "Négatif"}
                       </Badge>
                     </td>
-                    <td className="px-3 py-4 text-center">
-                      <Badge variant={getApprovalBadgeVariant(avis.approuve)} className="text-xs">
-                        {avis.approuve ? "Approuvé" : "En attente"}
-                      </Badge>
-                    </td>
                     <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                      {formatDate(avis.date_avis || avis.created_at)}
+                      {formatDate((avis as any).createdAt || avis.date_avis || avis.created_at)}
                     </td>
                     <td className="px-3 py-4 text-center">
               <button
@@ -557,28 +575,43 @@ export default function AvisPage() {
               {/* En-tête avec photo et nom */}
               <div className="flex items-center justify-between gap-6 pb-6 border-b border-[var(--zalama-border)]/30">
                 <div className="flex items-center gap-6">
-                  <div className="w-20 h-20 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
-                    {(selectedAvis.employee as any)?.photo_url ? (
-                      <Image
-                        src={(selectedAvis.employee as any).photo_url}
-                        alt={`${selectedAvis.employee?.prenom} ${selectedAvis.employee?.nom}`}
-                        width={80}
-                        height={80}
-                        className="w-full h-full object-cover rounded-full"
-                      />
-                    ) : (
-                      <span className="text-blue-600 dark:text-blue-400 font-bold text-2xl">
-                        {selectedAvis.employee?.prenom?.charAt(0)}
-                        {selectedAvis.employee?.nom?.charAt(0)}
-                      </span>
-                    )}
+                  <div className="w-20 h-20 bg-orange-50/30 dark:bg-orange-900/40 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
+                    {(() => {
+                      const user = (selectedAvis as any).user || selectedAvis.employee;
+                      const photoUrl = user?.photoUrl || (user as any)?.photo_url;
+                      const firstName = user?.firstName || user?.prenom || '';
+                      const lastName = user?.lastName || user?.nom || '';
+                      
+                      if (photoUrl) {
+                        return (
+                          <Image
+                            src={photoUrl}
+                            alt={`${firstName} ${lastName}`}
+                            width={80}
+                            height={80}
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        );
+                      }
+                      return (
+                        <User className="w-10 h-10 text-orange-600 dark:text-orange-400" />
+                      );
+                    })()}
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-white">
-                      {selectedAvis.employee?.prenom} {selectedAvis.employee?.nom}
+                      {(() => {
+                        const user = (selectedAvis as any).user || selectedAvis.employee;
+                        const firstName = user?.firstName || user?.prenom || '';
+                        const lastName = user?.lastName || user?.nom || '';
+                        return `${firstName} ${lastName}`.trim() || 'N/A';
+                      })()}
                   </h3>
                     <p className="text-[var(--zalama-text-secondary)] text-lg mt-1">
-                      {selectedAvis.employee?.poste || "N/A"}
+                      {(() => {
+                        const user = (selectedAvis as any).user || selectedAvis.employee;
+                        return user?.email || "N/A";
+                      })()}
                   </p>
                 </div>
                       </div>
@@ -600,7 +633,10 @@ export default function AvisPage() {
                     <span className="text-gray-600 dark:text-gray-400 text-xs">Email</span>
                   </div>
                   <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedAvis.employee?.email || "Non renseigné"}
+                    {(() => {
+                      const user = (selectedAvis as any).user || selectedAvis.employee;
+                      return user?.email || "Non renseigné";
+                    })()}
                     </p>
                   </div>
 
@@ -615,7 +651,15 @@ export default function AvisPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Téléphone</span>
                       </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {selectedAvis.employee?.telephone ? `+224${selectedAvis.employee.telephone}` : "Non renseigné"}
+                      {(() => {
+                        const user = (selectedAvis as any).user || selectedAvis.employee;
+                        const phone = user?.phone || (user as any)?.telephone;
+                        if (phone) {
+                          // Si le numéro commence déjà par +224, on le garde tel quel, sinon on l'ajoute
+                          return phone.startsWith('+') ? phone : `+224${phone}`;
+                        }
+                        return "Non renseigné";
+                      })()}
                     </p>
                     </div>
 
@@ -662,7 +706,7 @@ export default function AvisPage() {
                       <span className="text-gray-600 dark:text-gray-400 text-xs">Date</span>
                     </div>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {formatDate(selectedAvis.date_avis || selectedAvis.created_at)}
+                      {formatDate((selectedAvis as any).createdAt || selectedAvis.date_avis || selectedAvis.created_at)}
                     </p>
                   </div>
                 </div>
