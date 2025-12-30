@@ -91,6 +91,12 @@ const gnfFormatter = (value: number | null | undefined) => {
   return `${value.toLocaleString()} GNF`;
 };
 
+// Fonction pour formatter les montants (sans GNF) - comme dans la page wallet
+const formatAmount = (amount: number | undefined | null) => {
+  if (!amount || isNaN(amount)) return '0';
+  return new Intl.NumberFormat('fr-FR').format(amount);
+};
+
 // Fonction pour formatter les dates
 const formatDate = (dateString: string | null | undefined) => {
   if (!dateString) return "N/A";
@@ -287,33 +293,141 @@ export default function PaiementsTresoreriePage() {
     );
   }
 
+  // Calculer les statistiques
+  const totalDemandes = filteredAdvances.length;
+  const enAttente = filteredAdvances.filter((a) => a.statut === "REQUESTED" || a.statut === "WAITING_ADMIN_VALIDATION").length;
+  const approuvees = filteredAdvances.filter((a) => a.statut === "APPROVED" || a.statut === "RELEASED").length;
+  const remboursees = filteredAdvances.filter((a) => a.statut === "REPAID").length;
+  const totalMontant = filteredAdvances.reduce((sum, a) => sum + a.montantTotal, 0);
+  const totalRembourse = filteredAdvances.reduce((sum, a) => sum + a.montantRembourse, 0);
+  const totalRestant = totalMontant - totalRembourse;
+
   return (
-    <div className="p-6 space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
+    <div className="p-6">
+      {/* En-tête avec titre et bouton d'action */}
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold" style={{ color: "var(--zalama-orange)" }}>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Paiements par Avances de Trésorerie
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
+          <p className="mt-1 text-gray-600 dark:text-gray-400">
             Gérez les demandes d'avances de trésorerie pour le paiement des salaires
           </p>
         </div>
-        <Button
-          onClick={() => router.push("/dashboard/paiements-tresorerie/nouvelle-demande")}
-          className="flex items-center gap-2"
-          style={{ background: "var(--zalama-orange)" }}
-        >
-          <Plus className="w-4 h-4" />
-          Nouvelle demande
-        </Button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => router.push("/dashboard/paiements-tresorerie/nouvelle-demande")}
+            className="flex items-center gap-2 px-6 py-3 text-white rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105"
+            style={{ background: 'var(--zalama-orange)' }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#ea580c'}
+            onMouseLeave={(e) => e.currentTarget.style.background = 'var(--zalama-orange)'}
+          >
+            <Plus className="w-5 h-5" />
+            <span className="font-medium">Nouvelle demande</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filtres */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+      {/* Statistiques détaillées */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
+        {/* Total Demandes */}
+        <div className="bg-blue-50 dark:bg-blue-900/10 rounded-lg p-5 border border-blue-200 dark:border-blue-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <FileText className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <Badge variant="info" className="text-xs">Total</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+              {totalDemandes}
+            </p>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+              Total Demandes
+            </p>
+          </div>
+        </div>
+
+        {/* Montant Total */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Montant</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {formatAmount(totalMontant)} GNF
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Montant Total
+            </p>
+          </div>
+        </div>
+
+        {/* En Attente */}
+        <div className="bg-orange-50 dark:bg-orange-900/10 rounded-lg p-5 border border-orange-200 dark:border-orange-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+              <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <Badge variant="warning" className="text-xs">En attente</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+              {enAttente}
+            </p>
+            <p className="text-sm text-orange-600 dark:text-orange-400 mt-1">
+              En Attente
+            </p>
+          </div>
+        </div>
+
+        {/* Approuvées */}
+        <div className="bg-purple-50 dark:bg-purple-900/10 rounded-lg p-5 border border-purple-200 dark:border-purple-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
+            <Badge className="text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">Approuvées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+              {approuvees}
+            </p>
+            <p className="text-sm text-purple-600 dark:text-purple-400 mt-1">
+              Approuvées
+            </p>
+          </div>
+        </div>
+
+        {/* Remboursées */}
+        <div className="bg-green-50 dark:bg-green-900/10 rounded-lg p-5 border border-green-200 dark:border-green-800/30 shadow-sm hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between mb-3">
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <Banknote className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <Badge variant="success" className="text-xs">Remboursées</Badge>
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+              {remboursees}
+            </p>
+            <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+              Remboursées
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Filtres avancés */}
+      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm mb-6">
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Filtres</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+              Filtres avancés
+            </h3>
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -340,9 +454,7 @@ export default function PaiementsTresoreriePage() {
               >
                 {isLoading ? (
                   <RefreshCw className="h-3 w-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-3 w-3" />
-                )}
+                ) : null}
                 Actualiser
               </button>
             </div>
@@ -350,169 +462,162 @@ export default function PaiementsTresoreriePage() {
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4">
-            {/* Recherche */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-4">
+            {/* Barre de recherche */}
             <div>
-              <Label className="mb-1">Recherche</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Recherche
+              </label>
+              <div>
+                <input
+                  type="text"
+                  placeholder="Rechercher..."
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Référence, commentaire..."
-                  className="pl-10"
+                  className="w-full px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
             </div>
 
-            {/* Statut */}
+            {/* Filtre par statut */}
             <div>
-              <Label className="mb-1">Statut</Label>
-              <Select
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Statut
+              </label>
+              <select
                 value={selectedStatus || "all"}
-                onValueChange={(value) => handleStatusChange(value === "all" ? null : value)}
+                onChange={(e) => handleStatusChange(e.target.value === "all" ? null : e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Tous les statuts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
-                  <SelectItem value="REQUESTED">Demandée</SelectItem>
-                  <SelectItem value="WAITING_ADMIN_VALIDATION">En validation</SelectItem>
-                  <SelectItem value="APPROVED">Approuvée</SelectItem>
-                  <SelectItem value="REJECTED">Rejetée</SelectItem>
-                  <SelectItem value="RELEASED">Débloquée</SelectItem>
-                  <SelectItem value="REPAYMENT_PENDING">Remboursement en attente</SelectItem>
-                  <SelectItem value="OVERDUE">En retard</SelectItem>
-                  <SelectItem value="PENALTY_APPLIED">Pénalité appliquée</SelectItem>
-                  <SelectItem value="REPAID">Remboursée</SelectItem>
-                </SelectContent>
-              </Select>
+                <option value="all">Tous les statuts</option>
+                <option value="REQUESTED">Demandée</option>
+                <option value="WAITING_ADMIN_VALIDATION">En validation</option>
+                <option value="APPROVED">Approuvée</option>
+                <option value="REJECTED">Rejetée</option>
+                <option value="RELEASED">Débloquée</option>
+                <option value="REPAYMENT_PENDING">Remboursement en attente</option>
+                <option value="OVERDUE">En retard</option>
+                <option value="PENALTY_APPLIED">Pénalité appliquée</option>
+                <option value="REPAID">Remboursée</option>
+              </select>
             </div>
+          </div>
+        )}
+
+        {/* Indicateur de chargement */}
+        {isLoading && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+            <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+            Mise à jour des données...
           </div>
         )}
       </div>
 
-      {/* Statistiques rapides */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total demandes</p>
-              <p className="text-2xl font-bold dark:text-white">{totalAdvances}</p>
-            </div>
-            <FileText className="w-8 h-8 text-blue-500" />
-          </div>
-        </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">En attente</p>
-              <p className="text-2xl font-bold dark:text-white">
-                {filteredAdvances.filter((a) => a.statut === "REQUESTED" || a.statut === "WAITING_ADMIN_VALIDATION").length}
-              </p>
-            </div>
-            <Clock className="w-8 h-8 text-yellow-500" />
-          </div>
-        </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Approuvées</p>
-              <p className="text-2xl font-bold dark:text-white">
-                {filteredAdvances.filter((a) => a.statut === "APPROVED" || a.statut === "RELEASED").length}
-              </p>
-            </div>
-            <CheckCircle className="w-8 h-8 text-green-500" />
-          </div>
-        </div>
-        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg p-4 backdrop-blur-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Remboursées</p>
-              <p className="text-2xl font-bold dark:text-white">
-                {filteredAdvances.filter((a) => a.statut === "REPAID").length}
-              </p>
-            </div>
-            <DollarSign className="w-8 h-8 text-purple-500" />
-          </div>
-        </div>
-      </div>
 
       {/* Tableau des avances */}
-      <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200 dark:border-gray-700">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Référence
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Montant
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Statut
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Date création
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredAdvances.length === 0 ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <LoadingSpinner />
+          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+            Chargement des avances...
+          </span>
+        </div>
+      ) : filteredAdvances.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+          <CreditCard className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Aucune avance trouvée
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400">
+            Aucune avance de trésorerie ne correspond aux critères de recherche.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-transparent border border-[var(--zalama-border)] border-opacity-20 rounded-lg shadow overflow-hidden backdrop-blur-sm">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed dark:divide-gray-700">
+              <thead className="bg-gradient-to-r from-[var(--zalama-bg-lighter)] to-[var(--zalama-bg-light)]">
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                    Aucune avance de trésorerie trouvée
-                  </td>
+                  <th className="w-1/5 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Référence
+                  </th>
+                  <th className="w-1/6 px-3 py-4 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Montant Total
+                  </th>
+                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Montant Remboursé
+                  </th>
+                  <th className="w-1/6 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Montant Restant
+                  </th>
+                  <th className="px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Statut
+                  </th>
+                  <th className="w-1/8 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Date création
+                  </th>
+                  <th className="w-1/12 px-3 py-4 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                filteredAdvances.map((advance) => (
+              </thead>
+              <tbody className="bg-transparent divide-y divide-[var(--zalama-border)]">
+                {filteredAdvances.map((advance) => (
                   <tr
                     key={advance.id}
-                    className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                    className="hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-medium dark:text-white">
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">
                         {advance.reference || advance.id.slice(0, 8)}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-semibold dark:text-white">
-                        {gnfFormatter(advance.montantTotal)}
-                      </div>
-                      {advance.montantRembourse !== undefined && advance.montantRembourse < advance.montantTotal && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          Restant: {gnfFormatter(advance.montantTotal - advance.montantRembourse)}
+                      {advance.commentaire && (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-xs">
+                          {advance.commentaire}
                         </div>
                       )}
                     </td>
-                    <td className="px-4 py-3">{getStatusBadge(advance.statut)}</td>
-                    <td className="px-4 py-3">
-                      <div className="text-sm dark:text-white">{formatDate(advance.dateDemande)}</div>
+                    <td className="px-3 py-4 whitespace-nowrap">
+                      <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatAmount(advance.montantTotal)}
+                      </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                    <td className="px-3 py-4 text-center">
+                      <div className="text-sm font-medium text-green-600 dark:text-green-400">
+                        {formatAmount(advance.montantRembourse)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <div className="text-sm font-semibold text-orange-600 dark:text-orange-400">
+                        {formatAmount(advance.montantTotal - advance.montantRembourse)}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      {getStatusBadge(advance.statut)}
+                    </td>
+                    <td className="px-3 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                      {formatDate(advance.dateDemande)}
+                    </td>
+                    <td className="px-3 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
                           onClick={async () => {
                             setSelectedAdvance(advance);
                             await loadAdvanceDetails(advance.id);
                             setShowDetailModal(true);
                           }}
+                          className="group relative p-2 rounded-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                          title="Voir les détails"
                         >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                          <Eye className="h-4 w-4" />
+                          <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                            Voir
+                          </div>
+                        </button>
                         {(advance.statut === "RELEASED" ||
                           advance.statut === "REPAYMENT_PENDING" ||
                           advance.statut === "OVERDUE") && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <button
                             onClick={() => {
                               setSelectedAdvance(advance);
                               const montantRestant = advance.montantTotal - advance.montantRembourse;
@@ -525,30 +630,35 @@ export default function PaiementsTresoreriePage() {
                               });
                               setShowRepayModal(true);
                             }}
+                            className="group relative p-2 rounded-full bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-all duration-200 hover:scale-110 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                            title="Rembourser"
                           >
-                            <DollarSign className="w-4 h-4" />
-                          </Button>
+                            <DollarSign className="h-4 w-4" />
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                              Rembourser
+                            </div>
+                          </button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+          {/* Pagination */}
+          {filteredAdvances.length > 0 && (
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
+              totalItems={totalAdvances}
+              itemsPerPage={itemsPerPage}
               onPageChange={handlePageChange}
             />
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Modal de détails */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
