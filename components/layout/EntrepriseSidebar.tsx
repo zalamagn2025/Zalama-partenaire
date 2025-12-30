@@ -32,11 +32,17 @@ const getNavItems = () => [
   },
   { label: "Employés", icon: UserCheck, href: `/dashboard/employes` },
   { label: "Demande d'avance", icon: FileText, href: `/dashboard/demandes` },
-  // Ajout du lien Paiement de salaire
+  // Ajout du lien Paiement par wallets
   {
-    label: "Paiement de salaire",
+    label: "Paiement par wallets",
     icon: Banknote,
     href: `/dashboard/paiements`,
+  },
+  // Ajout du lien Paiements par avances de trésorerie
+  {
+    label: "Paiements par avances de trésorerie",
+    icon: CreditCard,
+    href: `/dashboard/paiements-tresorerie`,
   },
   // Ajout du lien Remboursements
   {

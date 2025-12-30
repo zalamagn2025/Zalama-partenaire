@@ -588,3 +588,126 @@ export const PartnerInfoResponseSchema = z.object({
 
 export type PartnerInfoResponse = z.infer<typeof PartnerInfoResponseSchema>;
 
+// ==================== Treasury Advances (Avances de Trésorerie) ====================
+
+export const TreasuryAdvanceStatusSchema = z.enum([
+  'REQUESTED',
+  'WAITING_ADMIN_VALIDATION',
+  'APPROVED',
+  'REJECTED',
+  'RELEASED',
+  'REPAYMENT_PENDING',
+  'OVERDUE',
+  'PENALTY_APPLIED',
+  'REPAID',
+]);
+
+export const TreasuryAdvanceSchema = z.object({
+  id: z.string(),
+  partenaireId: z.string(),
+  partenaire: z.object({
+    id: z.string(),
+    companyName: z.string(),
+    legalStatus: z.string(),
+    rccm: z.string().nullable(),
+    rccmDocumentUrl: z.string().nullable(),
+    nif: z.string().nullable(),
+    nifDocumentUrl: z.string().nullable(),
+    activityDomain: z.string(),
+    headquartersAddress: z.string(),
+    phone: z.string(),
+    email: z.string(),
+    paymentDay: z.number().nullable(),
+    payroll: z.string().nullable(),
+    lastPaymentDocumentUrl: z.string().nullable(),
+    employeesCountMin: z.number().nullable(),
+    employeesCountMax: z.number().nullable(),
+    contactRequestId: z.string().nullable(),
+    status: z.string(),
+    agreement: z.boolean(),
+    motivationLetterUrl: z.string().nullable(),
+    logoUrl: z.string().nullable(),
+    apiKey: z.string().nullable(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  }),
+  approbateurId: z.string().nullable(),
+  approbateur: z.any().nullable(),
+  montantDemande: z.number(),
+  montantTotal: z.number(),
+  fraisTresorerie: z.number(),
+  montantRembourse: z.number(),
+  penalitesAccumulees: z.number(),
+  montantTotalRemboursement: z.number(),
+  statut: TreasuryAdvanceStatusSchema,
+  dateDemande: z.string(),
+  dateApprobation: z.string().nullable(),
+  dateDeblocage: z.string().nullable(),
+  dateLimiteRemboursement: z.string().nullable(),
+  dateRemboursement: z.string().nullable(),
+  dateDernierePenalite: z.string().nullable(),
+  dureeSemaines: z.number(),
+  rejetMotif: z.string().nullable(),
+  reference: z.string().nullable(),
+  commentaire: z.string().nullable(),
+  numeroCompteRemboursement: z.string().nullable(),
+  methodeRemboursement: z.string().nullable(),
+  employeIds: z.string(), // JSON string array
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const TreasuryAdvancesListResponseSchema = z.object({
+  data: z.array(TreasuryAdvanceSchema),
+  total: z.number(),
+  page: z.number(),
+  limit: z.number(),
+  totalPages: z.number(),
+});
+
+export const TreasuryAdvanceDetailResponseSchema = z.object({
+  success: z.boolean().optional(),
+  data: TreasuryAdvanceSchema.optional(),
+});
+
+export const TreasuryAdvanceRequestSchema = z.object({
+  employeIds: z.array(z.string()),
+  mois: z.number().min(1).max(12),
+  annee: z.number(),
+  partenaireId: z.string(),
+  reference: z.string().optional(),
+  commentaire: z.string().optional(),
+});
+
+export const TreasuryAdvanceApproveRequestSchema = z.object({
+  commentaire: z.string().optional(),
+});
+
+export const TreasuryAdvanceRejectRequestSchema = z.object({
+  motif: z.string(),
+});
+
+export const TreasuryAdvanceRepayRequestSchema = z.object({
+  montant: z.number().min(0),
+  methodeRemboursement: z.enum(['WALLET', 'EXTERNAL']),
+  numeroCompteRemboursement: z.string().optional(),
+  reference: z.string().optional(),
+  commentaire: z.string().optional(),
+});
+
+export const TreasuryAdvanceResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string(),
+  data: TreasuryAdvanceSchema.optional(),
+});
+
+export type TreasuryAdvanceStatus = z.infer<typeof TreasuryAdvanceStatusSchema>;
+export type TreasuryAdvance = z.infer<typeof TreasuryAdvanceSchema>;
+export type TreasuryAdvancesListResponse = z.infer<typeof TreasuryAdvancesListResponseSchema>;
+export type TreasuryAdvanceDetailResponse = z.infer<typeof TreasuryAdvanceDetailResponseSchema>;
+export type TreasuryAdvanceRequest = z.infer<typeof TreasuryAdvanceRequestSchema>;
+export type TreasuryAdvanceApproveRequest = z.infer<typeof TreasuryAdvanceApproveRequestSchema>;
+export type TreasuryAdvanceRejectRequest = z.infer<typeof TreasuryAdvanceRejectRequestSchema>;
+export type TreasuryAdvanceRepayRequest = z.infer<typeof TreasuryAdvanceRepayRequestSchema>;
+export type TreasuryAdvanceResponse = z.infer<typeof TreasuryAdvanceResponseSchema>;
+
