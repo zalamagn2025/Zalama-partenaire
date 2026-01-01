@@ -33,8 +33,8 @@ export const API_ROUTES = {
   
   // Dashboard partenaire
   partnerDashboard: {
-    dashboardData: '/partner-dashboard/dashboard-data',
-    data: '/partner-dashboard/data',
+    dashboardData: '/partner/dashboard/dashboard-data',
+    data: '/partner/dashboard/data',
   },
   
   // Demandes d'adhésion
@@ -50,23 +50,26 @@ export const API_ROUTES = {
   partnerEmployee: {
     list: '/partner-employee',
     listAlias: '/partner-employe',
+    listNew: '/partner/employees',
     avis: '/partner-employee/avis',
+    avisNew: '/partner/avis',
     stats: '/partner-employee/stats',
+    bulkUpload: '/partner-employee/bulk-upload',
   },
   
   // Finances
   partnerFinances: {
-    demandes: '/partner-finances/demandes',
-    remboursements: '/partner-finances/remboursements',
-    stats: '/partner-finances/stats',
-    evolutionMensuelle: '/partner-finances/evolution-mensuelle',
-    partnerEmployeeStats: '/partner-finances/partner-employee-stats',
+    demandes: '/partner/finances/demandes',
+    remboursements: '/partner/finances/remboursements',
+    stats: '/partner/finances/stats',
+    evolutionMensuelle: '/partner/finances/evolution-mensuelle',
+    partnerEmployeeStats: '/partner/finances/partner-employee-stats',
   },
   
   // Informations partenaire
   partnerInfo: {
-    get: '/partner-info',
-    update: '/partner-info',
+    get: '/partner/info',
+    update: '/partner/info',
   },
   
   // Utilisateurs
@@ -114,8 +117,8 @@ export const API_ROUTES = {
   
   // Avances sur salaire (Partenaire - Multi-mois uniquement)
   partnerSalaryAdvances: {
-    approve: (id: string) => `/partner-salary-advances/${id}/approve`,
-    reject: (id: string) => `/partner-salary-advances/${id}/reject`,
+    approve: (id: string) => `/partner/salary-advances/${id}/approve`,
+    reject: (id: string) => `/partner/salary-advances/${id}/reject`,
   },
   
   // Paiements
@@ -129,16 +132,19 @@ export const API_ROUTES = {
   
   // Paiements partenaire
   partnerPayments: {
-    list: '/partner-payments',
-    employees: '/partner-payments/employees',
-    statistics: '/partner-payments/statistics',
-    batchProcessWallet: '/partner-payments/batch/process-wallet',
-    bulletinPaie: '/partner-payments/bulletin-paie',
+    list: '/partner/payments',
+    employees: '/partner/payments/employees',
+    statistics: '/partner/payments/statistics',
+    batchProcessWallet: '/partner/payments/batch/process-wallet',
+    bulletinPaie: '/partner/payments/bulletin-paie',
   },
   
   // Wallet partenaire
   partnerWallets: {
-    me: '/partner-wallets/me',
+    me: '/partner/wallets/me',
+    get: (partnerId: string) => `/partner/wallets/${partnerId}`,
+    recharge: (partnerId: string) => `/partner/wallets/${partnerId}/recharge`,
+    transactions: (partnerId: string) => `/partner/wallets/${partnerId}/transactions`,
   },
   
   // Remboursements
@@ -181,13 +187,36 @@ export const API_ROUTES = {
   
   // Treasury Advances
   treasuryAdvances: {
-    list: '/treasury-advances',
-    get: (id: string) => `/treasury-advances/${id}`,
-    request: '/treasury-advances/request',
+    list: '/partner/treasury-advances',
+    get: (id: string) => `/partner/treasury-advances/${id}`,
+    request: '/partner/treasury-advances/request',
     approve: (id: string) => `/treasury-advances/${id}/approve`,
     reject: (id: string) => `/treasury-advances/${id}/reject`,
     release: (id: string) => `/treasury-advances/${id}/release`,
     repay: (id: string) => `/treasury-advances/${id}/repay`,
+  },
+  
+  // Remboursements partenaire
+  partnerReimbursements: {
+    list: '/partner/reimbursements',
+    update: (id: string) => `/partner/reimbursements/${id}`,
+    activityPeriods: '/partner/reimbursements/activity-periods',
+    echeances: '/partner/reimbursements/echeances',
+    employees: '/partner/reimbursements/employees',
+    statistics: '/partner/reimbursements/statistics',
+  },
+  
+  // Avis partenaire
+  partnerAvis: {
+    list: '/partner/avis',
+    activityPeriods: '/partner/avis/activity-periods',
+    employeesList: '/partner/avis/employees-list',
+    statistics: '/partner/avis/statistics',
+  },
+  
+  // Upload partenaire
+  partnerUpload: {
+    file: '/partner/upload/file',
   },
 } as const;
 
